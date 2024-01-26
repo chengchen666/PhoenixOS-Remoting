@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "device-buffer",
+    "client",
+    "server",
+]
