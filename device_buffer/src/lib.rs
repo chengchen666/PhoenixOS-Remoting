@@ -1,4 +1,7 @@
 use std::time::Duration;
+mod shared_memory_buffer;
+
+pub use shared_memory_buffer::SharedMemoryBuffer;
 
 pub enum BufferPrivilege {
     BufferHost,
@@ -18,7 +21,7 @@ pub enum DeviceBufferError {
     // Add other relevant errors
 }
 
-const TIMEOUT: Duration = Duration::from_secs(50);
+const BUFFER_TIMEOUT: Duration = Duration::from_secs(50);
 
 // Trait for the DeviceBuffer: an io abstraction for heterogenous device
 pub trait DeviceBuffer {

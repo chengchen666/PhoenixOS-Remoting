@@ -1,5 +1,5 @@
 [package]
-name = "device-buffer"
+name = "device_buffer"
 version = "0.1.0"
 edition = "2021"
 
