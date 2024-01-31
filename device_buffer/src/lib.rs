@@ -1,4 +1,4 @@
-use std::time::Duration;
+// use std::time::Duration;
 
 pub enum BufferPrivilege {
     BufferHost,
@@ -20,7 +20,7 @@ pub enum DeviceBufferError {
     // Add other relevant errors
 }
 
-const BUFFER_TIMEOUT: Duration = Duration::from_secs(50);
+// const BUFFER_TIMEOUT: Duration = Duration::from_secs(50);
 
 // Trait for the DeviceBuffer: an io abstraction for heterogenous device
 pub trait DeviceBuffer {
