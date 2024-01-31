@@ -1,4 +1,4 @@
-// use std::time::Duration;
+pub use std::time::Duration;
 pub mod shared_memory_buffer;
 
 pub enum BufferPrivilege {

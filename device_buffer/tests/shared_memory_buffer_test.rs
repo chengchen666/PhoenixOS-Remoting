@@ -1,7 +1,6 @@
 extern crate device_buffer;
 
 use std::{thread, vec};
-use std::time::Duration;
 use device_buffer::*;
 
 // helper host function
