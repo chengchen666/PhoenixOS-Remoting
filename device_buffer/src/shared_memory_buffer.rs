@@ -265,3 +265,31 @@ impl DeviceBuffer for SharedMemoryBuffer {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capacity() {
+        let buf = SharedMemoryBuffer::new(
+            BufferPrivilege::BufferHost,
+            "/test",
+            1024 * 1024,
+        ).unwrap();
+
+        assert_eq!(buf.write_capacity(0), buf.buf_size - 1);
+        // set tail to buf_size
+        unsafe {
+            *buf.buf_tail = buf.buf_size;
+        }
+        assert_eq!(buf.write_capacity(0), 0);
+
+        assert_eq!(buf.read_capacity(0), 0);
+        // set head to buf_size/2
+        unsafe {
+            *buf.buf_head = buf.buf_size / 2;
+        }
+        assert_eq!(buf.read_capacity(0), buf.buf_size / 2);
+    }
+}
