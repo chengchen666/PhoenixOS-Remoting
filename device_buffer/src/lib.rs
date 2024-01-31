@@ -1,4 +1,5 @@
 // use std::time::Duration;
+pub mod shared_memory_buffer;
 
 pub enum BufferPrivilege {
     BufferHost,
@@ -32,8 +33,5 @@ pub trait DeviceBuffer {
 
     fn fill_in(&mut self, mode: Option<IssuingMode>) -> Result<(), DeviceBufferError>;
 }
-
-
-pub mod shared_memory_buffer;
 
 pub use shared_memory_buffer::SharedMemoryBuffer;
