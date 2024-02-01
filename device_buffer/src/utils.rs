@@ -14,3 +14,12 @@ macro_rules! function {
         }
     }};
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_function() {
+        println!("{}:{}", std::file!(), function!());
+        assert_eq!(function!(), "test_function");
+    }
+}
