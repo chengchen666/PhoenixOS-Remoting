@@ -270,6 +270,9 @@ impl DeviceBuffer for SharedMemoryBuffer {
     }
 }
 
+unsafe impl Sync for SharedMemoryBuffer {}
+unsafe impl Send for SharedMemoryBuffer {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
