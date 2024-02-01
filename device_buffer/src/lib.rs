@@ -1,5 +1,6 @@
 pub use std::time::Duration;
 pub mod shared_memory_buffer;
+pub mod utils;
 
 pub enum BufferPrivilege {
     BufferHost,
@@ -35,3 +36,6 @@ pub trait DeviceBuffer {
 }
 
 pub use shared_memory_buffer::SharedMemoryBuffer;
+pub use shared_memory_buffer::SHM_BUFFER_SIZE;
+pub use shared_memory_buffer::SHM_NAME_STOC;
+pub use shared_memory_buffer::SHM_NAME_CTOS;
