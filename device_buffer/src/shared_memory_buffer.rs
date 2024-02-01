@@ -182,7 +182,7 @@ impl SharedMemoryBuffer {
 impl DeviceBuffer for SharedMemoryBuffer {
     // Method to put bytes into the shared buffer
     fn put_bytes(
-        &mut self,
+        &self,
         src: &[u8],
         mode: Option<IssuingMode>,
     ) -> Result<usize, DeviceBufferError> {
@@ -214,7 +214,7 @@ impl DeviceBuffer for SharedMemoryBuffer {
         Ok(offset)
     }
 
-    fn flush_out(&mut self, mode: Option<IssuingMode>) -> Result<(), DeviceBufferError> {
+    fn flush_out(&self, mode: Option<IssuingMode>) -> Result<(), DeviceBufferError> {
         let _mode = mode.unwrap_or(IssuingMode::SyncIssuing);
         while unsafe { (*self.buf_tail + 1) % self.buf_size == *self.buf_head } {
             // Busy-waiting
@@ -224,7 +224,7 @@ impl DeviceBuffer for SharedMemoryBuffer {
 
     // Method to get bytes from the shared buffer
     fn get_bytes(
-        &mut self,
+        &self,
         dst: &mut [u8],
         mode: Option<IssuingMode>,
     ) -> Result<usize, DeviceBufferError> {
@@ -257,7 +257,7 @@ impl DeviceBuffer for SharedMemoryBuffer {
     }
 
     // Method to fill in the buffer
-    fn fill_in(&mut self, mode: Option<IssuingMode>) -> Result<(), DeviceBufferError> {
+    fn fill_in(&self, mode: Option<IssuingMode>) -> Result<(), DeviceBufferError> {
         let _mode = mode.unwrap_or(IssuingMode::SyncIssuing);
         while unsafe { *self.buf_head } == unsafe { *self.buf_tail } {
             // Busy-waiting

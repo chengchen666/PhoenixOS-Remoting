@@ -6,7 +6,7 @@ use device_buffer::*;
 // helper host function
 fn host(content: &[u8]) {
     // create a shared memory buffer
-    let mut shm_buf =
+    let shm_buf =
         SharedMemoryBuffer::new(BufferPrivilege::BufferHost, "/shm_buf", 1024).unwrap();
 
     // read the length:usize
@@ -30,7 +30,7 @@ fn host(content: &[u8]) {
 // helper guest function
 fn guest(content: &[u8]) {
     // create a shared memory buffer
-    let mut shm_buf =
+    let shm_buf =
         SharedMemoryBuffer::new(BufferPrivilege::BufferGuest, "/shm_buf", 1024).unwrap();
 
     // write the length:usize

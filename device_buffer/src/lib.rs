@@ -25,13 +25,13 @@ pub enum DeviceBufferError {
 
 // Trait for the DeviceBuffer: an io abstraction for heterogenous device
 pub trait DeviceBuffer {
-    fn put_bytes(&mut self, src: &[u8], mode: Option<IssuingMode>) -> Result<usize, DeviceBufferError>;
+    fn put_bytes(&self, src: &[u8], mode: Option<IssuingMode>) -> Result<usize, DeviceBufferError>;
 
-    fn get_bytes(&mut self, dst: &mut [u8], mode: Option<IssuingMode>) -> Result<usize, DeviceBufferError>;
+    fn get_bytes(&self, dst: &mut [u8], mode: Option<IssuingMode>) -> Result<usize, DeviceBufferError>;
 
-    fn flush_out(&mut self, mode: Option<IssuingMode>) -> Result<(), DeviceBufferError>;
+    fn flush_out(&self, mode: Option<IssuingMode>) -> Result<(), DeviceBufferError>;
 
-    fn fill_in(&mut self, mode: Option<IssuingMode>) -> Result<(), DeviceBufferError>;
+    fn fill_in(&self, mode: Option<IssuingMode>) -> Result<(), DeviceBufferError>;
 }
 
 pub use shared_memory_buffer::SharedMemoryBuffer;
