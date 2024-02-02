@@ -1,3 +1,6 @@
+extern crate num;
+#[macro_use]
+extern crate num_derive;
 extern crate device_buffer;
 mod cuda_lib;
 mod dispatcher;

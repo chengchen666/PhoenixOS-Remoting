@@ -8,6 +8,9 @@ build = "build.rs"
 
 [dependencies]
 device_buffer = { path = "../device_buffer" }
+num = "0.2"
+num-traits = "0.2"
+num-derive = "0.4"
 
 [build-dependencies]
 glob = "0.3"
