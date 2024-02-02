@@ -118,6 +118,10 @@ pub enum cudaError {
 pub use self::cudaError as cudaError_t;
 
 extern "C" {
+    pub fn cudaDeviceSynchronize() -> cudaError_t;
+}
+
+extern "C" {
     pub fn cudaSetDevice(device: ::std::os::raw::c_int) -> cudaError_t;
 }
 
