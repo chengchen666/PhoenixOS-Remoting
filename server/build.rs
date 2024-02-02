@@ -48,4 +48,6 @@ fn main() {
     println!("cargo:rustc-link-lib=dylib=cudart");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=CUDA_LIBRARY_PATH");
+
+    // TODO: use bindgen (or cuda_hook) to automatically generate the FFI
 }
