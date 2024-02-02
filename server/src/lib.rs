@@ -49,3 +49,45 @@ pub fn launch_server() {
 
     println!("[{}:{}] server terminated", std::file!(), function!());
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn cuda_ffi() {
+        let mut device = 0;
+        let mut device_num = 0;
+
+        unsafe {
+            if let cudaError_t::cudaSuccess = cudaGetDeviceCount(&mut device_num as *mut i32) {
+                println!("device count: {}", device_num);
+            } else {
+                panic!("failed to get device count");
+            }
+        }
+
+        unsafe {
+            if let cudaError_t::cudaSuccess = cudaGetDevice(&mut device as *mut i32) {
+                assert_eq!(device, 0);
+                println!("device: {}", device);
+            } else {
+                panic!("failed to get device");
+            }
+        }
+
+        unsafe {
+            if let cudaError_t::cudaSuccess = cudaSetDevice(device_num - 1) {
+            } else {
+                panic!("failed to set device");
+            }
+
+            if let cudaError_t::cudaSuccess = cudaGetDevice(&mut device as *mut i32) {
+                assert_eq!(device, device_num - 1);
+                println!("device: {}", device);
+            } else {
+                panic!("failed to get device");
+            }
+        }
+    }
+}
