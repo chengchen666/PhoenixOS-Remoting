@@ -40,7 +40,7 @@ pub fn launch_server() {
 
     loop {
         if let Ok(proc_id) = receive_request(&buffer_receiver) {
-            dispatcher::dispatch(proc_id, &buffer_sender, &buffer_receiver);
+            dispatch(proc_id, &buffer_sender, &buffer_receiver);
         } else {
             println!(
                 "[{}:{}] failed to receive request",
