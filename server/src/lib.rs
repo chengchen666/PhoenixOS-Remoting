@@ -31,7 +31,11 @@ pub fn launch_server() {
         if let cudaError_t::cudaSuccess = cudaDeviceSynchronize() {
             println!("[{}:{}] cuda driver initialized", std::file!(), function!());
         } else {
-            panic!("[{}:{}] failed to initialize cuda driver", std::file!(), function!());
+            panic!(
+                "[{}:{}] failed to initialize cuda driver",
+                std::file!(),
+                function!()
+            );
         }
     }
     loop {
