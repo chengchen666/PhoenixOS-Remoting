@@ -8,8 +8,16 @@ pub mod cuda_runtime;
 pub use cuda_runtime::*;
 
 lazy_static! {
-    static ref BUF_SENDER: SharedMemoryBuffer = {
-        let buf = SharedMemoryBuffer::new(BufferPrivilege::BufferHost, "/shm_buf", 1024).unwrap();
+    static ref BUFFER_SENDER: SharedMemoryBuffer = {
+        let buf =
+            SharedMemoryBuffer::new(BufferPrivilege::BufferGuest, SHM_NAME_CTOS, SHM_BUFFER_SIZE)
+                .unwrap();
+        buf
+    };
+    static ref BUFFER_RECEIVER: SharedMemoryBuffer = {
+        let buf =
+            SharedMemoryBuffer::new(BufferPrivilege::BufferGuest, SHM_NAME_STOC, SHM_BUFFER_SIZE)
+                .unwrap();
         buf
     };
 }
