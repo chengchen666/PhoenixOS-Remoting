@@ -16,8 +16,8 @@ pub enum IssuingMode {
 #[derive(Debug)]
 pub enum DeviceBufferError {
     // Define error types, for example:
-    IoError(std::io::Error),
     InvalidOperation,
+    IoError,
     Timeout,
     // Add other relevant errors
 }
