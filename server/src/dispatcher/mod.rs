@@ -1,7 +1,7 @@
 use super::*;
-mod cudart;
 
-use cudart::*;
+mod cudart_exe;
+use self::cudart_exe::*;
 
 pub fn dispatch(
     proc_id: i32,
@@ -11,6 +11,7 @@ pub fn dispatch(
     match proc_id {
         0 => cudaGetDeviceExe(buffer_sender, buffer_receiver),
         1 => cudaSetDeviceExe(buffer_sender, buffer_receiver),
+        2 => cudaGetDeviceCountExe(buffer_sender, buffer_receiver),
         other => {
             println!(
                 "[{}:{}] invalid proc_id: {}",
