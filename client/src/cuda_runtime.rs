@@ -116,6 +116,8 @@ pub enum cudaError {
 
 pub use self::cudaError as cudaError_t;
 
+// TODO: use device_buffer for communication
+
 #[no_mangle]
 pub extern "C" fn cudaGetDevice(device: *mut ::std::os::raw::c_int) -> cudaError_t {
     unsafe {
