@@ -1,8 +1,8 @@
 extern crate device_buffer;
-pub mod cuda_lib;
+mod cuda_lib;
 mod dispatcher;
 
-pub use cuda_lib::*;
+use cuda_lib::*;
 use device_buffer::*;
 use dispatcher::dispatch;
 
