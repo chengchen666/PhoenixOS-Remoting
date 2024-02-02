@@ -39,3 +39,5 @@ pub use shared_memory_buffer::SharedMemoryBuffer;
 pub use shared_memory_buffer::SHM_BUFFER_SIZE;
 pub use shared_memory_buffer::SHM_NAME_STOC;
 pub use shared_memory_buffer::SHM_NAME_CTOS;
+
+// TODO: implement (de-)serialization for basic types
