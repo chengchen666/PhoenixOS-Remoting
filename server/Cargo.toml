@@ -4,5 +4,10 @@ version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+build = "build.rs"
+
 [dependencies]
 device_buffer = { path = "../device_buffer" }
+
+[build-dependencies]
+glob = "0.3"
