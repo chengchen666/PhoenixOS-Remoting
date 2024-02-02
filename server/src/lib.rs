@@ -19,7 +19,7 @@ fn create_buffer() -> (SharedMemoryBuffer, SharedMemoryBuffer) {
 fn receive_request(buffer_receiver: &SharedMemoryBuffer) -> Result<i32, DeviceBufferError> {
     let mut buf = [0u8; 4];
     if let Ok(4) = buffer_receiver.get_bytes(&mut buf, Some(IssuingMode::SyncIssuing)) {
-        Ok(i32::from_le_bytes(buf))
+        Ok(i32::from_ne_bytes(buf))
     } else {
         Err(DeviceBufferError::IoError)
     }

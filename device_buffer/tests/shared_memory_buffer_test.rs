@@ -15,7 +15,7 @@ fn host(content: &[u8]) {
         assert_eq!(len_read, std::mem::size_of::<usize>());
         println!("Host: read length: {:?}", &buf[..len_read]);
     }
-    let len = usize::from_le_bytes(buf);
+    let len = usize::from_ne_bytes(buf);
     assert_eq!(len, content.len());
 
     // read the data from the buffer
@@ -35,7 +35,7 @@ fn guest(content: &[u8]) {
 
     // write the length:usize
     let len = content.len();
-    let buf = len.to_le_bytes();
+    let buf = len.to_ne_bytes();
     if let Ok(len_written) = shm_buf.put_bytes(&buf, None) {
         assert_eq!(len_written, std::mem::size_of::<usize>());
         println!("Guest: write length: {:?}", &buf[..len_written]);
