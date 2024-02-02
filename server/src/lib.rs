@@ -4,6 +4,7 @@ mod dispatcher;
 
 pub use cuda_lib::*;
 use device_buffer::*;
+use dispatcher::dispatch;
 
 fn create_buffer() -> (SharedMemoryBuffer, SharedMemoryBuffer) {
     let buffer_sender =
