@@ -1,3 +1,6 @@
+extern crate server;
+use server::*;
+
 fn main() {
-    println!("Hello, world!");
+    
 }
