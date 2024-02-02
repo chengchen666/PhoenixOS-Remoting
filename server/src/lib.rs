@@ -27,17 +27,16 @@ fn receive_request(buffer_receiver: &SharedMemoryBuffer) -> Result<i32, DeviceBu
 pub fn launch_server() {
     let (buffer_sender, buffer_receiver) = create_buffer();
     println!("[{}:{}] shm buffer created", std::file!(), function!());
-    unsafe {
-        if let cudaError_t::cudaSuccess = cudaDeviceSynchronize() {
-            println!("[{}:{}] cuda driver initialized", std::file!(), function!());
-        } else {
-            panic!(
-                "[{}:{}] failed to initialize cuda driver",
-                std::file!(),
-                function!()
-            );
-        }
+    if let cudaError_t::cudaSuccess = unsafe { cudaDeviceSynchronize() } {
+        println!("[{}:{}] cuda driver initialized", std::file!(), function!());
+    } else {
+        panic!(
+            "[{}:{}] failed to initialize cuda driver",
+            std::file!(),
+            function!()
+        );
     }
+
     loop {
         if let Ok(proc_id) = receive_request(&buffer_receiver) {
             dispatcher::dispatch(proc_id, &buffer_sender, &buffer_receiver);
@@ -63,35 +62,30 @@ mod tests {
         let mut device = 0;
         let mut device_num = 0;
 
-        unsafe {
-            if let cudaError_t::cudaSuccess = cudaGetDeviceCount(&mut device_num as *mut i32) {
-                println!("device count: {}", device_num);
-            } else {
-                panic!("failed to get device count");
-            }
+        if let cudaError_t::cudaSuccess = unsafe { cudaGetDeviceCount(&mut device_num as *mut i32) }
+        {
+            println!("device count: {}", device_num);
+        } else {
+            panic!("failed to get device count");
         }
 
-        unsafe {
-            if let cudaError_t::cudaSuccess = cudaGetDevice(&mut device as *mut i32) {
-                assert_eq!(device, 0);
-                println!("device: {}", device);
-            } else {
-                panic!("failed to get device");
-            }
+        if let cudaError_t::cudaSuccess = unsafe { cudaGetDevice(&mut device as *mut i32) } {
+            assert_eq!(device, 0);
+            println!("device: {}", device);
+        } else {
+            panic!("failed to get device");
         }
 
-        unsafe {
-            if let cudaError_t::cudaSuccess = cudaSetDevice(device_num - 1) {
-            } else {
-                panic!("failed to set device");
-            }
+        if let cudaError_t::cudaSuccess = unsafe { cudaSetDevice(device_num - 1) } {
+        } else {
+            panic!("failed to set device");
+        }
 
-            if let cudaError_t::cudaSuccess = cudaGetDevice(&mut device as *mut i32) {
-                assert_eq!(device, device_num - 1);
-                println!("device: {}", device);
-            } else {
-                panic!("failed to get device");
-            }
+        if let cudaError_t::cudaSuccess = unsafe { cudaGetDevice(&mut device as *mut i32) } {
+            assert_eq!(device, device_num - 1);
+            println!("device: {}", device);
+        } else {
+            panic!("failed to get device");
         }
     }
 }
