@@ -4,7 +4,7 @@
 
 int main()
 {
-    const int iterations = 0;
+    const int iterations = 1;
     int count = 0;
     int device;
 
