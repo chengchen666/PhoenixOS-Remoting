@@ -7,6 +7,7 @@ pub const SHM_BUFFER_SIZE: usize = 104857520;
 pub const SHM_NAME_STOC: &str = "/stoc";
 pub const SHM_NAME_CTOS: &str = "/ctos";
 
+// TODO: split the abstraction of SharedMemory and RingBuffer
 pub struct SharedMemoryBuffer {
     shm_name: String,
     shm_len: usize,
