@@ -1,6 +1,7 @@
 extern crate num;
 #[macro_use]
 extern crate num_derive;
+use num::FromPrimitive;
 
 pub use std::time::Duration;
 pub mod shared_memory_buffer;

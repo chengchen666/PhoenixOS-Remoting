@@ -17,15 +17,6 @@ macro_rules! function {
     }};
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_function() {
-        println!("{}:{}", std::file!(), function!());
-        assert_eq!(function!(), "test_function");
-    }
-}
-
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, FromPrimitive)]
 #[allow(non_camel_case_types)]
@@ -144,8 +135,8 @@ pub enum cudaError {
 }
 
 pub use self::cudaError as cudaError_t;
+
 use super::*;
-use num::FromPrimitive;
 
 // TODO: implement (de-)serialization for basic types
 
@@ -183,4 +174,25 @@ pub fn deserialize_cudaError_t(
         None => return Err(DeviceBufferError::IoError),
     }
     Ok(len_read)
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+
+    #[test]
+    fn test_function() {
+        println!("{}:{}", std::file!(), function!());
+        assert_eq!(function!(), "test_function");
+    }
+
+    #[test]
+    fn test_num_derive() {
+        let x: u32 = cudaError_t::cudaSuccess as u32;
+        assert_eq!(x, 0);
+        match cudaError_t::from_u32(1) {
+            Some(v) => assert_eq!(v, cudaError_t::cudaErrorInvalidValue),
+            None => panic!("failed to convert from u32"),
+        }
+    }
 }
