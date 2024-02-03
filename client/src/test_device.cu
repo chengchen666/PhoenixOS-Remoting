@@ -4,8 +4,17 @@
 
 int main()
 {
-    const int iterations = 1;
+    const int iterations = 0;
+    int count = 0;
     int device;
+
+    cudaGetDeviceCount(&count);
+    std::cout << "Number of CUDA devices: " << count << std::endl;
+    cudaGetDevice(&device);
+    std::cout << "Current CUDA device: " << device << std::endl;
+    cudaSetDevice(count -1 );
+    cudaGetDevice(&device);
+    std::cout << "Current CUDA device: " << device << std::endl;
 
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < iterations; ++i) {
