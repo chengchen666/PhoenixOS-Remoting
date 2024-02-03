@@ -144,15 +144,17 @@ pub enum cudaError {
 }
 
 pub use self::cudaError as cudaError_t;
+use super::*;
+use num::FromPrimitive;
 
 // TODO: implement (de-)serialization for basic types
 
-fn serialize_i32(value: &i32, buffer: &SharedMemoryBuffer) -> Result<usize, DeviceBufferError> {
+pub fn serialize_i32(value: &i32, buffer: &SharedMemoryBuffer) -> Result<usize, DeviceBufferError> {
     let buf = value.to_ne_bytes();
     buffer.put_bytes(&buf, None)
 }
 
-fn deserialize_i32(
+pub fn deserialize_i32(
     value: &mut i32,
     buffer: &SharedMemoryBuffer,
 ) -> Result<usize, DeviceBufferError> {
@@ -162,7 +164,7 @@ fn deserialize_i32(
     Ok(len_read)
 }
 
-fn serialize_cudaError_t(
+pub fn serialize_cudaError_t(
     value: &cudaError_t,
     buffer: &SharedMemoryBuffer,
 ) -> Result<usize, DeviceBufferError> {
@@ -170,7 +172,7 @@ fn serialize_cudaError_t(
     buffer.put_bytes(&buf, None)
 }
 
-fn deserialize_cudaError_t(
+pub fn deserialize_cudaError_t(
     value: &mut cudaError_t,
     buffer: &SharedMemoryBuffer,
 ) -> Result<usize, DeviceBufferError> {

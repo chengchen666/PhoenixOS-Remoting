@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 use super::*;
-use num::FromPrimitive;
 
 pub fn cudaGetDeviceExe(buffer_sender: &SharedMemoryBuffer, _buffer_receiver: &SharedMemoryBuffer) {
     println!("[{}:{}] cudaGetDevice", std::file!(), function!());

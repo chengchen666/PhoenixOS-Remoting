@@ -6,6 +6,8 @@ pub use std::time::Duration;
 pub mod shared_memory_buffer;
 pub mod utils;
 
+pub use utils::*;
+
 pub enum BufferPrivilege {
     BufferHost,
     BufferGuest,
