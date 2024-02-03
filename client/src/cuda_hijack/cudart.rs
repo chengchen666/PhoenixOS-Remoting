@@ -1,7 +1,5 @@
 use super::*;
 
-// TODO: use device_buffer for communication
-
 #[no_mangle]
 pub extern "C" fn cudaGetDevice(device: *mut ::std::os::raw::c_int) -> cudaError_t {
     println!("[{}:{}] cudaGetDevice", std::file!(), function!());
