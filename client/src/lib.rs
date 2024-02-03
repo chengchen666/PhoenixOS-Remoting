@@ -4,8 +4,8 @@ extern crate lazy_static;
 extern crate device_buffer;
 use device_buffer::*;
 
-pub mod cuda_runtime;
-pub use cuda_runtime::*;
+pub mod cuda_hijack;
+pub use cuda_hijack::*;
 
 lazy_static! {
     static ref BUFFER_SENDER: SharedMemoryBuffer = {
