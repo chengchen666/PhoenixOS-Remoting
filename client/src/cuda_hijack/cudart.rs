@@ -12,7 +12,7 @@ pub extern "C" fn cudaGetDevice(device: *mut ::std::os::raw::c_int) -> cudaError
         Ok(_) => {}
         Err(e) => panic!("failed to serialize proc_id: {:?}", e),
     }
-    match deserialize_i32(&mut dev, &BUFFER_SENDER) {
+    match deserialize_i32(&mut dev, &BUFFER_RECEIVER) {
         Ok(_) => {}
         Err(e) => panic!("failed to deserialize dev: {:?}", e),
     }
@@ -57,7 +57,7 @@ pub extern "C" fn cudaGetDeviceCount(count: *mut ::std::os::raw::c_int) -> cudaE
         Ok(_) => {}
         Err(e) => panic!("failed to serialize proc_id: {:?}", e),
     }
-    match deserialize_i32(&mut cnt, &BUFFER_SENDER) {
+    match deserialize_i32(&mut cnt, &BUFFER_RECEIVER) {
         Ok(_) => {}
         Err(e) => panic!("failed to deserialize cnt: {:?}", e),
     }
