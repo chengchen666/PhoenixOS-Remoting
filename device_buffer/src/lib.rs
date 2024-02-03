@@ -1,3 +1,7 @@
+extern crate num;
+#[macro_use]
+extern crate num_derive;
+
 pub use std::time::Duration;
 pub mod shared_memory_buffer;
 pub mod utils;
@@ -39,5 +43,3 @@ pub use shared_memory_buffer::SharedMemoryBuffer;
 pub use shared_memory_buffer::SHM_BUFFER_SIZE;
 pub use shared_memory_buffer::SHM_NAME_STOC;
 pub use shared_memory_buffer::SHM_NAME_CTOS;
-
-// TODO: implement (de-)serialization for basic types
