@@ -1,0 +1,51 @@
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+
+project(remoting_test LANGUAGES CXX CUDA)
+
+# Find CUDA
+find_package(CUDA REQUIRED)
+set(CUDA_USE_STATIC_CUDA_RUNTIME OFF CACHE INTERNAL "")
+
+
+# Add your .cu and .cpp files here
+set(SOURCE_FILES
+    test_device.cu
+    # Add any additional .cu or .cpp files
+)
+
+# Specify the executable to be built and its sources
+add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+
+# Include directories for CUDA
+include_directories(${CUDA_INCLUDE_DIRS})
+
+# Link against the CUDA libraries
+target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES} ${CUDA_CUDART_LIBRARY})
+message(STATUS "CUDA Libraries: ${CUDA_CUDART_LIBRARY}")
+
+# Specify C++11 as the standard for the host compiler
+set_target_properties(${PROJECT_NAME} PROPERTIES
+                      CUDA_SEPARABLE_COMPILATION ON
+                      CXX_STANDARD 11
+                      CXX_STANDARD_REQUIRED YES
+)
+
+# Set optimization level and pass other flags to the CUDA NVCC compiler
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O2;-std=c++11;-lcudnn)
+
+# If you need to specify architecture-specific flags, for example:
+# set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_30,code=sm_30)
+
+# Clean-up command (you might not need this as CMake has a 'clean' target)
+add_custom_target(clean-all
+   COMMAND ${CMAKE_BUILD_TOOL} clean
+   COMMAND ${CMAKE_COMMAND} -P clean-all.cmake
+)
+
+# The clean-all.cmake file (which you need to create) should contain:
+# file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/CMakeCache.txt
+#                     ${CMAKE_BINARY_DIR}/CMakeFiles
+#                     ${CMAKE_BINARY_DIR}/${PROJECT_NAME}${CMAKE_EXECUTABLE_SUFFIX}
+#                     ${CMAKE_BINARY_DIR}/Makefile
+#                     ${CMAKE_BINARY_DIR}/cmake_install.cmake
+# )
