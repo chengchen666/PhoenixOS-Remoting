@@ -17,7 +17,7 @@ Launch two terminals, one for server and the other for client.
 - server side:
 
 ```shell
-cargo run server
+RUST_LOG=debug cargo run server
 ```
 
 - client side:
