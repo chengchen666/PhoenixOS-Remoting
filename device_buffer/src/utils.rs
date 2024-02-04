@@ -139,6 +139,7 @@ pub use self::cudaError as cudaError_t;
 use super::*;
 
 // TODO: implement (de-)serialization for basic types
+// maybe define a trait and implement a specific version for each type
 
 pub fn serialize_i32(value: &i32, buffer: &SharedMemoryBuffer) -> Result<usize, DeviceBufferError> {
     let buf = value.to_ne_bytes();
