@@ -3,9 +3,8 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 project(remoting_test LANGUAGES CXX CUDA)
 
 # Find CUDA
-find_package(CUDA REQUIRED)
 set(CUDA_USE_STATIC_CUDA_RUNTIME OFF CACHE INTERNAL "")
-
+find_package(CUDA REQUIRED)
 
 # Add your .cu and .cpp files here
 set(SOURCE_FILES
@@ -20,7 +19,7 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 include_directories(${CUDA_INCLUDE_DIRS})
 
 # Link against the CUDA libraries
-target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES} ${CUDA_CUDART_LIBRARY})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CUDA_LIBRARIES} ${CUDA_CUDART_LIBRARY})
 message(STATUS "CUDA Libraries: ${CUDA_CUDART_LIBRARY}")
 
 # Specify C++11 as the standard for the host compiler
