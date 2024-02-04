@@ -24,8 +24,8 @@ cargo run server
 
 ```shell
 cd tests/cuda_api
-cmake .
-make
-./startclient.sh ./remoting_test
+mkdir -p build && cd build
+cmake .. && make
+cd ..
+./startclient.sh ./build/remoting_test
 ```
-
