@@ -44,14 +44,14 @@ impl SharedMemoryBuffer {
             )
         };
         if fd == -1 {
-            eprintln!("Error on shm_open");
+            error!("Error on shm_open");
             return Err(DeviceBufferError::InvalidOperation);
         }
 
         // two extra usize for head and tail
         let shm_len = buf_size + std::mem::size_of::<usize>() * 2;
         if unsafe { libc::ftruncate(fd, shm_len as libc::off_t) } == -1 {
-            eprintln!("Error on ftruncate");
+            error!("Error on ftruncate");
             unsafe { libc::shm_unlink(shm_name_.as_ptr()) };
             return Err(DeviceBufferError::InvalidOperation);
         }
@@ -68,7 +68,7 @@ impl SharedMemoryBuffer {
             )
         };
         if shm_ptr == libc::MAP_FAILED {
-            eprintln!("Error on mmap");
+            error!("Error on mmap");
             unsafe { libc::shm_unlink(shm_name_.as_ptr()) };
             return Err(DeviceBufferError::InvalidOperation);
         }
@@ -106,7 +106,7 @@ impl SharedMemoryBuffer {
             )
         };
         if fd == -1 {
-            eprintln!("Error on shm_open");
+            error!("Error on shm_open");
             return Err(DeviceBufferError::InvalidOperation);
         }
 
@@ -125,7 +125,7 @@ impl SharedMemoryBuffer {
             )
         };
         if shm_ptr == libc::MAP_FAILED {
-            eprintln!("Error on mmap");
+            error!("Error on mmap");
             unsafe { libc::shm_unlink(shm_name_.as_ptr()) };
             return Err(DeviceBufferError::InvalidOperation);
         }

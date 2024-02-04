@@ -1,6 +1,8 @@
 extern crate num;
 #[macro_use]
 extern crate num_derive;
+extern crate log;
+
 use num::FromPrimitive;
 
 pub use std::time::Duration;
@@ -8,6 +10,9 @@ pub mod shared_memory_buffer;
 pub mod utils;
 
 pub use utils::*;
+
+#[allow(unused_imports)]
+use log::{debug, error, log_enabled, info, Level};
 
 pub enum BufferPrivilege {
     BufferHost,
