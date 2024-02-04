@@ -2,7 +2,7 @@
 use super::*;
 
 pub fn cudaGetDeviceExe(buffer_sender: &SharedMemoryBuffer, _buffer_receiver: &SharedMemoryBuffer) {
-    println!("[{}:{}] cudaGetDevice", std::file!(), function!());
+    info!("[{}:{}] cudaGetDevice", std::file!(), function!());
     let mut device: i32 = 0;
     let result = unsafe { cudaGetDevice(&mut device) };
     serialize_i32(&device, buffer_sender).unwrap();
@@ -10,7 +10,7 @@ pub fn cudaGetDeviceExe(buffer_sender: &SharedMemoryBuffer, _buffer_receiver: &S
 }
 
 pub fn cudaSetDeviceExe(buffer_sender: &SharedMemoryBuffer, buffer_receiver: &SharedMemoryBuffer) {
-    println!("[{}:{}] cudaSetDevice", std::file!(), function!());
+    info!("[{}:{}] cudaSetDevice", std::file!(), function!());
     let mut device: i32 = 0;
     deserialize_i32(&mut device, buffer_receiver).unwrap();
     let result = unsafe { cudaSetDevice(device) };
@@ -21,7 +21,7 @@ pub fn cudaGetDeviceCountExe(
     buffer_sender: &SharedMemoryBuffer,
     _buffer_receiver: &SharedMemoryBuffer,
 ) {
-    println!("[{}:{}] cudaGetDeviceCount", std::file!(), function!());
+    info!("[{}:{}] cudaGetDeviceCount", std::file!(), function!());
     let mut count: i32 = 0;
     let result = unsafe { cudaGetDeviceCount(&mut count) };
     serialize_i32(&count, buffer_sender).unwrap();

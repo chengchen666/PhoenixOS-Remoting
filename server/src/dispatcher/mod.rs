@@ -13,12 +13,7 @@ pub fn dispatch(
         1 => cudaSetDeviceExe(buffer_sender, buffer_receiver),
         2 => cudaGetDeviceCountExe(buffer_sender, buffer_receiver),
         other => {
-            println!(
-                "[{}:{}] invalid proc_id: {}",
-                std::file!(),
-                function!(),
-                other
-            );
+            error!("[{}:{}] invalid proc_id: {}", std::file!(), function!(), other);
         }
     }
 }
