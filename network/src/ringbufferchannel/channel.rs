@@ -5,6 +5,24 @@ use crate::{CommChannel, CommChannelError};
 
 /// A ring buffer where the buffer can be shared between different processes/threads
 /// It uses the head 4B + 4B to store the head and tail
+/// 
+/// # Example 
+/// 
+/// ```no_compile
+/// use ringbufferchannel::{LocalChannelBufferManager, RingBuffer};
+/// use crate::CommChannel;
+/// 
+/// let mut buffer: RingBuffer<LocalChannelBufferManager> = RingBuffer::new(LocalChannelBufferManager::new(10 + 8));
+/// let data_to_send = [1, 2, 3, 4, 5];
+/// let mut receive_buffer = [0u8; 5];
+/// 
+/// buffer.send(&data_to_send).unwrap();
+/// buffer.recv(&mut receive_buffer).unwrap();
+/// 
+/// assert_eq!(receive_buffer, data_to_send);
+/// 
+/// ```
+/// 
 pub struct RingBuffer<T: ChannelBufferManager> {
     _manager: T,
     buffer: NonNull<u8>,
@@ -32,57 +50,6 @@ where
         res.write_head_volatile(0);
         res.write_tail_volatile(0);
         res
-    }
-}
-
-impl<T> RingBuffer<T>
-where
-    T: ChannelBufferManager,
-{
-    fn read_head_volatile(&self) -> u32 {
-        unsafe { ptr::read_volatile(self.buffer.as_ptr() as *const u32) }
-    }
-
-    fn write_head_volatile(&mut self, head: u32) {
-        unsafe {
-            ptr::write_volatile(self.buffer.as_ptr() as *mut u32, head);
-        }
-    }
-
-    fn read_tail_volatile(&self) -> u32 {
-        unsafe { ptr::read_volatile((self.buffer.as_ptr() as *const u32).add(1)) }
-    }
-
-    fn write_tail_volatile(&mut self, tail: u32) {
-        unsafe {
-            ptr::write_volatile((self.buffer.as_ptr() as *mut u32).add(1), tail);
-        }
-    }
-
-    /// Check how many bytes can be written
-    fn write_capacity(&self, read_head: usize) -> usize {
-        let read_head = if read_head == 0 {
-            self.capacity
-        } else {
-            read_head
-        };
-
-        let cur_tail = self.read_tail_volatile() as usize;
-        if cur_tail >= read_head {
-            self.capacity - cur_tail
-        } else {
-            read_head - cur_tail - 1
-        }
-    }
-
-    /// Check how many bytes can be read
-    fn read_capacity(&self, read_tail: usize) -> usize {
-        let cur_head = self.read_head_volatile() as usize;
-        if read_tail >= cur_head {
-            read_tail - cur_head
-        } else {
-            self.capacity - cur_head
-        }
     }
 }
 
@@ -172,34 +139,53 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::ringbufferchannel::LocalChannelBufferManager;
+impl<T> RingBuffer<T>
+where
+    T: ChannelBufferManager,
+{
+    fn read_head_volatile(&self) -> u32 {
+        unsafe { ptr::read_volatile(self.buffer.as_ptr() as *const u32) }
+    }
 
-    use super::*;
-
-    #[test]
-    fn test_ring_buffer() {
-        let mut buffer = RingBuffer::new(LocalChannelBufferManager::new(1024));
-        assert_eq!(buffer.capacity, 1024 - 8);
-        assert_eq!(buffer.read_head_volatile(), 0);
-        assert_eq!(buffer.read_tail_volatile(), 0);
-
-        let mut src = [0u8; 32];
-
-        for i in 0..src.len() {
-            src[i] = i as u8;
+    fn write_head_volatile(&mut self, head: u32) {
+        unsafe {
+            ptr::write_volatile(self.buffer.as_ptr() as *mut u32, head);
         }
+    }
 
-        buffer.send(&src).unwrap();
-        assert_eq!(buffer.read_tail_volatile(), 32);
+    fn read_tail_volatile(&self) -> u32 {
+        unsafe { ptr::read_volatile((self.buffer.as_ptr() as *const u32).add(1)) }
+    }
 
-        let mut dst = [0u8; 32];
-        buffer.recv(&mut dst).unwrap();
-        assert_eq!(buffer.read_head_volatile(), 32);
+    fn write_tail_volatile(&mut self, tail: u32) {
+        unsafe {
+            ptr::write_volatile((self.buffer.as_ptr() as *mut u32).add(1), tail);
+        }
+    }
 
-        for i in 0..src.len() {
-            assert_eq!(src[i], dst[i]);
+    /// Check how many bytes can be written
+    fn write_capacity(&self, read_head: usize) -> usize {
+        let read_head = if read_head == 0 {
+            self.capacity
+        } else {
+            read_head
+        };
+
+        let cur_tail = self.read_tail_volatile() as usize;
+        if cur_tail >= read_head {
+            self.capacity - cur_tail
+        } else {
+            read_head - cur_tail - 1
+        }
+    }
+
+    /// Check how many bytes can be read
+    fn read_capacity(&self, read_tail: usize) -> usize {
+        let cur_head = self.read_head_volatile() as usize;
+        if read_tail >= cur_head {
+            read_tail - cur_head
+        } else {
+            self.capacity - cur_head
         }
     }
 }

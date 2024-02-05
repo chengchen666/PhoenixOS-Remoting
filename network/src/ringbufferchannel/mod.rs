@@ -1,4 +1,6 @@
 pub mod channel;
+pub use channel::RingBuffer;
+pub mod test;
 
 // Only implemented in Linux now
 #[cfg(target_os = "linux")]
