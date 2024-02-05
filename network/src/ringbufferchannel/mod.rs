@@ -25,7 +25,7 @@ impl LocalChannelBufferManager {
         LocalChannelBufferManager {
             buffer: vec![0; size],
         }
-    }    
+    }
 }
 
 impl ChannelBufferManager for LocalChannelBufferManager {
