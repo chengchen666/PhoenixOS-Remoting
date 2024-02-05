@@ -1,8 +1,10 @@
 use std::error::Error;
-use std::{fmt, mem, ptr, slice};
+use std::fmt;
 
 pub mod buffer;
-pub use buffer::{RawBuffer,BufferError};
+pub use buffer::{BufferError, RawBuffer};
+
+pub mod ringbufferchannel;
 
 #[derive(Debug)]
 pub enum CommChannelError {
@@ -10,6 +12,7 @@ pub enum CommChannelError {
     InvalidOperation,
     IoError,
     Timeout,
+    NoLeftSpace,
     // Add other relevant errors
 }
 
@@ -22,16 +25,24 @@ impl fmt::Display for CommChannelError {
 
 impl Error for CommChannelError {}
 
-
 ///
 /// A communication channel allows TBD
 pub trait CommChannel { 
     /// Write bytes to the channel
     /// It may flush if the channel has no left space
-    fn put_bytes(&mut self, src: &[u8]) -> Result<usize, CommChannelError>;
+    fn send(&mut self, src: &[u8]) -> Result<usize, CommChannelError>;
+
+    /// Non-block version
+    /// Immediately return if error such as no left space
+    fn try_send(&mut self, src: &[u8]) -> Result<usize, CommChannelError>;
 
     /// Read bytes from the channel
-    fn get_bytes(&mut self, dst: &mut [u8]) -> Result<usize, CommChannelError>;
+    /// Wait if dont receive enough bytes
+    fn recv(&mut self, dst: &mut [u8]) -> Result<usize, CommChannelError>;
+
+    /// Non-block version
+    /// Immediately return after receive however long bytes (maybe =0 or <len)
+    fn try_recv(&mut self, dst: &mut [u8]) -> Result<usize, CommChannelError>;
 
     /// Flush the all the buffered results to the channel 
     fn flush_out(&mut self) -> Result<(), CommChannelError>;
