@@ -203,7 +203,7 @@ impl DeviceBuffer for SharedMemoryBuffer {
                 self.flush_out(Some(mode))?;
             }
 
-            let current = std::cmp::min(self.write_capacity(read_head), len);
+            let current: usize = std::cmp::min(self.write_capacity(read_head), len);
             unsafe {
                 std::ptr::copy_nonoverlapping(
                     src.as_ptr().add(offset),

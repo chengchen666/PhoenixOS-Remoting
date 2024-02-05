@@ -5,24 +5,24 @@ use crate::{CommChannel, CommChannelError};
 
 /// A ring buffer where the buffer can be shared between different processes/threads
 /// It uses the head 4B + 4B to store the head and tail
-/// 
-/// # Example 
-/// 
+///
+/// # Example
+///
 /// ```no_compile
 /// use ringbufferchannel::{LocalChannelBufferManager, RingBuffer};
 /// use crate::CommChannel;
-/// 
+///
 /// let mut buffer: RingBuffer<LocalChannelBufferManager> = RingBuffer::new(LocalChannelBufferManager::new(10 + 8));
 /// let data_to_send = [1, 2, 3, 4, 5];
 /// let mut receive_buffer = [0u8; 5];
-/// 
+///
 /// buffer.send(&data_to_send).unwrap();
 /// buffer.recv(&mut receive_buffer).unwrap();
-/// 
+///
 /// assert_eq!(receive_buffer, data_to_send);
-/// 
+///
 /// ```
-/// 
+///
 pub struct RingBuffer<T: ChannelBufferManager> {
     _manager: T,
     buffer: NonNull<u8>,
@@ -60,23 +60,27 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
 
         while len > 0 {
             // current head and tail
-            let read_head = self.read_head_volatile() as usize;
             let read_tail = self.read_tail_volatile() as usize;
 
             // buf_head can be modified by the other side at any time
             // so we need to read it at the beginning and assume it is not changed
-            if (read_tail + 1) % self.capacity == read_head {
+            if self.num_bytes_stored() == self.capacity { 
                 self.flush_out()?;
             }
 
-            let current = std::cmp::min(self.write_capacity(read_head), len);
+            let current = std::cmp::min(self.num_adjacent_bytes_to_write(read_tail), len);
+            
             unsafe {
                 std::ptr::copy_nonoverlapping(
                     src.as_ptr().add(offset),
-                    self.buffer.as_ptr().add(read_tail + std::mem::size_of::<u32>() * 2),
+                    self.buffer
+                        .as_ptr()
+                        .add(read_tail + std::mem::size_of::<u32>() * 2),
                     current,
                 );
             }
+            std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
+
             self.write_tail_volatile(((read_tail + current) % self.capacity) as u32);
             offset += current;
             len -= current;
@@ -104,23 +108,24 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
         let mut offset = 0;
 
         while len > 0 {
-            // buf_tail can be modified by the other side at any time
-            // so we need to read it at the beginning and assume it is not changed
-            let read_tail = self.read_tail_volatile() as usize;
-            let read_head = self.read_head_volatile() as usize;
-
-            if read_tail == read_head {
+            if self.empty() {
                 return Ok(offset);
             }
 
-            let current = std::cmp::min(self.read_capacity(read_tail), len);
+            let read_head = self.read_head_volatile() as usize;
+            let current = std::cmp::min(self.num_adjacent_bytes_to_read(read_head), len);
+
             unsafe {
                 std::ptr::copy_nonoverlapping(
-                    self.buffer.as_ptr().add(read_head + std::mem::size_of::<u32>() * 2),
+                    self.buffer
+                        .as_ptr()
+                        .add(read_head + std::mem::size_of::<u32>() * 2),
                     dst.as_mut_ptr().add(offset),
                     current,
                 );
             }
+
+            std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
             self.write_head_volatile(((read_head + current) % self.capacity) as u32);
             offset += current;
             len -= current;
@@ -130,12 +135,40 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
     }
 
     fn flush_out(&mut self) -> Result<(), CommChannelError> {
-        while (self.read_tail_volatile() as usize + 1) % self.capacity
-            == self.read_head_volatile() as usize
-        {
+        while self.num_bytes_stored() == self.capacity {
             // Busy-waiting
         }
         Ok(())
+    }
+}
+
+impl<T> RingBuffer<T>
+where
+    T: ChannelBufferManager,
+{
+    /// The space that has not been consumed by the consumer
+    #[inline]
+    pub fn num_bytes_free(&self) -> usize {
+        self.capacity - self.num_bytes_stored()
+    }
+
+    #[inline]
+    pub fn num_bytes_stored(&self) -> usize {
+        let head = self.read_head_volatile() as usize;
+        let tail = self.read_tail_volatile() as usize;
+
+        if tail >= head {
+            // Tail is ahead of head
+            tail - head
+        } else {
+            // Head is ahead of tail, buffer is wrapped
+            self.capacity - (head - tail)
+        }        
+    }
+
+    #[inline]
+    pub fn empty(&self) -> bool {
+        self.read_head_volatile() == self.read_tail_volatile()
     }
 }
 
@@ -163,29 +196,28 @@ where
         }
     }
 
-    /// Check how many bytes can be written
-    fn write_capacity(&self, read_head: usize) -> usize {
-        let read_head = if read_head == 0 {
-            self.capacity
-        } else {
-            read_head
-        };
-
+    #[inline]
+    fn num_adjacent_bytes_to_read(&self, cur_head : usize) -> usize {
         let cur_tail = self.read_tail_volatile() as usize;
-        if cur_tail >= read_head {
+        if cur_tail >= cur_head {
+            cur_tail - cur_head 
+        } else {
+            self.capacity - cur_head 
+        }
+    }
+
+    #[inline]
+    fn num_adjacent_bytes_to_write(&self, cur_tail : usize) -> usize { 
+        let mut cur_head = self.read_head_volatile() as usize;        
+        if cur_head == 0 {
+            cur_head = self.capacity;
+        }
+
+        if cur_tail >= cur_head {
             self.capacity - cur_tail
         } else {
-            read_head - cur_tail - 1
+            cur_head - cur_tail - 1
         }
     }
-
-    /// Check how many bytes can be read
-    fn read_capacity(&self, read_tail: usize) -> usize {
-        let cur_head = self.read_head_volatile() as usize;
-        if read_tail >= cur_head {
-            read_tail - cur_head
-        } else {
-            self.capacity - cur_head
-        }
-    }
+    
 }

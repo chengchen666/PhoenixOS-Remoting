@@ -31,6 +31,7 @@ mod tests {
 
     #[test]
     fn wrap_around() {
+        println!("Wrap around test");
         let mut buffer: RingBuffer<LocalChannelBufferManager> =
             RingBuffer::new(LocalChannelBufferManager::new(5 + 8));
 
