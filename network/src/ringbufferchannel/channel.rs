@@ -21,8 +21,7 @@ where
             len >= std::mem::size_of::<u32>() * 2,
             "Buffer size is too small"
         );
-        let buffer: NonNull<u8> =
-            unsafe { NonNull::new(ptr.add(std::mem::size_of::<u32>() * 2)).unwrap() };
+        let buffer: NonNull<u8> = NonNull::new(ptr).unwrap();
 
         let capacity = len - std::mem::size_of::<u32>() * 2;
         let mut res = RingBuffer {
@@ -107,7 +106,7 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
             unsafe {
                 std::ptr::copy_nonoverlapping(
                     src.as_ptr().add(offset),
-                    self.buffer.as_ptr().add(read_tail),
+                    self.buffer.as_ptr().add(read_tail + std::mem::size_of::<u32>() * 2),
                     current,
                 );
             }
@@ -120,18 +119,87 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
     }
 
     fn recv(&mut self, dst: &mut [u8]) -> Result<usize, CommChannelError> {
-        unimplemented!();
+        let mut cur_recv = 0;
+        while cur_recv != dst.len() {
+            let new_dst = &mut dst[cur_recv..];
+            let recv = self.try_recv(new_dst)?;
+            cur_recv += recv;
+        }
+        Ok(cur_recv)
     }
 
     fn try_send(&mut self, _src: &[u8]) -> Result<usize, CommChannelError> {
         unimplemented!()
     }
 
-    fn try_recv(&mut self, _dst: &mut [u8]) -> Result<usize, CommChannelError> {
-        unimplemented!()
+    fn try_recv(&mut self, dst: &mut [u8]) -> Result<usize, CommChannelError> {
+        let mut len = dst.len();
+        let mut offset = 0;
+
+        while len > 0 {
+            // buf_tail can be modified by the other side at any time
+            // so we need to read it at the beginning and assume it is not changed
+            let read_tail = self.read_tail_volatile() as usize;
+            let read_head = self.read_head_volatile() as usize;
+
+            if read_tail == read_head {
+                return Ok(offset);
+            }
+
+            let current = std::cmp::min(self.read_capacity(read_tail), len);
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    self.buffer.as_ptr().add(read_head + std::mem::size_of::<u32>() * 2),
+                    dst.as_mut_ptr().add(offset),
+                    current,
+                );
+            }
+            self.write_head_volatile(((read_head + current) % self.capacity) as u32);
+            offset += current;
+            len -= current;
+        }
+
+        Ok(offset)
     }
 
     fn flush_out(&mut self) -> Result<(), CommChannelError> {
-        unimplemented!()
+        while (self.read_tail_volatile() as usize + 1) % self.capacity
+            == self.read_head_volatile() as usize
+        {
+            // Busy-waiting
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ringbufferchannel::LocalChannelBufferManager;
+
+    use super::*;
+
+    #[test]
+    fn test_ring_buffer() {
+        let mut buffer = RingBuffer::new(LocalChannelBufferManager::new(1024));
+        assert_eq!(buffer.capacity, 1024 - 8);
+        assert_eq!(buffer.read_head_volatile(), 0);
+        assert_eq!(buffer.read_tail_volatile(), 0);
+
+        let mut src = [0u8; 32];
+
+        for i in 0..src.len() {
+            src[i] = i as u8;
+        }
+
+        buffer.send(&src).unwrap();
+        assert_eq!(buffer.read_tail_volatile(), 32);
+
+        let mut dst = [0u8; 32];
+        buffer.recv(&mut dst).unwrap();
+        assert_eq!(buffer.read_head_volatile(), 32);
+
+        for i in 0..src.len() {
+            assert_eq!(src[i], dst[i]);
+        }
     }
 }
