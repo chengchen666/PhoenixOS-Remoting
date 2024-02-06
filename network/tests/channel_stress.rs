@@ -31,9 +31,9 @@ unsafe impl Send for ConsumerManager {}
 
 #[test]
 fn test_ring_buffer_producer_consumer() {
-    let p_shared_buffer =
+    let c_shared_buffer =
         LocalChannelBufferManager::new(1024 + network::ringbufferchannel::channel::META_AREA);
-    let c_shared_buffer = ConsumerManager::new(&p_shared_buffer);
+    let p_shared_buffer = ConsumerManager::new(&c_shared_buffer);
 
     let barrier = Arc::new(Barrier::new(2)); // Set up a barrier for 2 threads
     let producer_barrier = barrier.clone();

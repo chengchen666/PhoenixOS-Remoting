@@ -22,10 +22,18 @@ impl SHMChannelBufferManager {
             shm_name,
             shm_len,
             libc::O_CREAT | libc::O_TRUNC | libc::O_RDWR,
-            (libc::S_IRUSR | libc::S_IWUSR) as i32,
+            (libc::S_IRUSR | libc::S_IWUSR) as _,
         )
     }
 
+    pub fn new_client(shm_name: &str, shm_len: usize) -> Result<Self> {
+        Self::new_inner(
+            shm_name,
+            shm_len,
+            libc::O_RDWR,
+            (libc::S_IRUSR | libc::S_IWUSR) as _,
+        )
+    }
     fn new_inner(shm_name: &str, shm_len: usize, oflag: i32, sflag: i32) -> Result<Self> {
         let shm_name_c_str = CString::new(shm_name).unwrap();
         let fd: RawFd =

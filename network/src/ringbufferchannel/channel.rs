@@ -136,7 +136,7 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
                     current,
                 );
             } 
-            
+
             std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
             assert!(
                 read_head + current <= self.capacity,
@@ -145,7 +145,6 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
                 current,
                 self.capacity
             );
-            println!("update head: {}", read_head + current);
             self.write_head_volatile(((read_head + current) % self.capacity) as u32);
             offset += current;
             len -= current;
@@ -222,7 +221,6 @@ where
         if cur_tail >= cur_head {
             cur_tail - cur_head
         } else {
-            println!("cur_head: {}, cur_tail: {}", cur_head, cur_tail);
             self.capacity - cur_head
         }
     }
