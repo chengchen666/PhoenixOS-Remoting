@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 libc = "*"
 log = "0.4.0"
+errno = "0.2.7" 

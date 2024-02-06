@@ -3,6 +3,14 @@ use std::ptr::{self, NonNull};
 use super::ChannelBufferManager;
 use crate::{CommChannel, CommChannelError};
 
+/// we reserve the first 128B for the header and tailer
+/// 128 = cacheline size * 2
+/// FIXME: should be hardware dependent
+///
+pub const HEAD_OFF: usize = 0;
+pub const TAIL_OFF: usize = 64;
+pub const META_AREA: usize = 128;
+
 /// A ring buffer where the buffer can be shared between different processes/threads
 /// It uses the head 4B + 4B to store the head and tail
 ///
@@ -35,13 +43,15 @@ where
 {
     pub fn new(manager: T) -> RingBuffer<T> {
         let (ptr, len) = manager.get_managed_memory();
+        assert!(len > META_AREA, "Buffer size is too small");
         assert!(
-            len >= std::mem::size_of::<u32>() * 2,
-            "Buffer size is too small"
+            super::utils::is_cache_line_aligned(ptr),
+            "Buffer is not cache line aligned"
         );
+
         let buffer: NonNull<u8> = NonNull::new(ptr).unwrap();
 
-        let capacity = len - std::mem::size_of::<u32>() * 2;
+        let capacity = len - META_AREA;
         let mut res = RingBuffer {
             _manager: manager,
             buffer,
@@ -61,10 +71,11 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
         while len > 0 {
             // current head and tail
             let read_tail = self.read_tail_volatile() as usize;
+            assert!(read_tail < self.capacity, "read_tail: {}", read_tail);
 
             // buf_head can be modified by the other side at any time
             // so we need to read it at the beginning and assume it is not changed
-            if self.num_bytes_stored() == self.capacity { 
+            if self.num_bytes_stored() == self.capacity {
                 self.flush_out()?;
             }
 
@@ -75,10 +86,10 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
                     src.as_ptr().add(offset),
                     self.buffer
                         .as_ptr()
-                        .add(read_tail + std::mem::size_of::<u32>() * 2),
+                        .add(META_AREA).add(read_tail),
                     current,
                 );
-            }
+            } 
             std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
 
             self.write_tail_volatile(((read_tail + current) % self.capacity) as u32);
@@ -113,19 +124,28 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
             }
 
             let read_head = self.read_head_volatile() as usize;
+            assert!(read_head < self.capacity, "read_head: {}", read_head);
             let current = std::cmp::min(self.num_adjacent_bytes_to_read(read_head), len);
 
             unsafe {
                 std::ptr::copy_nonoverlapping(
                     self.buffer
                         .as_ptr()
-                        .add(read_head + std::mem::size_of::<u32>() * 2),
+                        .add(META_AREA).add(read_head),
                     dst.as_mut_ptr().add(offset),
                     current,
                 );
-            }
-
+            } 
+            
             std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
+            assert!(
+                read_head + current <= self.capacity,
+                "read_head: {}, current: {}, capacity: {}",
+                read_head,
+                current,
+                self.capacity
+            );
+            println!("update head: {}", read_head + current);
             self.write_head_volatile(((read_head + current) % self.capacity) as u32);
             offset += current;
             len -= current;
@@ -163,7 +183,7 @@ where
         } else {
             // Head is ahead of tail, buffer is wrapped
             self.capacity - (head - tail)
-        }        
+        }
     }
 
     #[inline]
@@ -177,38 +197,39 @@ where
     T: ChannelBufferManager,
 {
     fn read_head_volatile(&self) -> u32 {
-        unsafe { ptr::read_volatile(self.buffer.as_ptr() as *const u32) }
+        unsafe { ptr::read_volatile(self.buffer.as_ptr().add(HEAD_OFF) as *const u32) }
     }
 
     fn write_head_volatile(&mut self, head: u32) {
         unsafe {
-            ptr::write_volatile(self.buffer.as_ptr() as *mut u32, head);
+            ptr::write_volatile(self.buffer.as_ptr().add(HEAD_OFF) as *mut u32, head);
         }
     }
 
     fn read_tail_volatile(&self) -> u32 {
-        unsafe { ptr::read_volatile((self.buffer.as_ptr() as *const u32).add(1)) }
+        unsafe { ptr::read_volatile(self.buffer.as_ptr().add(TAIL_OFF) as _) }
     }
 
     fn write_tail_volatile(&mut self, tail: u32) {
         unsafe {
-            ptr::write_volatile((self.buffer.as_ptr() as *mut u32).add(1), tail);
+            ptr::write_volatile(self.buffer.as_ptr().add(TAIL_OFF) as _, tail);
         }
     }
 
     #[inline]
-    fn num_adjacent_bytes_to_read(&self, cur_head : usize) -> usize {
+    fn num_adjacent_bytes_to_read(&self, cur_head: usize) -> usize {
         let cur_tail = self.read_tail_volatile() as usize;
         if cur_tail >= cur_head {
-            cur_tail - cur_head 
+            cur_tail - cur_head
         } else {
-            self.capacity - cur_head 
+            println!("cur_head: {}, cur_tail: {}", cur_head, cur_tail);
+            self.capacity - cur_head
         }
     }
 
     #[inline]
-    fn num_adjacent_bytes_to_write(&self, cur_tail : usize) -> usize { 
-        let mut cur_head = self.read_head_volatile() as usize;        
+    fn num_adjacent_bytes_to_write(&self, cur_tail: usize) -> usize {
+        let mut cur_head = self.read_head_volatile() as usize;
         if cur_head == 0 {
             cur_head = self.capacity;
         }
@@ -219,5 +240,4 @@ where
             cur_head - cur_tail - 1
         }
     }
-    
 }

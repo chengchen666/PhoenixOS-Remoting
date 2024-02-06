@@ -31,7 +31,8 @@ unsafe impl Send for ConsumerManager {}
 
 #[test]
 fn test_ring_buffer_producer_consumer() {
-    let p_shared_buffer = LocalChannelBufferManager::new(1024 + 8);
+    let p_shared_buffer =
+        LocalChannelBufferManager::new(1024 + network::ringbufferchannel::channel::META_AREA);
     let c_shared_buffer = ConsumerManager::new(&p_shared_buffer);
 
     let barrier = Arc::new(Barrier::new(2)); // Set up a barrier for 2 threads
@@ -49,6 +50,8 @@ fn test_ring_buffer_producer_consumer() {
             let data = [(i % 256) as u8; 10]; // Simplified data to send
             producer_ring_buffer.send(&data).unwrap();
         }
+
+        println!("Producer done");
     });
 
     // Consumer thread
@@ -71,7 +74,7 @@ fn test_ring_buffer_producer_consumer() {
                 Err(_) => thread::sleep(Duration::from_millis(10)), // Wait if buffer is empty
             }
         }
-    }); 
+    });
 
     // Note: producer must be joined later, since the consumer will reuse the buffer
     consumer.join().unwrap();
