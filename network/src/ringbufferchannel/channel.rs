@@ -37,6 +37,9 @@ pub struct RingBuffer<T: ChannelBufferManager> {
     capacity: usize, // Capacity of the buffer excluding head and tail.
 }
 
+unsafe impl<T: ChannelBufferManager> Send for RingBuffer<T> {}
+unsafe impl<T: ChannelBufferManager> Sync for RingBuffer<T> {}
+
 impl<T> RingBuffer<T>
 where
     T: ChannelBufferManager,
