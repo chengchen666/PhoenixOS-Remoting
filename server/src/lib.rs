@@ -28,9 +28,7 @@ fn create_buffer() -> (
     )
 }
 
-fn receive_request(
-    channel_receiver: &mut RingBuffer<SHMChannelBufferManager>,
-) -> Result<i32, CommChannelError> {
+fn receive_request<T: CommChannel>(channel_receiver: &mut T) -> Result<i32, CommChannelError> {
     let mut proc_id = 0;
     if let Ok(()) = channel_receiver.recv_var(&mut proc_id) {
         Ok(proc_id)
@@ -43,7 +41,11 @@ pub fn launch_server() {
     let (mut channel_sender, mut channel_receiver) = create_buffer();
     info!("[{}:{}] shm buffer created", std::file!(), std::line!());
     if let cudaError_t::cudaSuccess = unsafe { cudaDeviceSynchronize() } {
-        info!("[{}:{}] cuda driver initialized", std::file!(), std::line!());
+        info!(
+            "[{}:{}] cuda driver initialized",
+            std::file!(),
+            std::line!()
+        );
     } else {
         error!(
             "[{}:{}] failed to initialize cuda driver",

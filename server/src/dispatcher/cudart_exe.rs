@@ -1,10 +1,7 @@
 #![allow(non_snake_case)]
 use super::*;
 
-pub fn cudaGetDeviceExe(
-    channel_sender: &mut RingBuffer<SHMChannelBufferManager>,
-    _channel_receiver: &mut RingBuffer<SHMChannelBufferManager>,
-) {
+pub fn cudaGetDeviceExe<T: CommChannel>(channel_sender: &mut T, _channel_receiver: &mut T) {
     info!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
     let mut device: i32 = 0;
     let result = unsafe { cudaGetDevice(&mut device) };
@@ -12,10 +9,7 @@ pub fn cudaGetDeviceExe(
     channel_sender.send_var(&result).unwrap();
 }
 
-pub fn cudaSetDeviceExe(
-    channel_sender: &mut RingBuffer<SHMChannelBufferManager>,
-    channel_receiver: &mut RingBuffer<SHMChannelBufferManager>,
-) {
+pub fn cudaSetDeviceExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
     info!("[{}:{}] cudaSetDevice", std::file!(), std::line!());
     let mut device: i32 = 0;
     channel_receiver.recv_var(&mut device).unwrap();
@@ -23,10 +17,7 @@ pub fn cudaSetDeviceExe(
     channel_sender.send_var(&result).unwrap();
 }
 
-pub fn cudaGetDeviceCountExe(
-    channel_sender: &mut RingBuffer<SHMChannelBufferManager>,
-    _channel_receiver: &mut RingBuffer<SHMChannelBufferManager>,
-) {
+pub fn cudaGetDeviceCountExe<T: CommChannel>(channel_sender: &mut T, _channel_receiver: &mut T) {
     info!("[{}:{}] cudaGetDeviceCount", std::file!(), std::line!());
     let mut count: i32 = 0;
     let result = unsafe { cudaGetDeviceCount(&mut count) };
