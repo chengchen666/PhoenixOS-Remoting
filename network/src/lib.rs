@@ -54,6 +54,21 @@ pub trait CommChannel {
 
     /// Flush the all the buffered results to the channel 
     fn flush_out(&mut self) -> Result<(), CommChannelError>;
+
+    fn send_var<T: SerializeAndDeserialize>(&mut self, value: &T) -> Result<(), CommChannelError> {
+        let buf = value.to_bytes()?;
+        let len = self.send(&buf)?;
+        if len != buf.len() {
+            return Err(CommChannelError::IoError);
+        }
+        Ok(())
+    }
+
+    fn recv_var<T: SerializeAndDeserialize>(&mut self, value: &mut T) -> Result<(), CommChannelError> {
+        let mut buf = vec![0u8; std::mem::size_of::<T>()];
+        let len = self.recv(&mut buf)?;
+        value.from_bytes(&buf[0..len].to_vec())
+    }
 }
 
 ///
@@ -64,19 +79,4 @@ pub trait SerializeAndDeserialize{
 
     /// Deserialize the type from bytes
     fn from_bytes(&mut self, src: &Vec<u8>) -> Result<(), CommChannelError>;
-}
-
-pub fn serialize<T: SerializeAndDeserialize, C: CommChannel>(value: &T, channel: &mut C) -> Result<(), CommChannelError> {
-    let buf = value.to_bytes()?;
-    let len = channel.send(&buf)?;
-    if len != buf.len() {
-        return Err(CommChannelError::IoError);
-    }
-    Ok(())
-}
-
-pub fn deserialize<T: SerializeAndDeserialize, C: CommChannel>(value: &mut T, channel: &mut C) -> Result<(), CommChannelError> {
-    let mut buf = vec![0u8; std::mem::size_of::<T>()];
-    let len = channel.recv(&mut buf)?;
-    value.from_bytes(&buf[0..len].to_vec())
 }
