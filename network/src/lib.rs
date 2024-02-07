@@ -1,10 +1,18 @@
 use std::error::Error;
 use std::fmt;
 
+extern crate num;
+pub use num::FromPrimitive;
+#[macro_use]
+extern crate num_derive;
+
 pub mod buffer;
 pub use buffer::{BufferError, RawBuffer};
 
 pub mod ringbufferchannel;
+pub mod type_impl;
+
+pub use type_impl::cudaError_t;
 
 #[derive(Debug)]
 pub enum CommChannelError {
@@ -46,4 +54,29 @@ pub trait CommChannel {
 
     /// Flush the all the buffered results to the channel 
     fn flush_out(&mut self) -> Result<(), CommChannelError>;
+}
+
+///
+/// The type can be transfered by the channel
+pub trait SerializeAndDeserialize{
+    /// Serialize the type to bytes
+    fn to_bytes(&self) -> Result<Vec<u8>, CommChannelError>;
+
+    /// Deserialize the type from bytes
+    fn from_bytes(&mut self, src: &Vec<u8>) -> Result<(), CommChannelError>;
+}
+
+pub fn serialize<T: SerializeAndDeserialize, C: CommChannel>(value: &T, channel: &mut C) -> Result<(), CommChannelError> {
+    let buf = value.to_bytes()?;
+    let len = channel.send(&buf)?;
+    if len != buf.len() {
+        return Err(CommChannelError::IoError);
+    }
+    Ok(())
+}
+
+pub fn deserialize<T: SerializeAndDeserialize, C: CommChannel>(value: &mut T, channel: &mut C) -> Result<(), CommChannelError> {
+    let mut buf = vec![0u8; std::mem::size_of::<T>()];
+    let len = channel.recv(&mut buf)?;
+    value.from_bytes(&buf[0..len].to_vec())
 }
