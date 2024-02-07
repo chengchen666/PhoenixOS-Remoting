@@ -115,7 +115,7 @@ mod tests {
         let value: u32 = 42;
 
         unsafe {
-            assert!(buffer.append(value).is_ok());
+            assert!(buffer.append(&value).is_ok());
         }
 
         let buffer_slice = buffer.as_slice();
@@ -132,7 +132,7 @@ mod tests {
         let mut buffer = RawBuffer::new(4); // small buffer
         let value: u64 = 123456789; // 8 bytes, too large for the buffer
 
-        let result = unsafe { buffer.append(value) };
+        let result = unsafe { buffer.append(&value) };
         assert!(result.is_err());
     }
 
@@ -140,14 +140,14 @@ mod tests {
     fn test_buffer_capacity_limit() {
         let mut buffer = RawBuffer::new(8); // buffer for exactly two u32 values
         unsafe {
-            assert!(buffer.append(1u32).is_ok());
-            assert!(buffer.append(2u32).is_ok());
+            assert!(buffer.append(&1u32).is_ok());
+            assert!(buffer.append(&2u32).is_ok());
         }
 
         assert_eq!(buffer.size, 8);
         assert_eq!(buffer.capacity, 8);
 
-        let result = unsafe { buffer.append(3u32) }; // should fail, no space left
+        let result = unsafe { buffer.append(&3u32) }; // should fail, no space left
         assert!(result.is_err());
     }
 }

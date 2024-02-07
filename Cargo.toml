@@ -3,4 +3,5 @@ members = [
     "device_buffer",
     "client",
     "server",
+    "network",
 ]
