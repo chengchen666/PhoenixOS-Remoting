@@ -14,6 +14,10 @@ pub mod utils;
 
 pub const CACHE_LINE_SZ: usize = 64;
 
+pub const SHM_SIZE: usize = 104857520;
+pub const SHM_NAME_STOC: &str = "/stoc";
+pub const SHM_NAME_CTOS: &str = "/ctos";
+
 /// A ring buffer can use arbitrary memory for its channel
 ///
 /// It will manage the following:

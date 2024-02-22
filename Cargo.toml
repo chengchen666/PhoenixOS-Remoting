@@ -5,3 +5,5 @@ members = [
     "server",
     "network",
 ]
+
+resolver = "2"

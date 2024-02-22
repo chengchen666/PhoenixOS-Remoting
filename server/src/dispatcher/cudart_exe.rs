@@ -1,29 +1,29 @@
 #![allow(non_snake_case)]
 use super::*;
 
-pub fn cudaGetDeviceExe(buffer_sender: &SharedMemoryBuffer, _buffer_receiver: &SharedMemoryBuffer) {
-    info!("[{}:{}] cudaGetDevice", std::file!(), function!());
+pub fn cudaGetDeviceExe<T: CommChannel>(channel_sender: &mut T, _channel_receiver: &mut T) {
+    info!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
     let mut device: i32 = 0;
     let result = unsafe { cudaGetDevice(&mut device) };
-    serialize_i32(&device, buffer_sender).unwrap();
-    serialize_cudaError_t(&result, buffer_sender).unwrap();
+    channel_sender.send_var(&device).unwrap();
+    channel_sender.send_var(&result).unwrap();
+    channel_sender.flush_out().unwrap();
 }
 
-pub fn cudaSetDeviceExe(buffer_sender: &SharedMemoryBuffer, buffer_receiver: &SharedMemoryBuffer) {
-    info!("[{}:{}] cudaSetDevice", std::file!(), function!());
+pub fn cudaSetDeviceExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+    info!("[{}:{}] cudaSetDevice", std::file!(), std::line!());
     let mut device: i32 = 0;
-    deserialize_i32(&mut device, buffer_receiver).unwrap();
+    channel_receiver.recv_var(&mut device).unwrap();
     let result = unsafe { cudaSetDevice(device) };
-    serialize_cudaError_t(&result, buffer_sender).unwrap();
+    channel_sender.send_var(&result).unwrap();
+    channel_sender.flush_out().unwrap();
 }
 
-pub fn cudaGetDeviceCountExe(
-    buffer_sender: &SharedMemoryBuffer,
-    _buffer_receiver: &SharedMemoryBuffer,
-) {
-    info!("[{}:{}] cudaGetDeviceCount", std::file!(), function!());
+pub fn cudaGetDeviceCountExe<T: CommChannel>(channel_sender: &mut T, _channel_receiver: &mut T) {
+    info!("[{}:{}] cudaGetDeviceCount", std::file!(), std::line!());
     let mut count: i32 = 0;
     let result = unsafe { cudaGetDeviceCount(&mut count) };
-    serialize_i32(&count, buffer_sender).unwrap();
-    serialize_cudaError_t(&result, buffer_sender).unwrap();
+    channel_sender.send_var(&count).unwrap();
+    channel_sender.send_var(&result).unwrap();
+    channel_sender.flush_out().unwrap();
 }

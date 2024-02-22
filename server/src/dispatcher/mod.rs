@@ -3,17 +3,18 @@ use super::*;
 mod cudart_exe;
 use self::cudart_exe::*;
 
-pub fn dispatch(
-    proc_id: i32,
-    buffer_sender: &SharedMemoryBuffer,
-    buffer_receiver: &SharedMemoryBuffer,
-) {
+pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_receiver: &mut T) {
     match proc_id {
-        0 => cudaGetDeviceExe(buffer_sender, buffer_receiver),
-        1 => cudaSetDeviceExe(buffer_sender, buffer_receiver),
-        2 => cudaGetDeviceCountExe(buffer_sender, buffer_receiver),
+        0 => cudaGetDeviceExe(channel_sender, channel_receiver),
+        1 => cudaSetDeviceExe(channel_sender, channel_receiver),
+        2 => cudaGetDeviceCountExe(channel_sender, channel_receiver),
         other => {
-            error!("[{}:{}] invalid proc_id: {}", std::file!(), function!(), other);
+            error!(
+                "[{}:{}] invalid proc_id: {}",
+                std::file!(),
+                std::line!(),
+                other
+            );
         }
     }
 }

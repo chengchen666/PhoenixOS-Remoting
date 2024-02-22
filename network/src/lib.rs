@@ -1,10 +1,20 @@
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
 use std::error::Error;
 use std::fmt;
+
+extern crate num;
+pub use num::FromPrimitive;
+#[macro_use]
+extern crate num_derive;
 
 pub mod buffer;
 pub use buffer::{BufferError, RawBuffer};
 
 pub mod ringbufferchannel;
+pub mod type_impl;
+
+pub use type_impl::cudaError_t;
 
 #[derive(Debug)]
 pub enum CommChannelError {
@@ -27,7 +37,7 @@ impl Error for CommChannelError {}
 
 ///
 /// A communication channel allows TBD
-pub trait CommChannel { 
+pub trait CommChannel {
     /// Write bytes to the channel
     /// It may flush if the channel has no left space
     fn send(&mut self, src: &[u8]) -> Result<usize, CommChannelError>;
@@ -44,6 +54,45 @@ pub trait CommChannel {
     /// Immediately return after receive however long bytes (maybe =0 or <len)
     fn try_recv(&mut self, dst: &mut [u8]) -> Result<usize, CommChannelError>;
 
-    /// Flush the all the buffered results to the channel 
+    /// Flush the all the buffered results to the channel
     fn flush_out(&mut self) -> Result<(), CommChannelError>;
+
+    /// Send a variable to the channel
+    fn send_var<T: SerializeAndDeserialize>(&mut self, value: &T) -> Result<(), CommChannelError>
+    where
+        [(); std::mem::size_of::<T>()]:,
+    {
+        let buf = value.to_bytes()?;
+        let len = self.send(&buf)?;
+        if len != buf.len() {
+            return Err(CommChannelError::IoError);
+        }
+        Ok(())
+    }
+
+    /// Receive a variable from the channel
+    fn recv_var<T: SerializeAndDeserialize>(
+        &mut self,
+        value: &mut T,
+    ) -> Result<(), CommChannelError>
+    where
+        [(); std::mem::size_of::<T>()]:,
+    {
+        let mut buf = [0u8; std::mem::size_of::<T>()];
+        let len = self.recv(&mut buf)?;
+        value.from_bytes(&buf[0..len])
+    }
+}
+
+///
+/// The type can be transfered by the channel
+/// Every type wanted to be transfered should implement this trait
+pub trait SerializeAndDeserialize: Sized {
+    /// TODO: compare with arena
+
+    /// Serialize the type to bytes
+    fn to_bytes(&self) -> Result<[u8; std::mem::size_of::<Self>()], CommChannelError>;
+
+    /// Deserialize the type from bytes
+    fn from_bytes(&mut self, src: &[u8]) -> Result<(), CommChannelError>;
 }

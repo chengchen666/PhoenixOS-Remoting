@@ -1,23 +1,27 @@
 #[macro_use]
 extern crate lazy_static;
 
-extern crate device_buffer;
-use device_buffer::*;
+extern crate network;
+use network::{
+    cudaError_t,
+    ringbufferchannel::{
+        RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
+    },
+    CommChannel,
+};
 
 pub mod cuda_hijack;
 pub use cuda_hijack::*;
 
+use std::sync::Mutex;
+
 lazy_static! {
-    static ref BUFFER_SENDER: SharedMemoryBuffer = {
-        let buf =
-            SharedMemoryBuffer::new(BufferPrivilege::BufferGuest, SHM_NAME_CTOS, SHM_BUFFER_SIZE)
-                .unwrap();
-        buf
+    static ref CHANNEL_SENDER: Mutex<RingBuffer<SHMChannelBufferManager>> = {
+        let manager = SHMChannelBufferManager::new_client(SHM_NAME_CTOS, SHM_SIZE).unwrap();
+        Mutex::new(RingBuffer::new(manager))
     };
-    static ref BUFFER_RECEIVER: SharedMemoryBuffer = {
-        let buf =
-            SharedMemoryBuffer::new(BufferPrivilege::BufferGuest, SHM_NAME_STOC, SHM_BUFFER_SIZE)
-                .unwrap();
-        buf
+    static ref CHANNEL_RECEIVER: Mutex<RingBuffer<SHMChannelBufferManager>> = {
+        let manager = SHMChannelBufferManager::new_client(SHM_NAME_STOC, SHM_SIZE).unwrap();
+        Mutex::new(RingBuffer::new(manager))
     };
 }
