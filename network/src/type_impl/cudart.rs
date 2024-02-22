@@ -121,13 +121,13 @@ pub enum cudaError {
 pub use self::cudaError as cudaError_t;
 
 impl SerializeAndDeserialize for cudaError_t {
-    fn to_bytes(&self) -> Result<Vec<u8>, CommChannelError> {
+    fn to_bytes(&self) -> Result<[u8; std::mem::size_of::<Self>()], CommChannelError> {
         let buf = (*self as u32).to_ne_bytes();
-        Ok(buf.to_vec())
+        Ok(buf)
     }
 
-    fn from_bytes(&mut self, src: &Vec<u8>) -> Result<(), CommChannelError> {
-        if src.len() < std::mem::size_of::<cudaError_t>() {
+    fn from_bytes(&mut self, src: &[u8]) -> Result<(), CommChannelError> {
+        if src.len() < std::mem::size_of::<Self>() {
             return Err(CommChannelError::IoError);
         }
         match cudaError_t::from_u32(u32::from_ne_bytes(src[0..std::mem::size_of::<cudaError_t>()].try_into().unwrap())) {

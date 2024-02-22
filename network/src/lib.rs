@@ -1,3 +1,5 @@
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
 use std::error::Error;
 use std::fmt;
 
@@ -35,7 +37,7 @@ impl Error for CommChannelError {}
 
 ///
 /// A communication channel allows TBD
-pub trait CommChannel { 
+pub trait CommChannel {
     /// Write bytes to the channel
     /// It may flush if the channel has no left space
     fn send(&mut self, src: &[u8]) -> Result<usize, CommChannelError>;
@@ -52,11 +54,14 @@ pub trait CommChannel {
     /// Immediately return after receive however long bytes (maybe =0 or <len)
     fn try_recv(&mut self, dst: &mut [u8]) -> Result<usize, CommChannelError>;
 
-    /// Flush the all the buffered results to the channel 
+    /// Flush the all the buffered results to the channel
     fn flush_out(&mut self) -> Result<(), CommChannelError>;
 
     /// Send a variable to the channel and *flush*
-    fn send_var<T: SerializeAndDeserialize>(&mut self, value: &T) -> Result<(), CommChannelError> {
+    fn send_var<T: SerializeAndDeserialize>(&mut self, value: &T) -> Result<(), CommChannelError>
+    where
+        [(); std::mem::size_of::<T>()]:,
+    {
         let buf = value.to_bytes()?;
         let len = self.send(&buf)?;
         if len != buf.len() {
@@ -67,8 +72,14 @@ pub trait CommChannel {
     }
 
     /// Receive a variable from the channel
-    fn recv_var<T: SerializeAndDeserialize>(&mut self, value: &mut T) -> Result<(), CommChannelError> {
-        let mut buf = vec![0u8; std::mem::size_of::<T>()];
+    fn recv_var<T: SerializeAndDeserialize>(
+        &mut self,
+        value: &mut T,
+    ) -> Result<(), CommChannelError>
+    where
+        [(); std::mem::size_of::<T>()]:,
+    {
+        let mut buf = [0u8; std::mem::size_of::<T>()];
         let len = self.recv(&mut buf)?;
         value.from_bytes(&buf[0..len].to_vec())
     }
@@ -76,10 +87,10 @@ pub trait CommChannel {
 
 ///
 /// The type can be transfered by the channel
-pub trait SerializeAndDeserialize{
+pub trait SerializeAndDeserialize: Sized {
     /// Serialize the type to bytes
-    fn to_bytes(&self) -> Result<Vec<u8>, CommChannelError>;
+    fn to_bytes(&self) -> Result<[u8; std::mem::size_of::<Self>()], CommChannelError>;
 
     /// Deserialize the type from bytes
-    fn from_bytes(&mut self, src: &Vec<u8>) -> Result<(), CommChannelError>;
+    fn from_bytes(&mut self, src: &[u8]) -> Result<(), CommChannelError>;
 }
