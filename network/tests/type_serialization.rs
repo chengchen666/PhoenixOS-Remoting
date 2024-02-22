@@ -50,6 +50,7 @@ fn test_cudaerror() {
                 None => panic!("failed to convert from u32"),
             };
             producer_ring_buffer.send_var(&var).unwrap();
+            producer_ring_buffer.flush_out().unwrap();
         }
 
         println!("Producer done");
