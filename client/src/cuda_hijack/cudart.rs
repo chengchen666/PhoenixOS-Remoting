@@ -11,6 +11,11 @@ pub extern "C" fn cudaGetDevice(device: *mut ::std::os::raw::c_int) -> cudaError
         Ok(_) => {}
         Err(e) => panic!("failed to serialize proc_id: {:?}", e),
     }
+    match CHANNEL_SENDER.lock().unwrap().flush_out() {
+        Ok(_) => {}
+        Err(e) => panic!("failed to send: {:?}", e),
+    }
+
     match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut dev) {
         Ok(_) => {}
         Err(e) => panic!("failed to deserialize dev: {:?}", e),
@@ -39,6 +44,11 @@ pub extern "C" fn cudaSetDevice(device: ::std::os::raw::c_int) -> cudaError_t {
         Ok(_) => {}
         Err(e) => panic!("failed to serialize dev: {:?}", e),
     }
+    match CHANNEL_SENDER.lock().unwrap().flush_out() {
+        Ok(_) => {}
+        Err(e) => panic!("failed to send: {:?}", e),
+    }
+
     match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut result) {
         Ok(_) => {}
         Err(e) => panic!("failed to deserialize result: {:?}", e),
@@ -56,6 +66,11 @@ pub extern "C" fn cudaGetDeviceCount(count: *mut ::std::os::raw::c_int) -> cudaE
         Ok(_) => {}
         Err(e) => panic!("failed to serialize proc_id: {:?}", e),
     }
+    match CHANNEL_SENDER.lock().unwrap().flush_out() {
+        Ok(_) => {}
+        Err(e) => panic!("failed to send: {:?}", e),
+    }
+
     match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut cnt) {
         Ok(_) => {}
         Err(e) => panic!("failed to deserialize cnt: {:?}", e),

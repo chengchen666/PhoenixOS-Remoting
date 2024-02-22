@@ -57,7 +57,7 @@ pub trait CommChannel {
     /// Flush the all the buffered results to the channel
     fn flush_out(&mut self) -> Result<(), CommChannelError>;
 
-    /// Send a variable to the channel and *flush*
+    /// Send a variable to the channel
     fn send_var<T: SerializeAndDeserialize>(&mut self, value: &T) -> Result<(), CommChannelError>
     where
         [(); std::mem::size_of::<T>()]:,
@@ -67,7 +67,6 @@ pub trait CommChannel {
         if len != buf.len() {
             return Err(CommChannelError::IoError);
         }
-        self.flush_out()?;
         Ok(())
     }
 
@@ -89,7 +88,7 @@ pub trait CommChannel {
 /// The type can be transfered by the channel
 pub trait SerializeAndDeserialize: Sized {
     /// TODO: compare with arena
-    
+
     /// Serialize the type to bytes
     fn to_bytes(&self) -> Result<[u8; std::mem::size_of::<Self>()], CommChannelError>;
 

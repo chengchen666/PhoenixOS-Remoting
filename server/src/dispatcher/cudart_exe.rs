@@ -7,6 +7,7 @@ pub fn cudaGetDeviceExe<T: CommChannel>(channel_sender: &mut T, _channel_receive
     let result = unsafe { cudaGetDevice(&mut device) };
     channel_sender.send_var(&device).unwrap();
     channel_sender.send_var(&result).unwrap();
+    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudaSetDeviceExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
@@ -15,6 +16,7 @@ pub fn cudaSetDeviceExe<T: CommChannel>(channel_sender: &mut T, channel_receiver
     channel_receiver.recv_var(&mut device).unwrap();
     let result = unsafe { cudaSetDevice(device) };
     channel_sender.send_var(&result).unwrap();
+    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudaGetDeviceCountExe<T: CommChannel>(channel_sender: &mut T, _channel_receiver: &mut T) {
@@ -23,4 +25,5 @@ pub fn cudaGetDeviceCountExe<T: CommChannel>(channel_sender: &mut T, _channel_re
     let result = unsafe { cudaGetDeviceCount(&mut count) };
     channel_sender.send_var(&count).unwrap();
     channel_sender.send_var(&result).unwrap();
+    channel_sender.flush_out().unwrap();
 }
