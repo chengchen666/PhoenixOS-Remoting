@@ -88,6 +88,8 @@ pub trait CommChannel {
 ///
 /// The type can be transfered by the channel
 pub trait SerializeAndDeserialize: Sized {
+    /// TODO: compare with arena
+    
     /// Serialize the type to bytes
     fn to_bytes(&self) -> Result<[u8; std::mem::size_of::<Self>()], CommChannelError>;
 
