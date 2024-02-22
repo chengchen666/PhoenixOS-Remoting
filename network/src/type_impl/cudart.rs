@@ -151,4 +151,13 @@ mod tests{
             None => panic!("failed to convert from u32"),
         }
     }
+
+    #[test]
+    fn test_cudaError_t_sd() {
+        let a = cudaError_t::cudaErrorInvalidValue;
+        let mut b = cudaError_t::cudaSuccess;
+        let buf = a.to_bytes().unwrap();
+        b.from_bytes(&buf).unwrap();
+        assert_eq!(a, b);
+    }
 }

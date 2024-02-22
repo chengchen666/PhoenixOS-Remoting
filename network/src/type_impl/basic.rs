@@ -14,3 +14,18 @@ impl SerializeAndDeserialize for i32 {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Test i32 SerializeAndDeserialize impl
+    #[test]
+    fn test_i32_sd() {
+        let a = 123;
+        let mut b = 0;
+        let buf = a.to_bytes().unwrap();
+        b.from_bytes(&buf).unwrap();
+        assert_eq!(a, b);
+    }
+}
