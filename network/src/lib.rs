@@ -81,7 +81,7 @@ pub trait CommChannel {
     {
         let mut buf = [0u8; std::mem::size_of::<T>()];
         let len = self.recv(&mut buf)?;
-        value.from_bytes(&buf[0..len].to_vec())
+        value.from_bytes(&buf[0..len])
     }
 }
 
