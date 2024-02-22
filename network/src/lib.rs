@@ -86,6 +86,7 @@ pub trait CommChannel {
 
 ///
 /// The type can be transfered by the channel
+/// Every type wanted to be transfered should implement this trait
 pub trait SerializeAndDeserialize: Sized {
     /// TODO: compare with arena
 
