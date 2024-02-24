@@ -37,9 +37,13 @@ use utils::{Element, ElementMode};
 /// ```ignore
 /// pub fn cudaSetDeviceExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
 ///     info!("[{}:{}] cudaSetDevice", std::file!(), std::line!());
+///
 ///     let mut param1: ::std::os::raw::c_int = Default::default();
+///
 ///     channel_receiver.recv_var(&mut param1).unwrap();
+///
 ///     let result = unsafe { cudaSetDevice(param1) };
+///
 ///     channel_sender.send_var(&result).unwrap();
 ///     channel_sender.flush_out().unwrap();
 /// }
