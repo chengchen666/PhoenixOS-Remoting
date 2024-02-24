@@ -13,31 +13,37 @@ use utils::{Element, ElementMode};
 
 /// The procedural macro to generate execution functions for the server dispatcher.
 ///
-/// ### Example
 /// To use this macro, annotate a call to `gen_exe` with the desired function name as the first
-/// string literal argument, followed by the types of the parameters as string literals.
+/// string literal argument, followed by the types of the return and parameters as string literals.
 ///
+/// ### Example
+/// We have a function `cudaSetDevice` with the following signature:
+///
+/// ```ignore
 /// pub fn cudaSetDevice(device: ::std::os::raw::c_int) -> cudaError_t;
-/// gen_exe!("cudaSetDevice", "cudaError_t", "::std::os::raw::c_int");
+/// ```
 ///
-/// This invocation generates a function `myFunctionExe` with channel_sender and channel_receiver for communication.
-/// When `myFunction` is called with values for these parameters, it serializes
-/// each parameter's into the buffer.
+/// To use this macro generating a helper function for the server dispatcher, we can write:
+///
+/// ```ignore
+/// gen_exe!("cudaSetDevice", "cudaError_t", "::std::os::raw::c_int");
+/// ```
+///
+/// This invocation generates a function `cudaSetDeviceExe` with `channel_sender` and `channel_receiver` for communication.
+/// `cudaSetDeviceExe` will be called by the server dispatcher to execute the native `cudaSetDevice` function and send the result back to the client.
 ///
 /// Specifically, the function is expanded as:
 ///
+/// ```ignore
 /// pub fn cudaSetDeviceExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
 ///     info!("[{}:{}] cudaSetDevice", std::file!(), std::line!());
-///
 ///     let mut param1: ::std::os::raw::c_int = Default::default();
-///
 ///     channel_receiver.recv_var(&mut param1).unwrap();
-///
 ///     let result = unsafe { cudaSetDevice(param1) };
-///
 ///     channel_sender.send_var(&result).unwrap();
 ///     channel_sender.flush_out().unwrap();
 /// }
+/// ```
 ///
 #[proc_macro]
 pub fn gen_exe(input: TokenStream) -> TokenStream {
