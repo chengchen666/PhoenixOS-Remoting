@@ -2,11 +2,13 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_macro_input, Ident, Lit, NestedMeta};
+use syn::{
+    parse_macro_input,
+    AttributeArgs, Ident, Lit, NestedMeta,
+};
 
 mod utils;
-use utils::{Element, ElementMode};
-
+use utils::{Element, ElementMode, HijackInput};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The collection of the procedural macro to generate Rust functions for client usage.
@@ -41,8 +43,8 @@ use utils::{Element, ElementMode};
 ///     println!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
 ///     let proc_id = 0;
 ///     let mut var1 = Default::default();
-///     let mut result = cudaError_t::cudaSuccess;
-/// 
+///     let mut result = Default::default();
+///
 ///     match CHANNEL_SENDER.lock().unwrap().send_var(&proc_id) {
 ///         Ok(_) => {}
 ///         Err(e) => panic!("failed to serialize proc_id: {:?}", e),
@@ -51,7 +53,7 @@ use utils::{Element, ElementMode};
 ///         Ok(_) => {}
 ///         Err(e) => panic!("failed to send: {:?}", e),
 ///     }
-/// 
+///
 ///     match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut var1) {
 ///         Ok(_) => {}
 ///         Err(e) => panic!("failed to deserialize var1: {:?}", e),
@@ -69,106 +71,96 @@ use utils::{Element, ElementMode};
 ///
 #[proc_macro]
 pub fn gen_hijack(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as syn::AttributeArgs);
+    let input = parse_macro_input!(input as HijackInput);
 
-    let func = match &input[0] {
-        NestedMeta::Lit(Lit::Str(lit_str)) => Ident::new(&lit_str.value(), lit_str.span()),
-        _ => panic!("Expected first argument to be a string literal for function name"),
-    };
+    let (proc_id, func, result, params) = (input.proc_id, input.func, input.result, input.params);
 
-    let func_exe = Ident::new(&format!("{}Exe", func), func.span());
-
-    let mut input = input.iter();
-
-    let result = match input.nth(1).unwrap() {
-        NestedMeta::Lit(Lit::Str(lit_str)) => {
-            let ty = syn::parse_str::<syn::Type>(&lit_str.value()).expect("Expected valid type");
-            Element {
-                name: format_ident!("result"),
-                ty: ty,
-                mode: ElementMode::Output,
-            }
-        }
-        _ => panic!("Expected type as a string literal"),
-    };
-
-    let params: Vec<Element> = input
+    let vars: Vec<Element> = params
+        .iter()
+        .filter(|param| param.mode == ElementMode::Output)
         .enumerate()
-        .map(|(i, arg)| {
-            match arg {
-                NestedMeta::Lit(Lit::Str(lit_str)) => {
-                    // list_str can be: - "type", - "*mut type"
-                    let mut ty_str = lit_str.value();
-                    if ty_str.starts_with("*mut ") {
-                        ty_str = ty_str.replace("*mut ", "");
-                        let ty = syn::parse_str::<syn::Type>(&ty_str).expect("Expected valid type");
-                        Element {
-                            name: format_ident!("param{}", i + 1),
-                            ty: ty,
-                            mode: ElementMode::Output,
-                        }
-                    } else {
-                        let ty = syn::parse_str::<syn::Type>(&ty_str).expect("Expected valid type");
-                        Element {
-                            name: format_ident!("param{}", i + 1),
-                            ty: ty,
-                            mode: ElementMode::Input,
-                        }
-                    }
-                }
-                _ => panic!("Expected type as a string literal"),
-            }
+        .map(|(i, param)| Element {
+            name: format_ident!("var{}", i + 1),
+            ty: param.ty.clone(),
+            mode: ElementMode::Output,
         })
         .collect();
 
     // definition statements
-    let def_statements = params.iter().map(|param| {
-        let name = &param.name;
-        let ty = &param.ty;
+    let def_statements = vars.iter().map(|var| {
+        let name = &var.name;
+        let ty = &var.ty;
         quote! { let mut #name: #ty = Default::default(); }
     });
 
-    // receive parameters
-    let recv_statements = params
+    // send parameters
+    let send_statements = params
         .iter()
         .filter(|param| param.mode == ElementMode::Input)
         .map(|param| {
             let name = &param.name;
-            quote! { channel_receiver.recv_var(&mut #name).unwrap(); }
-        });
-
-    // execution statement
-    let exec_statement = {
-        let result_name = &result.name;
-        let result_ty = &result.ty;
-        let params = params.iter().map(|param| {
-            let name = &param.name;
-            match param.mode {
-                ElementMode::Input => quote! { #name },
-                ElementMode::Output => quote! { &mut #name },
+            quote! {
+                match CHANNEL_SENDER.lock().unwrap().send_var(&#name) {
+                    Ok(_) => {}
+                    Err(e) => panic!("failed to serialize #name: {:?}", e),
+                }
             }
         });
-        quote! { let #result_name: #result_ty = unsafe { #func(#(#params),*) }; }
-    };
 
-    // send result
-    let send_statements = params
+    // receive vars
+    let recv_statements = vars.iter().map(|var| {
+        let name = &var.name;
+        quote! {
+            match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut #name) {
+                Ok(_) => {}
+                Err(e) => panic!("failed to deserialize #name: {:?}", e),
+            }
+        }
+    });
+
+    // assign vars to params
+    let assign_statements = params
         .iter()
         .filter(|param| param.mode == ElementMode::Output)
-        .map(|param| {
-            let name = &param.name;
-            quote! { channel_sender.send_var(&#name).unwrap(); }
+        .zip(vars.iter())
+        .map(|(param, var)| {
+            let param_name = &param.name;
+            let var_name = &var.name;
+            quote! { unsafe { *#param_name = #var_name; } }
         });
 
+    let params = params.iter().map(|param| {
+        let name = &param.name;
+        let ty = &param.ty;
+        quote! { #name: #ty }
+    });
+    let result_name = &result.name;
+    let result_ty = &result.ty;
     let gen_fn = quote! {
-        pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+        // BUG: #[no_mangle] can't use in quote
+        pub extern "C" fn #func(#(#params),*) -> #result_ty {
+            println!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            let proc_id = #proc_id;
             #( #def_statements )*
-            #( #recv_statements )*
-            #exec_statement
+            let mut #result_name: #result_ty = Default::default();
+
+            match CHANNEL_SENDER.lock().unwrap().send_var(&proc_id) {
+                Ok(_) => {}
+                Err(e) => panic!("failed to serialize proc_id: {:?}", e),
+            }
             #( #send_statements )*
-            channel_sender.send_var(&result).unwrap();
-            channel_sender.flush_out().unwrap();
+            match CHANNEL_SENDER.lock().unwrap().flush_out() {
+                Ok(_) => {}
+                Err(e) => panic!("failed to send: {:?}", e),
+            }
+
+            #( #recv_statements )*
+            #( #assign_statements )*
+            match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut result) {
+                Ok(_) => {}
+                Err(e) => panic!("failed to deserialize result: {:?}", e),
+            }
+            return result;
         }
     };
 
