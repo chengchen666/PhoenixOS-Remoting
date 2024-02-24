@@ -2,10 +2,11 @@
 use super::*;
 
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, FromPrimitive)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, PartialOrd, Ord, FromPrimitive)]
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
 pub enum cudaError {
+    #[default]
     cudaSuccess = 0,
     cudaErrorInvalidValue = 1,
     cudaErrorMemoryAllocation = 2,

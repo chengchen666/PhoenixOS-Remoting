@@ -5,7 +5,7 @@ pub extern "C" fn cudaGetDevice(param1: *mut ::std::os::raw::c_int) -> cudaError
     println!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
     let proc_id = 0;
     let mut var1 = Default::default();
-    let mut result = cudaError_t::cudaSuccess;
+    let mut result = Default::default();
 
     match CHANNEL_SENDER.lock().unwrap().send_var(&proc_id) {
         Ok(_) => {}
@@ -34,7 +34,7 @@ pub extern "C" fn cudaGetDevice(param1: *mut ::std::os::raw::c_int) -> cudaError
 pub extern "C" fn cudaSetDevice(param1: ::std::os::raw::c_int) -> cudaError_t {
     println!("[{}:{}] cudaSetDevice", std::file!(), std::line!());
     let proc_id = 1;
-    let mut result = cudaError_t::cudaSuccess;
+    let mut result = Default::default();
     match CHANNEL_SENDER.lock().unwrap().send_var(&proc_id) {
         Ok(_) => {}
         Err(e) => panic!("failed to serialize proc_id: {:?}", e),
@@ -60,7 +60,7 @@ pub extern "C" fn cudaGetDeviceCount(param1: *mut ::std::os::raw::c_int) -> cuda
     println!("[{}:{}] cudaGetDeviceCount", std::file!(), std::line!());
     let proc_id = 2;
     let mut var1 = Default::default();
-    let mut result = cudaError_t::cudaSuccess;
+    let mut result = Default::default();
     match CHANNEL_SENDER.lock().unwrap().send_var(&proc_id) {
         Ok(_) => {}
         Err(e) => panic!("failed to serialize proc_id: {:?}", e),
