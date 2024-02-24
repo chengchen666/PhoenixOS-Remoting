@@ -129,7 +129,10 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
     let params = params.iter().map(|param| {
         let name = &param.name;
         let ty = &param.ty;
-        quote! { #name: #ty }
+        match param.mode {
+            ElementMode::Input => quote! { #name: #ty },
+            ElementMode::Output => quote! { #name: *mut #ty },
+        }
     });
     let result_name = &result.name;
     let result_ty = &result.ty;
