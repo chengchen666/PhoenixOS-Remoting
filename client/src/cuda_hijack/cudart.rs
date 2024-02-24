@@ -1,10 +1,10 @@
 use super::*;
 
 #[no_mangle]
-pub extern "C" fn cudaGetDevice(device: *mut ::std::os::raw::c_int) -> cudaError_t {
+pub extern "C" fn cudaGetDevice(param1: *mut ::std::os::raw::c_int) -> cudaError_t {
     println!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
     let proc_id = 0;
-    let mut dev = 0;
+    let mut var1 = Default::default();
     let mut result = cudaError_t::cudaSuccess;
 
     match CHANNEL_SENDER.lock().unwrap().send_var(&proc_id) {
@@ -16,33 +16,32 @@ pub extern "C" fn cudaGetDevice(device: *mut ::std::os::raw::c_int) -> cudaError
         Err(e) => panic!("failed to send: {:?}", e),
     }
 
-    match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut dev) {
+    match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut var1) {
         Ok(_) => {}
-        Err(e) => panic!("failed to deserialize dev: {:?}", e),
+        Err(e) => panic!("failed to deserialize var1: {:?}", e),
     }
     match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut result) {
         Ok(_) => {}
         Err(e) => panic!("failed to deserialize result: {:?}", e),
     }
     unsafe {
-        *device = dev;
+        *param1 = var1;
     }
     return result;
 }
 
 #[no_mangle]
-pub extern "C" fn cudaSetDevice(device: ::std::os::raw::c_int) -> cudaError_t {
+pub extern "C" fn cudaSetDevice(param1: ::std::os::raw::c_int) -> cudaError_t {
     println!("[{}:{}] cudaSetDevice", std::file!(), std::line!());
     let proc_id = 1;
-    let dev = device;
     let mut result = cudaError_t::cudaSuccess;
     match CHANNEL_SENDER.lock().unwrap().send_var(&proc_id) {
         Ok(_) => {}
         Err(e) => panic!("failed to serialize proc_id: {:?}", e),
     }
-    match CHANNEL_SENDER.lock().unwrap().send_var(&dev) {
+    match CHANNEL_SENDER.lock().unwrap().send_var(&param1) {
         Ok(_) => {}
-        Err(e) => panic!("failed to serialize dev: {:?}", e),
+        Err(e) => panic!("failed to serialize param1: {:?}", e),
     }
     match CHANNEL_SENDER.lock().unwrap().flush_out() {
         Ok(_) => {}
@@ -57,10 +56,10 @@ pub extern "C" fn cudaSetDevice(device: ::std::os::raw::c_int) -> cudaError_t {
 }
 
 #[no_mangle]
-pub extern "C" fn cudaGetDeviceCount(count: *mut ::std::os::raw::c_int) -> cudaError_t {
+pub extern "C" fn cudaGetDeviceCount(param1: *mut ::std::os::raw::c_int) -> cudaError_t {
     println!("[{}:{}] cudaGetDeviceCount", std::file!(), std::line!());
     let proc_id = 2;
-    let mut cnt = 0;
+    let mut var1 = Default::default();
     let mut result = cudaError_t::cudaSuccess;
     match CHANNEL_SENDER.lock().unwrap().send_var(&proc_id) {
         Ok(_) => {}
@@ -71,16 +70,16 @@ pub extern "C" fn cudaGetDeviceCount(count: *mut ::std::os::raw::c_int) -> cudaE
         Err(e) => panic!("failed to send: {:?}", e),
     }
 
-    match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut cnt) {
+    match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut var1) {
         Ok(_) => {}
-        Err(e) => panic!("failed to deserialize cnt: {:?}", e),
+        Err(e) => panic!("failed to deserialize var1: {:?}", e),
     }
     match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut result) {
         Ok(_) => {}
         Err(e) => panic!("failed to deserialize result: {:?}", e),
     }
     unsafe {
-        *count = cnt;
+        *param1 = var1;
     }
     return result;
 }
