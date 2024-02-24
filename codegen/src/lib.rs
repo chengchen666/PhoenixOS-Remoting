@@ -8,7 +8,7 @@ use syn::{
 };
 
 mod utils;
-use utils::{Element, ElementMode, HijackInput};
+use utils::{Element, ElementMode, HijackParser};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The collection of the procedural macro to generate Rust functions for client usage.
@@ -71,7 +71,7 @@ use utils::{Element, ElementMode, HijackInput};
 ///
 #[proc_macro]
 pub fn gen_hijack(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as HijackInput);
+    let input = parse_macro_input!(input as HijackParser);
 
     let (proc_id, func, result, params) = (input.proc_id, input.func, input.result, input.params);
 

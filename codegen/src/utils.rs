@@ -19,14 +19,14 @@ pub struct Element {
     pub mode: ElementMode,
 }
 
-pub struct HijackInput {
+pub struct HijackParser {
     pub proc_id: LitInt,
     pub func: Ident,
     pub result: Element,
     pub params: Vec<Element>,
 }
 
-impl Parse for HijackInput {
+impl Parse for HijackParser {
     fn parse(input: ParseStream) -> Result<Self> {
         let proc_id = input.parse::<LitInt>().expect("Expected valid proc_id");
 
@@ -63,7 +63,7 @@ impl Parse for HijackInput {
             i += 1;
         }
 
-        Ok(HijackInput {
+        Ok(HijackParser {
             proc_id,
             func,
             result,
