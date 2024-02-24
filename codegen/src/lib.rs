@@ -4,15 +4,18 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse_macro_input, Ident, Lit, NestedMeta};
 
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Resevation.
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /// The procedural macro to generate a Rust function for serializing parameters to a buffer.
 ///
 /// ### Example
 /// To use this macro, annotate a call to `gen_serialize` with the desired function name as the first
 /// string literal argument, followed by the types of the parameters as string literals.
 ///
-/// ```
 /// gen_serialize!("my_function", "i32", "String");
-/// ```
 ///
 /// This invocation generates a function `my_function` with two parameters: the first of type `i32` and
 /// the second of type `String` (with a `buffer`` defined in `network`). 
@@ -20,11 +23,9 @@ use syn::{parse_macro_input, Ident, Lit, NestedMeta};
 /// each parameter's into the buffer. 
 ///
 /// Specifically, the function is defined as:
-/// ```
 /// fn my_function(buf : &mut RawBuffer, a1: i32, a2: String) -> Result<(),BufferError> {
 ///    ... 
 /// }
-/// ```
 /// 
 #[proc_macro]
 pub fn gen_serialize(input: TokenStream) -> TokenStream {

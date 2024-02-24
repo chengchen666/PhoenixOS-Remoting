@@ -1,6 +1,7 @@
-# Test code for codegen 
+# automative codegen
 
 Minor tips: to debug the expanded macros, we can use the following:
-```
-cargo expand --bin codegen_test
+
+```bash
+cargo expand --test serialization
 ```
