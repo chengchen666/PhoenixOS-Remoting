@@ -2,13 +2,10 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{
-    parse_macro_input,
-    AttributeArgs, Ident, Lit, NestedMeta,
-};
+use syn::{parse_macro_input, Ident};
 
 mod utils;
-use utils::{Element, ElementMode, HijackParser};
+use utils::{Element, ElementMode, ExeParser, HijackParser};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The collection of the procedural macro to generate Rust functions for client usage.
@@ -167,7 +164,6 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
     gen_fn.into()
 }
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The collection of the procedural macro to generate Rust functions for server usage.
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -212,57 +208,10 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
 ///
 #[proc_macro]
 pub fn gen_exe(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as syn::AttributeArgs);
+    let input = parse_macro_input!(input as ExeParser);
 
-    let func = match &input[0] {
-        NestedMeta::Lit(Lit::Str(lit_str)) => Ident::new(&lit_str.value(), lit_str.span()),
-        _ => panic!("Expected first argument to be a string literal for function name"),
-    };
-
+    let (func, result, params) = (input.func, input.result, input.params);
     let func_exe = Ident::new(&format!("{}Exe", func), func.span());
-
-    let mut input = input.iter();
-
-    let result = match input.nth(1).unwrap() {
-        NestedMeta::Lit(Lit::Str(lit_str)) => {
-            let ty = syn::parse_str::<syn::Type>(&lit_str.value()).expect("Expected valid type");
-            Element {
-                name: format_ident!("result"),
-                ty: ty,
-                mode: ElementMode::Output,
-            }
-        }
-        _ => panic!("Expected type as a string literal"),
-    };
-
-    let params: Vec<Element> = input
-        .enumerate()
-        .map(|(i, arg)| {
-            match arg {
-                NestedMeta::Lit(Lit::Str(lit_str)) => {
-                    // list_str can be: - "type", - "*mut type"
-                    let mut ty_str = lit_str.value();
-                    if ty_str.starts_with("*mut ") {
-                        ty_str = ty_str.replace("*mut ", "");
-                        let ty = syn::parse_str::<syn::Type>(&ty_str).expect("Expected valid type");
-                        Element {
-                            name: format_ident!("param{}", i + 1),
-                            ty: ty,
-                            mode: ElementMode::Output,
-                        }
-                    } else {
-                        let ty = syn::parse_str::<syn::Type>(&ty_str).expect("Expected valid type");
-                        Element {
-                            name: format_ident!("param{}", i + 1),
-                            ty: ty,
-                            mode: ElementMode::Input,
-                        }
-                    }
-                }
-                _ => panic!("Expected type as a string literal"),
-            }
-        })
-        .collect();
 
     // definition statements
     let def_statements = params.iter().map(|param| {
@@ -318,7 +267,6 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
     gen_fn.into()
 }
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Resevation.
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -347,7 +295,9 @@ pub fn gen_serialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::AttributeArgs);
 
     let fn_name = match &input[0] {
-        NestedMeta::Lit(Lit::Str(lit_str)) => Ident::new(&lit_str.value(), lit_str.span()),
+        syn::NestedMeta::Lit(syn::Lit::Str(lit_str)) => {
+            Ident::new(&lit_str.value(), lit_str.span())
+        }
         _ => panic!("Expected first argument to be a string literal for function name"),
     };
 
@@ -357,7 +307,7 @@ pub fn gen_serialize(input: TokenStream) -> TokenStream {
         .enumerate()
         .map(|(i, arg)| {
             let ty = match arg {
-                NestedMeta::Lit(Lit::Str(lit_str)) => {
+                syn::NestedMeta::Lit(syn::Lit::Str(lit_str)) => {
                     lit_str.parse::<syn::Type>().expect("Expected valid type")
                 }
                 _ => panic!("Expected type as a string literal"),
@@ -392,7 +342,9 @@ pub fn gen_deserialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::AttributeArgs);
 
     let fn_name = match &input[0] {
-        NestedMeta::Lit(Lit::Str(lit_str)) => Ident::new(&lit_str.value(), lit_str.span()),
+        syn::NestedMeta::Lit(syn::Lit::Str(lit_str)) => {
+            Ident::new(&lit_str.value(), lit_str.span())
+        }
         _ => panic!("Expected first argument to be a string literal for function name"),
     };
 
@@ -402,7 +354,7 @@ pub fn gen_deserialize(input: TokenStream) -> TokenStream {
         .enumerate()
         .map(|(i, arg)| {
             let ty = match arg {
-                NestedMeta::Lit(Lit::Str(lit_str)) => {
+                syn::NestedMeta::Lit(syn::Lit::Str(lit_str)) => {
                     lit_str.parse::<syn::Type>().expect("Expected valid type")
                 }
                 _ => panic!("Expected type as a string literal"),
