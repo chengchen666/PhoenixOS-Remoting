@@ -7,6 +7,175 @@ use syn::{parse_macro_input, Ident, Lit, NestedMeta};
 mod utils;
 use utils::{Element, ElementMode};
 
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// The collection of the procedural macro to generate Rust functions for client usage.
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// The procedural macro to generate hijack functions for client intercepting application calls.
+///
+/// To use this macro, annotate a call to `gen_hijack` with specified proc_id and the desired function name,
+/// followed by the types of the return and parameters as string literals.
+///
+/// ### Example
+/// We have a function `cudaGetDevice` with the following signature:
+///
+/// ```ignore
+/// pub fn cudaGetDevice(device: *mut ::std::os::raw::c_int) -> cudaError_t;
+/// ```
+///
+/// To use this macro generating a hijack function for interception, we can write:
+///
+/// ```ignore
+/// gen_hijack!("0", "cudaGetDevice", "cudaError_t", "*mut ::std::os::raw::c_int");
+/// ```
+///
+/// This invocation generates a function `cudaGetDevice` with the same signature as the original function,
+/// which will intercept the call to `cudaGetDevice` and send the parameters to the server then wait for the result.
+///
+/// Specifically, the function is expanded as:
+///
+/// ```ignore
+/// #[no_mangle]
+/// pub extern "C" fn cudaGetDevice(param1: *mut ::std::os::raw::c_int) -> cudaError_t {
+///     println!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
+///     let proc_id = 0;
+///     let mut var1 = Default::default();
+///     let mut result = cudaError_t::cudaSuccess;
+/// 
+///     match CHANNEL_SENDER.lock().unwrap().send_var(&proc_id) {
+///         Ok(_) => {}
+///         Err(e) => panic!("failed to serialize proc_id: {:?}", e),
+///     }
+///     match CHANNEL_SENDER.lock().unwrap().flush_out() {
+///         Ok(_) => {}
+///         Err(e) => panic!("failed to send: {:?}", e),
+///     }
+/// 
+///     match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut var1) {
+///         Ok(_) => {}
+///         Err(e) => panic!("failed to deserialize var1: {:?}", e),
+///     }
+///     match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut result) {
+///         Ok(_) => {}
+///         Err(e) => panic!("failed to deserialize result: {:?}", e),
+///     }
+///     unsafe {
+///         *param1 = var1;
+///     }
+///     return result;
+/// }
+/// ```
+///
+#[proc_macro]
+pub fn gen_hijack(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as syn::AttributeArgs);
+
+    let func = match &input[0] {
+        NestedMeta::Lit(Lit::Str(lit_str)) => Ident::new(&lit_str.value(), lit_str.span()),
+        _ => panic!("Expected first argument to be a string literal for function name"),
+    };
+
+    let func_exe = Ident::new(&format!("{}Exe", func), func.span());
+
+    let mut input = input.iter();
+
+    let result = match input.nth(1).unwrap() {
+        NestedMeta::Lit(Lit::Str(lit_str)) => {
+            let ty = syn::parse_str::<syn::Type>(&lit_str.value()).expect("Expected valid type");
+            Element {
+                name: format_ident!("result"),
+                ty: ty,
+                mode: ElementMode::Output,
+            }
+        }
+        _ => panic!("Expected type as a string literal"),
+    };
+
+    let params: Vec<Element> = input
+        .enumerate()
+        .map(|(i, arg)| {
+            match arg {
+                NestedMeta::Lit(Lit::Str(lit_str)) => {
+                    // list_str can be: - "type", - "*mut type"
+                    let mut ty_str = lit_str.value();
+                    if ty_str.starts_with("*mut ") {
+                        ty_str = ty_str.replace("*mut ", "");
+                        let ty = syn::parse_str::<syn::Type>(&ty_str).expect("Expected valid type");
+                        Element {
+                            name: format_ident!("param{}", i + 1),
+                            ty: ty,
+                            mode: ElementMode::Output,
+                        }
+                    } else {
+                        let ty = syn::parse_str::<syn::Type>(&ty_str).expect("Expected valid type");
+                        Element {
+                            name: format_ident!("param{}", i + 1),
+                            ty: ty,
+                            mode: ElementMode::Input,
+                        }
+                    }
+                }
+                _ => panic!("Expected type as a string literal"),
+            }
+        })
+        .collect();
+
+    // definition statements
+    let def_statements = params.iter().map(|param| {
+        let name = &param.name;
+        let ty = &param.ty;
+        quote! { let mut #name: #ty = Default::default(); }
+    });
+
+    // receive parameters
+    let recv_statements = params
+        .iter()
+        .filter(|param| param.mode == ElementMode::Input)
+        .map(|param| {
+            let name = &param.name;
+            quote! { channel_receiver.recv_var(&mut #name).unwrap(); }
+        });
+
+    // execution statement
+    let exec_statement = {
+        let result_name = &result.name;
+        let result_ty = &result.ty;
+        let params = params.iter().map(|param| {
+            let name = &param.name;
+            match param.mode {
+                ElementMode::Input => quote! { #name },
+                ElementMode::Output => quote! { &mut #name },
+            }
+        });
+        quote! { let #result_name: #result_ty = unsafe { #func(#(#params),*) }; }
+    };
+
+    // send result
+    let send_statements = params
+        .iter()
+        .filter(|param| param.mode == ElementMode::Output)
+        .map(|param| {
+            let name = &param.name;
+            quote! { channel_sender.send_var(&#name).unwrap(); }
+        });
+
+    let gen_fn = quote! {
+        pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            #( #def_statements )*
+            #( #recv_statements )*
+            #exec_statement
+            #( #send_statements )*
+            channel_sender.send_var(&result).unwrap();
+            channel_sender.flush_out().unwrap();
+        }
+    };
+
+    gen_fn.into()
+}
+
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The collection of the procedural macro to generate Rust functions for server usage.
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -156,6 +325,7 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
 
     gen_fn.into()
 }
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Resevation.
