@@ -11,7 +11,7 @@ use syn::{parse_macro_input, Ident, Lit, NestedMeta};
 /// string literal argument, followed by the types of the parameters as string literals.
 ///
 /// ```
-/// buf = gen_serialize!("my_function", "i32", "String");
+/// gen_serialize!("my_function", "i32", "String");
 /// ```
 ///
 /// This invocation generates a function `my_function` with two parameters: the first of type `i32` and
