@@ -10,6 +10,9 @@ use network::{
     CommChannel,
 };
 
+extern crate codegen;
+use codegen::gen_hijack;
+
 pub mod cuda_hijack;
 pub use cuda_hijack::*;
 
