@@ -137,7 +137,7 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
     let result_name = &result.name;
     let result_ty = &result.ty;
     let gen_fn = quote! {
-        // BUG: #[no_mangle] can't use in quote
+        #[no_mangle]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             println!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             let proc_id = #proc_id;
