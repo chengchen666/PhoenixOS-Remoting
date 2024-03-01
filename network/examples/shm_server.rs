@@ -1,12 +1,9 @@
 fn main() {
     #[cfg(target_os = "linux")]
-    {
-        use std::thread::sleep;
-        use std::time::Duration;
-        
+    {   
         use network::{
             ringbufferchannel::{RingBuffer, SHMChannelBufferManager},
-            CommChannel,
+            Transportable
         };
 
         let shm_name = "/stoc";
@@ -16,17 +13,11 @@ fn main() {
 
         loop {
             let mut dst = [0u8; 5];
-            let res = ring_buffer.try_recv(&mut dst);
+            let res = dst.recv(&mut ring_buffer);
             match res {
-                Ok(num) => {
-                    if num > 0 {
-                        println!("Received {:?}", dst);
-                        break;
-                    }
-
-                    if num == 0 {
-                        sleep(Duration::from_secs(1));
-                    }
+                Ok(()) => {
+                    println!("Received {:?}", dst);
+                    break;
                 }
                 Err(e) => {
                     println!("Error {}", e);

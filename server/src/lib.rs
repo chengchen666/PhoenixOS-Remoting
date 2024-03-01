@@ -10,7 +10,7 @@ use network::{
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },
-    CommChannel, CommChannelError,
+    CommChannel, CommChannelError, Transportable
 };
 
 #[allow(unused_imports)]
@@ -30,7 +30,7 @@ fn create_buffer() -> (
 
 fn receive_request<T: CommChannel>(channel_receiver: &mut T) -> Result<i32, CommChannelError> {
     let mut proc_id = 0;
-    if let Ok(()) = channel_receiver.recv_var(&mut proc_id) {
+    if let Ok(()) = proc_id.recv(channel_receiver) {
         Ok(proc_id)
     } else {
         Err(CommChannelError::IoError)

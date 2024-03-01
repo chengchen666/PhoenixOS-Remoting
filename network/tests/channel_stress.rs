@@ -2,7 +2,7 @@ extern crate network;
 
 use network::{
     ringbufferchannel::{ChannelBufferManager, LocalChannelBufferManager, RingBuffer},
-    CommChannel,
+    CommChannel, RawMemory, RawMemoryMut,
 };
 
 use std::sync::{Arc, Barrier};
@@ -48,7 +48,8 @@ fn test_ring_buffer_producer_consumer() {
 
         for i in 0..test_iters {
             let data = [(i % 256) as u8; 10]; // Simplified data to send
-            producer_ring_buffer.send(&data).unwrap();
+            let send_memory = RawMemory::new(&data, data.len());
+            producer_ring_buffer.put_bytes(&send_memory).unwrap();
         }
 
         println!("Producer done");
@@ -63,7 +64,9 @@ fn test_ring_buffer_producer_consumer() {
         let mut buffer = [0u8; 10];
 
         while received < test_iters {
-            match consumer_ring_buffer.recv(&mut buffer) {
+            let len = buffer.len();
+            let mut recv_memory = RawMemoryMut::new(&mut buffer, len);
+            match consumer_ring_buffer.get_bytes(&mut recv_memory) {
                 Ok(size) => {
                     for i in 0..size {
                         assert_eq!(buffer[i], (received % 256) as u8);
