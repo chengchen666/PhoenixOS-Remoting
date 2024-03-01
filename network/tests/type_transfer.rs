@@ -1,7 +1,9 @@
 extern crate network;
 
 use network::{
-    cudaError_t, ringbufferchannel::{ChannelBufferManager, LocalChannelBufferManager, RingBuffer}, CommChannel, FromPrimitive
+    cudaError_t,
+    ringbufferchannel::{ChannelBufferManager, LocalChannelBufferManager, RingBuffer},
+    CommChannel, Transportable, FromPrimitive,
 };
 
 use std::sync::{Arc, Barrier};
@@ -49,7 +51,7 @@ fn test_cudaerror() {
                 Some(v) => v,
                 None => panic!("failed to convert from u32"),
             };
-            producer_ring_buffer.send_var(&var).unwrap();
+            var.send(&mut producer_ring_buffer).unwrap();
             producer_ring_buffer.flush_out().unwrap();
         }
 
@@ -69,7 +71,7 @@ fn test_cudaerror() {
                 None => panic!("failed to convert from u32"),
             };
             let mut var = cudaError_t::cudaSuccess;
-            consumer_ring_buffer.recv_var(&mut var).unwrap();
+            var.recv(&mut consumer_ring_buffer).unwrap();
             assert_eq!(var, test);
             received += 1;
         }

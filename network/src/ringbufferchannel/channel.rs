@@ -1,7 +1,7 @@
 use std::ptr::{self, NonNull};
 
 use super::ChannelBufferManager;
-use crate::{CommChannel, CommChannelError};
+use crate::{CommChannel, CommChannelError, RawMemory, RawMemoryMut};
 
 /// we reserve the first 128B for the header and tailer
 /// 128 = cacheline size * 2
@@ -67,8 +67,8 @@ where
 }
 
 impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
-    fn send(&mut self, src: &[u8]) -> Result<usize, CommChannelError> {
-        let mut len = src.len();
+    fn put_bytes(&mut self, src: &RawMemory) -> Result<usize, CommChannelError> {
+        let mut len = src.len;
         let mut offset = 0;
 
         while len > 0 {
@@ -83,16 +83,14 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
             }
 
             let current = std::cmp::min(self.num_adjacent_bytes_to_write(read_tail), len);
-            
+
             unsafe {
                 std::ptr::copy_nonoverlapping(
-                    src.as_ptr().add(offset),
-                    self.buffer
-                        .as_ptr()
-                        .add(META_AREA).add(read_tail),
+                    src.ptr.add(offset),
+                    self.buffer.as_ptr().add(META_AREA).add(read_tail),
                     current,
                 );
-            } 
+            }
             std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
 
             self.write_tail_volatile(((read_tail + current) % self.capacity) as u32);
@@ -100,25 +98,25 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
             len -= current;
         }
 
-        Ok(src.len())
+        Ok(offset)
     }
 
-    fn recv(&mut self, dst: &mut [u8]) -> Result<usize, CommChannelError> {
+    fn get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
         let mut cur_recv = 0;
-        while cur_recv != dst.len() {
-            let new_dst = &mut dst[cur_recv..];
-            let recv = self.try_recv(new_dst)?;
+        while cur_recv != dst.len {
+            let mut new_dst = dst.add_offset(cur_recv);
+            let recv = self.try_get_bytes(&mut new_dst)?;
             cur_recv += recv;
         }
         Ok(cur_recv)
     }
 
-    fn try_send(&mut self, _src: &[u8]) -> Result<usize, CommChannelError> {
+    fn try_put_bytes(&mut self, _src: &RawMemory) -> Result<usize, CommChannelError> {
         unimplemented!()
     }
 
-    fn try_recv(&mut self, dst: &mut [u8]) -> Result<usize, CommChannelError> {
-        let mut len = dst.len();
+    fn try_get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
+        let mut len = dst.len;
         let mut offset = 0;
 
         while len > 0 {
@@ -132,13 +130,11 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
 
             unsafe {
                 std::ptr::copy_nonoverlapping(
-                    self.buffer
-                        .as_ptr()
-                        .add(META_AREA).add(read_head),
-                    dst.as_mut_ptr().add(offset),
+                    self.buffer.as_ptr().add(META_AREA).add(read_head),
+                    dst.ptr.add(offset),
                     current,
                 );
-            } 
+            }
 
             std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
             assert!(
