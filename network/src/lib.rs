@@ -16,6 +16,62 @@ pub mod type_impl;
 
 pub use type_impl::cudaError_t;
 
+/// A raw memory struct
+/// used to wrap raw memory pointer and length,
+/// for brevity of `CommChannel` interface
+pub struct RawMemory {
+    pub ptr: *const u8,
+    pub len: usize,
+}
+
+impl RawMemory {
+    pub fn new<T>(var: &T, len: usize) -> Self {
+        RawMemory {
+            ptr: var as *const T as *const u8,
+            len,
+        }
+    }
+
+    pub fn from_ptr(ptr: *const u8, len: usize) -> Self {
+        RawMemory { ptr, len }
+    }
+
+    pub fn add_offset(&self, offset: usize) -> Self {
+        RawMemory {
+            ptr: unsafe { self.ptr.add(offset) },
+            len: self.len - offset,
+        }
+    }
+}
+
+/// A *mutable* raw memory struct
+/// used to wrap raw memory pointer and length,
+/// for brevity of `CommChannel` interface
+pub struct RawMemoryMut {
+    pub ptr: *mut u8,
+    pub len: usize,
+}
+
+impl RawMemoryMut {
+    pub fn new<T>(var: &mut T, len: usize) -> Self {
+        RawMemoryMut {
+            ptr: var as *mut T as *mut u8,
+            len,
+        }
+    }
+
+    pub fn from_ptr(ptr: *mut u8, len: usize) -> Self {
+        RawMemoryMut { ptr, len }
+    }
+
+    pub fn add_offset(&self, offset: usize) -> Self {
+        RawMemoryMut {
+            ptr: unsafe { self.ptr.add(offset) },
+            len: self.len - offset,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum CommChannelError {
     // Define error types, for example:
@@ -40,59 +96,30 @@ impl Error for CommChannelError {}
 pub trait CommChannel {
     /// Write bytes to the channel
     /// It may flush if the channel has no left space
-    fn send(&mut self, src: &[u8]) -> Result<usize, CommChannelError>;
+    fn put_bytes(&mut self, src: &RawMemory) -> Result<usize, CommChannelError>;
 
     /// Non-block version
     /// Immediately return if error such as no left space
-    fn try_send(&mut self, src: &[u8]) -> Result<usize, CommChannelError>;
+    fn try_put_bytes(&mut self, src: &RawMemory) -> Result<usize, CommChannelError>;
 
     /// Read bytes from the channel
     /// Wait if dont receive enough bytes
-    fn recv(&mut self, dst: &mut [u8]) -> Result<usize, CommChannelError>;
+    fn get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
 
     /// Non-block version
     /// Immediately return after receive however long bytes (maybe =0 or <len)
-    fn try_recv(&mut self, dst: &mut [u8]) -> Result<usize, CommChannelError>;
+    fn try_get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
 
     /// Flush the all the buffered results to the channel
     fn flush_out(&mut self) -> Result<(), CommChannelError>;
-
-    /// Send a variable to the channel
-    fn send_var<T: SerializeAndDeserialize>(&mut self, value: &T) -> Result<(), CommChannelError>
-    where
-        [(); std::mem::size_of::<T>()]:,
-    {
-        let buf = value.to_bytes()?;
-        let len = self.send(&buf)?;
-        if len != buf.len() {
-            return Err(CommChannelError::IoError);
-        }
-        Ok(())
-    }
-
-    /// Receive a variable from the channel
-    fn recv_var<T: SerializeAndDeserialize>(
-        &mut self,
-        value: &mut T,
-    ) -> Result<(), CommChannelError>
-    where
-        [(); std::mem::size_of::<T>()]:,
-    {
-        let mut buf = [0u8; std::mem::size_of::<T>()];
-        let len = self.recv(&mut buf)?;
-        value.from_bytes(&buf[0..len])
-    }
 }
 
 ///
-/// The type can be transfered by the channel
-/// Every type wanted to be transfered should implement this trait
-pub trait SerializeAndDeserialize: Sized {
-    /// TODO: compare with arena
+/// The type itself use `CommChannel` to implicitly implement (de-)serialization logic.
+///
+/// Every type wanted to be transfered should implement this trait.
+pub trait Transportable {
+    fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError>;
 
-    /// Serialize the type to bytes
-    fn to_bytes(&self) -> Result<[u8; std::mem::size_of::<Self>()], CommChannelError>;
-
-    /// Deserialize the type from bytes
-    fn from_bytes(&mut self, src: &[u8]) -> Result<(), CommChannelError>;
+    fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError>;
 }
