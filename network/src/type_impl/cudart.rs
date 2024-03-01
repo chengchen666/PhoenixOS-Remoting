@@ -124,8 +124,7 @@ pub use self::cudaError as cudaError_t;
 impl Transportable for cudaError_t {
     fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
         let memory = RawMemory::new(self, std::mem::size_of::<Self>());
-        let len = channel.put_bytes(&memory)?;
-        match len == std::mem::size_of::<Self>() {
+        match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
             true => Ok(()),
             false => Err(CommChannelError::IoError),
         }
@@ -133,8 +132,7 @@ impl Transportable for cudaError_t {
 
     fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
         let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
-        let len = channel.get_bytes(&mut memory)?;
-        match len == std::mem::size_of::<Self>() {
+        match channel.get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
             true => Ok(()),
             false => Err(CommChannelError::IoError),
         }
