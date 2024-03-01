@@ -39,25 +39,25 @@ use utils::{Element, ElementMode, ExeParser, HijackParser};
 /// pub extern "C" fn cudaGetDevice(param1: *mut ::std::os::raw::c_int) -> cudaError_t {
 ///     println!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
 ///     let proc_id = 0;
-///     let mut var1 = Default::default();
-///     let mut result = Default::default();
-///
-///     match CHANNEL_SENDER.lock().unwrap().send_var(&proc_id) {
-///         Ok(_) => {}
-///         Err(e) => panic!("failed to serialize proc_id: {:?}", e),
+///     let mut var1: ::std::os::raw::c_int = Default::default();
+///     let mut result: cudaError_t = Default::default();
+
+///     match proc_id.send(&mut (*CHANNEL_SENDER.lock().unwrap())) {
+///         Ok(()) => {}
+///         Err(e) => panic!("failed to send proc_id: {:?}", e),
 ///     }
 ///     match CHANNEL_SENDER.lock().unwrap().flush_out() {
-///         Ok(_) => {}
+///         Ok(()) => {}
 ///         Err(e) => panic!("failed to send: {:?}", e),
 ///     }
-///
-///     match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut var1) {
-///         Ok(_) => {}
-///         Err(e) => panic!("failed to deserialize var1: {:?}", e),
+
+///     match var1.recv(&mut (*CHANNEL_RECEIVER.lock().unwrap())) {
+///         Ok(()) => {}
+///         Err(e) => panic!("failed to receive var1: {:?}", e),
 ///     }
-///     match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut result) {
-///         Ok(_) => {}
-///         Err(e) => panic!("failed to deserialize result: {:?}", e),
+///     match result.recv(&mut (*CHANNEL_RECEIVER.lock().unwrap())) {
+///         Ok(()) => {}
+///         Err(e) => panic!("failed to receive result: {:?}", e),
 ///     }
 ///     unsafe {
 ///         *param1 = var1;
@@ -97,9 +97,9 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
         .map(|param| {
             let name = &param.name;
             quote! {
-                match CHANNEL_SENDER.lock().unwrap().send_var(&#name) {
-                    Ok(_) => {}
-                    Err(e) => panic!("failed to serialize #name: {:?}", e),
+                match #name.send(&mut (*CHANNEL_SENDER.lock().unwrap())) {
+                    Ok(()) => {}
+                    Err(e) => panic!("failed to send #name: {:?}", e),
                 }
             }
         });
@@ -108,9 +108,9 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
     let recv_statements = vars.iter().map(|var| {
         let name = &var.name;
         quote! {
-            match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut #name) {
-                Ok(_) => {}
-                Err(e) => panic!("failed to deserialize #name: {:?}", e),
+            match #name.recv(&mut (*CHANNEL_RECEIVER.lock().unwrap())) {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive #name: {:?}", e),
             }
         }
     });
@@ -144,23 +144,23 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
             #( #def_statements )*
             let mut #result_name: #result_ty = Default::default();
 
-            match CHANNEL_SENDER.lock().unwrap().send_var(&proc_id) {
-                Ok(_) => {}
-                Err(e) => panic!("failed to serialize proc_id: {:?}", e),
+            match proc_id.send(&mut (*CHANNEL_SENDER.lock().unwrap())) {
+                Ok(()) => {}
+                Err(e) => panic!("failed to send proc_id: {:?}", e),
             }
             #( #send_statements )*
             match CHANNEL_SENDER.lock().unwrap().flush_out() {
-                Ok(_) => {}
-                Err(e) => panic!("failed to send: {:?}", e),
+                Ok(()) => {}
+                Err(e) => panic!("failed to flush_out: {:?}", e),
             }
 
             #( #recv_statements )*
             #( #assign_statements )*
-            match CHANNEL_RECEIVER.lock().unwrap().recv_var(&mut result) {
-                Ok(_) => {}
-                Err(e) => panic!("failed to deserialize result: {:?}", e),
+            match #result_name.recv(&mut (*CHANNEL_RECEIVER.lock().unwrap())) {
+                Ok(()) => {}
+                Err(e) => panic!("failed to send #result_name: {:?}", e),
             }
-            return result;
+            return #result_name;
         }
     };
 
@@ -197,14 +197,10 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
 /// ```ignore
 /// pub fn cudaSetDeviceExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
 ///     info!("[{}:{}] cudaSetDevice", std::file!(), std::line!());
-///
 ///     let mut param1: ::std::os::raw::c_int = Default::default();
-///
-///     channel_receiver.recv_var(&mut param1).unwrap();
-///
+///     param1.recv(channel_receiver).unwrap();
 ///     let result = unsafe { cudaSetDevice(param1) };
-///
-///     channel_sender.send_var(&result).unwrap();
+///     result.send(channel_sender).unwrap();
 ///     channel_sender.flush_out().unwrap();
 /// }
 /// ```
@@ -229,12 +225,12 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
         .filter(|param| param.mode == ElementMode::Input)
         .map(|param| {
             let name = &param.name;
-            quote! { channel_receiver.recv_var(&mut #name).unwrap(); }
+            quote! { #name.recv(channel_receiver).unwrap(); }
         });
 
     // execution statement
+    let result_name = &result.name;
     let exec_statement = {
-        let result_name = &result.name;
         let result_ty = &result.ty;
         let params = params.iter().map(|param| {
             let name = &param.name;
@@ -252,7 +248,7 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
         .filter(|param| param.mode == ElementMode::Output)
         .map(|param| {
             let name = &param.name;
-            quote! { channel_sender.send_var(&#name).unwrap(); }
+            quote! { #name.send(channel_sender).unwrap(); }
         });
 
     let gen_fn = quote! {
@@ -262,7 +258,7 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
             #( #recv_statements )*
             #exec_statement
             #( #send_statements )*
-            channel_sender.send_var(&result).unwrap();
+            #result_name.send(channel_sender).unwrap();
             channel_sender.flush_out().unwrap();
         }
     };

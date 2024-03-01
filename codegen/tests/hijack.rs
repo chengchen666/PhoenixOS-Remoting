@@ -8,7 +8,7 @@ use network::{
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },
-    CommChannel,
+    CommChannel, Transportable
 };
 
 use std::sync::Mutex;
