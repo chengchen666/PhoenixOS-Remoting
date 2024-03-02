@@ -2,7 +2,7 @@
 use super::*;
 
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, PartialOrd, Ord, FromPrimitive)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, PartialOrd, Ord, FromPrimitive, codegen::Transportable)]
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
 pub enum cudaError {
@@ -121,23 +121,23 @@ pub enum cudaError {
 
 pub use self::cudaError as cudaError_t;
 
-impl Transportable for cudaError_t {
-    fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
-        let memory = RawMemory::new(self, std::mem::size_of::<Self>());
-        match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
-            true => Ok(()),
-            false => Err(CommChannelError::IoError),
-        }
-    }
+// impl Transportable for cudaError_t {
+//     fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
+//         let memory = RawMemory::new(self, std::mem::size_of::<Self>());
+//         match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
+//             true => Ok(()),
+//             false => Err(CommChannelError::IoError),
+//         }
+//     }
 
-    fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
-        let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
-        match channel.get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
-            true => Ok(()),
-            false => Err(CommChannelError::IoError),
-        }
-    }
-}
+//     fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
+//         let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
+//         match channel.get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
+//             true => Ok(()),
+//             false => Err(CommChannelError::IoError),
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests{
