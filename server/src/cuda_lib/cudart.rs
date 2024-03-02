@@ -16,6 +16,14 @@ extern "C" {
     pub fn cudaGetDeviceCount(count: *mut ::std::os::raw::c_int) -> cudaError_t;
 }
 
+extern "C" {
+    pub fn cudaGetLastError() -> cudaError_t;
+}
+
+extern "C" {
+    pub fn cudaPeekAtLastError() -> cudaError_t;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

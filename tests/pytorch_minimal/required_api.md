@@ -6,10 +6,10 @@
 - [ ] __cudaRegisterFatBinaryEnd
 - [ ] __cudaRegisterFunction
 - [ ] __cudaRegisterVar
-- [ ] cudaGetDevice
-- [ ] cudaGetDeviceCount
+- [x] cudaGetDevice
+- [x] cudaGetDeviceCount
 - [ ] cudaGetDeviceProperties
-- [ ] cudaGetLastError
+- [x] cudaGetLastError
 - [ ] cudaLaunchKernel
 - [ ] cudaMalloc
 - [ ] cudaMemcpyAsyncDeviceToHost
