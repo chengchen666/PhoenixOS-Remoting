@@ -2,9 +2,16 @@
 
 ## Minimal demo
 
-Consits of 3 parts: `server`, `client` and `device_buffer`.
+Consits of 4 parts:
+
+- `server`
+- `client`
+- `network`
+- `codegen`
 
 ### Build
+
+We need Rust *nightly* toolchain to build the project.
 
 ```shell
 cd /path/to/xpuremoting && cargo build
@@ -17,7 +24,7 @@ Launch two terminals, one for server and the other for client.
 - server side:
 
 ```shell
-RUST_LOG=debug cargo run server
+cargo run server
 ```
 
 - client side:

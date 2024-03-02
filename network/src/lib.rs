@@ -16,6 +16,8 @@ pub mod type_impl;
 
 pub use type_impl::cudaError_t;
 
+extern crate codegen;
+
 /// A raw memory struct
 /// used to wrap raw memory pointer and length,
 /// for brevity of `CommChannel` interface

@@ -4,6 +4,9 @@ mod dispatcher;
 
 use cuda_lib::*;
 extern crate network;
+extern crate codegen;
+
+use codegen::gen_exe;
 use dispatcher::dispatch;
 use network::{
     cudaError_t,

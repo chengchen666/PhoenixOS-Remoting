@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 #[macro_use]
 extern crate lazy_static;
 
@@ -9,12 +10,6 @@ use network::{
     },
     CommChannel, Transportable
 };
-
-extern crate codegen;
-use codegen::gen_hijack;
-
-pub mod cuda_hijack;
-pub use cuda_hijack::*;
 
 use std::sync::Mutex;
 
@@ -28,3 +23,11 @@ lazy_static! {
         Mutex::new(RingBuffer::new(manager))
     };
 }
+
+
+extern crate codegen;
+
+use codegen::gen_hijack;
+
+gen_hijack!(0, "cudaGetDevice", "cudaError_t", "*mut ::std::os::raw::c_int");
+gen_hijack!(1, "cudaSetDevice", "cudaError_t", "::std::os::raw::c_int");
