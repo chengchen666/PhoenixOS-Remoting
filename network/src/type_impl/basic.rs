@@ -1,40 +1,30 @@
 use super::*;
 
-impl Transportable for i32 {
-    fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
-        let memory = RawMemory::new(self, std::mem::size_of::<Self>());
-        match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
-            true => Ok(()),
-            false => Err(CommChannelError::IoError),
-        }
-    }
-
-    fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
-        let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
-        match channel.get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
-            true => Ok(()),
-            false => Err(CommChannelError::IoError),
-        }
-    }
+macro_rules! impl_transportable {
+    ($($t:ty),*) => {
+        $(
+            impl Transportable for $t {
+                fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
+                    let memory = RawMemory::new(self, std::mem::size_of::<Self>());
+                    match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
+                        true => Ok(()),
+                        false => Err(CommChannelError::IoError),
+                    }
+                }
+            
+                fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
+                    let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
+                    match channel.get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
+                        true => Ok(()),
+                        false => Err(CommChannelError::IoError),
+                    }
+                }
+            }
+        )*
+    };
 }
 
-impl Transportable for usize {
-    fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
-        let memory = RawMemory::new(self, std::mem::size_of::<Self>());
-        match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
-            true => Ok(()),
-            false => Err(CommChannelError::IoError),
-        }
-    }
-
-    fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
-        let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
-        match channel.get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
-            true => Ok(()),
-            false => Err(CommChannelError::IoError),
-        }
-    }
-}
+impl_transportable!(u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, usize, isize, f32, f64, bool, char);
 
 impl<S> Transportable for [S] {
     fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
