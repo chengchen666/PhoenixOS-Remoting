@@ -8,6 +8,75 @@ mod utils;
 use utils::{Element, ElementMode, ExeParser, HijackParser};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// The derive macro for Transportable trait.
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// The derive procedural macro to generate `Transportable` trait implementation for a *fixed-size* type.
+///
+/// ### Example
+/// To use this macro, annotate a struct or enum with `#[derive(Transportable)]`.
+///
+/// ```ignore
+/// #[derive(Transportable)]
+/// pub struct MyStruct {
+///     ...
+/// }
+/// ```
+///
+/// This invocation generates a `Transportable` trait implementation for `MyStruct`.
+/// The `Transportable` trait is used for sending and receiving the struct over a communication channel.
+///
+/// Specifically, the implementation is expanded as:
+///
+/// ```ignore
+/// impl Transportable for MyStruct {
+///     fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
+///         let memory = RawMemory::new(self, std::mem::size_of::<Self>());
+///         match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
+///             true => Ok(()),
+///             false => Err(CommChannelError::IoError),
+///         }
+///     }
+///
+///     fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
+///         let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
+///         match channel.get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
+///             true => Ok(()),
+///             false => Err(CommChannelError::IoError),
+///         }
+///     }
+/// }
+/// ```
+///
+#[proc_macro_derive(Transportable)]
+pub fn transportable_derive(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as syn::DeriveInput);
+    let name = &input.ident;
+
+    let gen = quote! {
+        impl Transportable for #name {
+            fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
+                let memory = RawMemory::new(self, std::mem::size_of::<Self>());
+                match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
+                    true => Ok(()),
+                    false => Err(CommChannelError::IoError),
+                }
+            }
+
+            fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
+                let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
+                match channel.get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
+                    true => Ok(()),
+                    false => Err(CommChannelError::IoError),
+                }
+            }
+        }
+    };
+
+    gen.into()
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The collection of the procedural macro to generate Rust functions for client usage.
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
