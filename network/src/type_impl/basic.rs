@@ -69,6 +69,18 @@ mod tests {
     use super::*;
     use crate::ringbufferchannel::{channel::META_AREA, LocalChannelBufferManager, RingBuffer};
 
+    /// Test bool Transportable impl
+    #[test]
+    fn test_bool_io() {
+        let mut buffer: RingBuffer<LocalChannelBufferManager> =
+            RingBuffer::new(LocalChannelBufferManager::new(10 + META_AREA));
+        let a = true;
+        let mut b = false;
+        a.send(&mut buffer).unwrap();
+        b.recv(&mut buffer).unwrap();
+        assert_eq!(a, b);
+    }
+
     /// Test i32 Transportable impl
     #[test]
     fn test_i32_io() {
