@@ -6,28 +6,25 @@ project(remoting_test LANGUAGES CXX CUDA)
 set(CUDA_USE_STATIC_CUDA_RUNTIME OFF CACHE INTERNAL "")
 find_package(CUDA REQUIRED)
 
-# Add your .cu and .cpp files here
-set(SOURCE_FILES
-    test_device.cu
-    # Add any additional .cu or .cpp files
-)
-
-# Specify the executable to be built and its sources
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-
 # Include directories for CUDA
 include_directories(${CUDA_INCLUDE_DIRS})
-
-# Link against the CUDA libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE ${CUDA_LIBRARIES} ${CUDA_CUDART_LIBRARY})
 message(STATUS "CUDA Libraries: ${CUDA_CUDART_LIBRARY}")
 
-# Specify C++11 as the standard for the host compiler
-set_target_properties(${PROJECT_NAME} PROPERTIES
-                      CUDA_SEPARABLE_COMPILATION ON
-                      CXX_STANDARD 11
-                      CXX_STANDARD_REQUIRED YES
-)
+file(GLOB_RECURSE sources RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/*.cu")
+foreach(source IN LISTS sources)
+    # Get file name without directory
+    get_filename_component(source_name ${source} NAME_WE)
+    # Specify the executable to be built and its sources
+    add_executable(${source_name} ${source})
+    # Link against the CUDA libraries
+    target_link_libraries(${source_name} PRIVATE ${CUDA_LIBRARIES} ${CUDA_CUDART_LIBRARY})
+    # Specify C++11 as the standard for the host compiler
+    set_target_properties(${source_name} PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+    )
+endforeach()
 
 # Set optimization level and pass other flags to the CUDA NVCC compiler
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O2;-std=c++11;-lcudnn)
