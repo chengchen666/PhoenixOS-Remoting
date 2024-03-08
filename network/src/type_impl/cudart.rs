@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
+#![allow(non_camel_case_types)]
 use super::*;
 
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, PartialOrd, Ord, FromPrimitive, codegen::Transportable)]
-#[allow(non_camel_case_types)]
 #[allow(dead_code)]
 pub enum cudaError {
     #[default]
@@ -120,6 +120,26 @@ pub enum cudaError {
 }
 
 pub use self::cudaError as cudaError_t;
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+#[allow(dead_code)]
+pub struct CUstream_st {
+    _unused: [u8; 0],
+}
+pub type cudaStream_t = *mut CUstream_st;
+
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, FromPrimitive, codegen::Transportable)]
+#[allow(dead_code)]
+pub enum cudaMemcpyKind {
+    #[default]
+    cudaMemcpyHostToHost = 0,
+    cudaMemcpyHostToDevice = 1,
+    cudaMemcpyDeviceToHost = 2,
+    cudaMemcpyDeviceToDevice = 3,
+    cudaMemcpyDefault = 4,
+}
 
 #[cfg(test)]
 mod tests{
