@@ -26,6 +26,11 @@ macro_rules! impl_transportable {
 
 impl_transportable!(u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, usize, isize, f32, f64, bool, char);
 
+// TODO: need some discussion
+/// a pointer type, we just need to use usize to represent it.
+/// the raw type `*mut void` is hard to handle:(
+pub type MemPtr = usize;
+
 impl<S> Transportable for [S] {
     fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
         let len = self.len() * std::mem::size_of::<S>();

@@ -28,9 +28,9 @@ extern "C" {
     pub fn cudaStreamSynchronize(stream: cudaStream_t) -> cudaError_t;
 }
 
-// extern "C" {
-//     pub fn cudaMalloc(devPtr: *mut *mut ::std::os::raw::c_void, size: usize) -> cudaError_t;
-// }
+extern "C" {
+    pub fn cudaMalloc(devPtr: *mut MemPtr, size: usize) -> cudaError_t;
+}
 
 // extern "C" {
 //     pub fn cudaMemcpy(
