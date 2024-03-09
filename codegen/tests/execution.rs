@@ -3,7 +3,7 @@
 extern crate codegen;
 
 use codegen::gen_exe;
-use network::{cudaError_t, CommChannel, Transportable};
+use network::{type_impl::cudart::cudaError_t, CommChannel, Transportable};
 use log::info;
 
 extern "C" {
