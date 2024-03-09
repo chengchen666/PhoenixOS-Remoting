@@ -41,16 +41,6 @@ extern "C" {
     ) -> cudaError_t;
 }
 
-// extern "C" {
-//     pub fn cudaMemcpyAsync(
-//         dst: MemPtr,
-//         src: MemPtr,
-//         count: usize,
-//         kind: cudaMemcpyKind,
-//         stream: cudaStream_t,
-//     ) -> cudaError_t;
-// }
-
 // #[no_mangle]
 // pub extern "C" fn __cudaRegisterFatBinary(fatCubin: &FatHeader) -> *mut u64 {
 //     // println!("Hijacked __cudaRegisterFatBinary(fatCubin:{:#x?})", fatCubin);

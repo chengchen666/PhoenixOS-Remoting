@@ -96,3 +96,16 @@ pub extern "C" fn cudaMemcpy(
     }
     return result;
 }
+
+// TODO: maybe we should understand the semantic diff of cudaMemcpyAsync&cudaMemcpy
+#[no_mangle]
+pub extern "C" fn cudaMemcpyAsync(
+    dst: MemPtr,
+    src: MemPtr,
+    count: usize,
+    kind: cudaMemcpyKind,
+    _stream: cudaStream_t,
+) -> cudaError_t {
+    println!("[{}:{}] cudaMemcpyAsync", std::file!(), std::line!());
+    cudaMemcpy(dst, src, count, kind)
+}

@@ -4,7 +4,7 @@
 
 int main()
 {
-    const int iterations = 1;
+    // const int iterations = 1;
 
     int n = 16*1024*1024;
     char *h_data = (char*)malloc(n);
