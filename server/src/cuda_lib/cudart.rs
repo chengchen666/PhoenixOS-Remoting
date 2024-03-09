@@ -24,6 +24,33 @@ extern "C" {
     pub fn cudaPeekAtLastError() -> cudaError_t;
 }
 
+extern "C" {
+    pub fn cudaStreamSynchronize(stream: cudaStream_t) -> cudaError_t;
+}
+
+// extern "C" {
+//     pub fn cudaMalloc(devPtr: *mut *mut ::std::os::raw::c_void, size: usize) -> cudaError_t;
+// }
+
+// extern "C" {
+//     pub fn cudaMemcpy(
+//         dst: *mut ::std::os::raw::c_void,
+//         src: *const ::std::os::raw::c_void,
+//         count: usize,
+//         kind: cudaMemcpyKind,
+//     ) -> cudaError_t;
+// }
+
+// extern "C" {
+//     pub fn cudaMemcpyAsync(
+//         dst: *mut ::std::os::raw::c_void,
+//         src: *const ::std::os::raw::c_void,
+//         count: usize,
+//         kind: cudaMemcpyKind,
+//         stream: cudaStream_t,
+//     ) -> cudaError_t;
+// }
+
 // #[no_mangle]
 // pub extern "C" fn __cudaRegisterFatBinary(fatCubin: &FatHeader) -> *mut u64 {
 //     // println!("Hijacked __cudaRegisterFatBinary(fatCubin:{:#x?})", fatCubin);
@@ -172,10 +199,6 @@ extern "C" {
 //         stream: cudaStream_t,
 //         pCaptureStatus: *mut cudaStreamCaptureStatus,
 //     ) -> cudaError_t;
-// }
-
-// extern "C" {
-//     pub fn cudaStreamSynchronize(stream: cudaStream_t) -> cudaError_t;
 // }
 
 // extern "C" {

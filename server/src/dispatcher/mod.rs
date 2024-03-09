@@ -10,6 +10,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         2 => cudaGetDeviceCountExe(channel_sender, channel_receiver),
         3 => cudaGetLastErrorExe(channel_sender, channel_receiver),
         4 => cudaPeekAtLastErrorExe(channel_sender, channel_receiver),
+        5 => cudaStreamSynchronizeExe(channel_sender, channel_receiver),
         other => {
             error!(
                 "[{}:{}] invalid proc_id: {}",

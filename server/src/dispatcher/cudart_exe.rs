@@ -6,3 +6,4 @@ gen_exe!("cudaGetDevice", "cudaError_t", "*mut ::std::os::raw::c_int");
 gen_exe!("cudaGetDeviceCount", "cudaError_t", "*mut ::std::os::raw::c_int");
 gen_exe!("cudaGetLastError", "cudaError_t");
 gen_exe!("cudaPeekAtLastError", "cudaError_t");
+gen_exe!("cudaStreamSynchronize", "cudaError_t", "cudaStream_t");

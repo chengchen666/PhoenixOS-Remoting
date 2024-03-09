@@ -6,7 +6,7 @@ use network::{
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },
-    type_impl::cudart::cudaError_t,
+    type_impl::cudart::{cudaError_t, cudaMemcpyKind, cudaStream_t},
     CommChannel, Transportable,
 };
 
