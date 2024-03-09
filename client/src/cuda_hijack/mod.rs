@@ -1,4 +1,4 @@
-pub mod cudart;
+pub mod cudart_hijack;
 
 use super::*;
-pub use cudart::*;
+pub use cudart_hijack::*;

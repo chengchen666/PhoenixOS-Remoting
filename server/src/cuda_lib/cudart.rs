@@ -32,19 +32,19 @@ extern "C" {
     pub fn cudaMalloc(devPtr: *mut MemPtr, size: usize) -> cudaError_t;
 }
 
-// extern "C" {
-//     pub fn cudaMemcpy(
-//         dst: *mut ::std::os::raw::c_void,
-//         src: *const ::std::os::raw::c_void,
-//         count: usize,
-//         kind: cudaMemcpyKind,
-//     ) -> cudaError_t;
-// }
+extern "C" {
+    pub fn cudaMemcpy(
+        dst: MemPtr,
+        src: MemPtr,
+        count: usize,
+        kind: cudaMemcpyKind,
+    ) -> cudaError_t;
+}
 
 // extern "C" {
 //     pub fn cudaMemcpyAsync(
-//         dst: *mut ::std::os::raw::c_void,
-//         src: *const ::std::os::raw::c_void,
+//         dst: MemPtr,
+//         src: MemPtr,
 //         count: usize,
 //         kind: cudaMemcpyKind,
 //         stream: cudaStream_t,
