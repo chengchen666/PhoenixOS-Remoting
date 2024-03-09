@@ -17,6 +17,19 @@ int main()
     cudaMalloc((void**)&d_data, n * sizeof(int));
     std::cout << "ptr: " << (long)d_data << std::endl;
 
+    // sanity check
+    cudaMemcpy(d_data, h_data, n, cudaMemcpyHostToDevice);
+    char *h_data2 = (char*)calloc(n, sizeof(char));
+    std::cout << (int)h_data2[0] << " " << (int)h_data2[1] << " " << (int)h_data2[2] << " " << (int)h_data2[3] << std::endl;
+    cudaMemcpy(h_data2, d_data, n, cudaMemcpyDeviceToHost);
+    std::cout << (int)h_data2[0] << " " << (int)h_data2[1] << " " << (int)h_data2[2] << " " << (int)h_data2[3] << std::endl;
+    for (int i = 0; i < n; i++) {
+        if (h_data[i] != h_data2[i]) {
+            std::cout << "mismatch at " << i << std::endl;
+            return -1;
+        }
+    }
+
     // // remove initial overhead
     // for (int i = 0; i < 10; i++) {
     //     cudaMemcpy(d_data, h_data, n, cudaMemcpyHostToDevice);
