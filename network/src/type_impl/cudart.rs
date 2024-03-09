@@ -121,13 +121,9 @@ pub enum cudaError {
 
 pub use self::cudaError as cudaError_t;
 
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-#[allow(dead_code)]
-pub struct CUstream_st {
-    _unused: [u8; 0],
-}
-pub type cudaStream_t = *mut CUstream_st;
+/// cudaStream_t is a pointer type, we just need to use usize to represent it.
+/// It is not necessary to define a struct for it, as the struct is also just a placeholder.
+pub type cudaStream_t = usize;
 
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, FromPrimitive, codegen::Transportable)]
@@ -166,6 +162,17 @@ mod tests{
             RingBuffer::new(LocalChannelBufferManager::new(10 + META_AREA));
         let a = cudaError_t::cudaErrorInvalidValue;
         let mut b = cudaError_t::cudaSuccess;
+        a.send(&mut buffer).unwrap();
+        b.recv(&mut buffer).unwrap();
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_cudaStream_t_io() {
+        let mut buffer: RingBuffer<LocalChannelBufferManager> =
+            RingBuffer::new(LocalChannelBufferManager::new(10 + META_AREA));
+        let a = 100usize as cudaStream_t;
+        let mut b: cudaStream_t = 0usize as cudaStream_t;
         a.send(&mut buffer).unwrap();
         b.recv(&mut buffer).unwrap();
         assert_eq!(a, b);
