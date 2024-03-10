@@ -144,21 +144,6 @@ extern "C" {
 //     ) -> cudaError_t;
 // }
 
-// #[no_mangle]
-// pub extern "C" fn nvmlInitWithFlags(flags: ::std::os::raw::c_uint) -> nvmlReturn_t {
-//     unsafe { crate::r#impl::init_with_flags(flags).into() }
-// }
-
-// #[no_mangle]
-// pub extern "C" fn nvmlInit_v2() -> nvmlReturn_t {
-//     unsafe { crate::r#impl::init().into() }
-// }
-
-// #[no_mangle]
-// pub extern "C" fn nvmlDeviceGetCount_v2(deviceCount: *mut ::std::os::raw::c_uint) -> nvmlReturn_t {
-//     unsafe { crate::r#impl::device_get_count(deviceCount) }.into()
-// }
-
 // https://github.com/QuarkContainer/Quark/blob/8c3f63eb6edcf1dd043e325512d47781951ff89a/cudaproxy/src/cudaproxy.rs#L75
 // https://github.com/vosen/ZLUDA/blob/master/zluda_ml/src/nvml.rs#L1343
 // https://github.com/rust-cuda/cuda-sys/blob/3a973786b3482e3fdfd783cd692fbc3c665d5c11/cuda-runtime-sys/src/cuda_runtime.rs#L4638

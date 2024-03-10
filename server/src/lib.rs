@@ -17,6 +17,7 @@ use network::{
         cudart::{
             cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
         },
+        nvml::nvmlReturn_t,
     },
     CommChannel, CommChannelError, Transportable,
 };
