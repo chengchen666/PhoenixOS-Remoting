@@ -8,13 +8,13 @@
 - [ ] __cudaRegisterVar
 - [x] cudaGetDevice
 - [x] cudaGetDeviceCount
-- [ ] cudaGetDeviceProperties
+- [x] cudaGetDeviceProperties
 - [x] cudaGetLastError
 - [ ] cudaLaunchKernel
-- [ ] cudaMalloc
-- [ ] cudaMemcpyAsyncDeviceToHost
-- [ ] cudaStreamIsCapturing
-- [ ] cudaStreamSynchronize
+- [x] cudaMalloc
+- [x] cudaMemcpyAsyncDeviceToHost
+- [x] cudaStreamIsCapturing
+- [x] cudaStreamSynchronize
 - [ ] nvmlDeviceGetCount_v2
 - [ ] nvmlInitWithFlags
 - [ ] nvmlInit_v2
