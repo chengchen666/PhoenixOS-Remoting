@@ -2,10 +2,11 @@
 #![allow(non_camel_case_types)]
 use super::*;
 
-#[repr(::std::os::raw::c_uint)]
+#[repr(u32)]
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, PartialOrd, Ord, FromPrimitive, codegen::Transportable)]
 #[allow(dead_code)]
 pub enum nvmlReturn_enum {
+    #[default]
     NVML_SUCCESS = 0,
     NVML_ERROR_UNINITIALIZED = 1,
     NVML_ERROR_INVALID_ARGUMENT = 2,
@@ -38,3 +39,34 @@ pub enum nvmlReturn_enum {
 }
 
 pub use self::nvmlReturn_enum as nvmlReturn_t;
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    use crate::FromPrimitive;
+    use crate::ringbufferchannel::{
+        channel::META_AREA,
+        LocalChannelBufferManager, RingBuffer
+    };
+
+    #[test]
+    fn test_num_derive() {
+        let x: u32 = nvmlReturn_t::NVML_SUCCESS as u32;
+        assert_eq!(x, 0);
+        match nvmlReturn_t::from_u32(1) {
+            Some(v) => assert_eq!(v, nvmlReturn_t::NVML_ERROR_UNINITIALIZED),
+            None => panic!("failed to convert from u32"),
+        }
+    }
+
+    #[test]
+    fn test_nvmlReturn_t_io() {
+        let mut buffer: RingBuffer<LocalChannelBufferManager> =
+            RingBuffer::new(LocalChannelBufferManager::new(10 + META_AREA));
+        let a = nvmlReturn_t::NVML_ERROR_UNINITIALIZED;
+        let mut b = nvmlReturn_t::NVML_SUCCESS;
+        a.send(&mut buffer).unwrap();
+        b.recv(&mut buffer).unwrap();
+        assert_eq!(a, b);
+    }
+}
