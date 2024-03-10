@@ -2,3 +2,4 @@ use crate::{RawMemory, RawMemoryMut, CommChannel, CommChannelError, Transportabl
 
 pub mod basic;
 pub mod cudart;
+pub mod nvml;
