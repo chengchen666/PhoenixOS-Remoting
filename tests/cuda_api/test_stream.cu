@@ -11,5 +11,9 @@ int main()
     error = cudaStreamSynchronize(0);
     std::cout << "cudaStreamSynchronize(0) returned " << error << std::endl;
 
+    cudaStreamCaptureStatus status;
+    cudaStreamIsCapturing(0, &status);
+    std::cout << "cudaStreamIsCapturing(0) returned " << status << std::endl;
+
     return 0;
 }
