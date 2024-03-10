@@ -13,6 +13,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         5 => cudaStreamSynchronizeExe(channel_sender, channel_receiver),
         6 => cudaMallocExe(channel_sender, channel_receiver),
         7 => cudaMemcpyExe(channel_sender, channel_receiver),
+        8 => cudaStreamIsCapturingExe(channel_sender, channel_receiver),
         other => {
             error!(
                 "[{}:{}] invalid proc_id: {}",

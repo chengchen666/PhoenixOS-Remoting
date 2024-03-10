@@ -14,7 +14,7 @@ use network::{
     },
     type_impl::{
         basic::MemPtr,
-        cudart::{cudaError_t, cudaMemcpyKind, cudaStream_t},
+        cudart::{cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t},
     },
     CommChannel, CommChannelError, Transportable,
 };

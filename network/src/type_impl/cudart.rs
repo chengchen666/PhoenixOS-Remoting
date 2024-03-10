@@ -137,6 +137,16 @@ pub enum cudaMemcpyKind {
     cudaMemcpyDefault = 4,
 }
 
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, FromPrimitive, codegen::Transportable)]
+#[allow(dead_code)]
+pub enum cudaStreamCaptureStatus {
+    #[default]
+    cudaStreamCaptureStatusNone = 0,
+    cudaStreamCaptureStatusActive = 1,
+    cudaStreamCaptureStatusInvalidated = 2,
+}
+
 #[cfg(test)]
 mod tests{
     use super::*;

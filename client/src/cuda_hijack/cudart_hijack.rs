@@ -109,3 +109,11 @@ pub extern "C" fn cudaMemcpyAsync(
     println!("[{}:{}] cudaMemcpyAsync", std::file!(), std::line!());
     cudaMemcpy(dst, src, count, kind)
 }
+
+gen_hijack!(
+    8,
+    "cudaStreamIsCapturing",
+    "cudaError_t",
+    "cudaStream_t",
+    "*mut cudaStreamCaptureStatus"
+);
