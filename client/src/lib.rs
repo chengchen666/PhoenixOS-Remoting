@@ -3,11 +3,17 @@ extern crate lazy_static;
 
 extern crate network;
 use network::{
-    cudaError_t,
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },
-    CommChannel, Transportable
+    type_impl::{
+        basic::MemPtr,
+        cudart::{
+            cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
+        },
+        nvml::nvmlReturn_t,
+    },
+    CommChannel, Transportable,
 };
 
 extern crate codegen;

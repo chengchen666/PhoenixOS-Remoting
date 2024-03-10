@@ -3,17 +3,23 @@ mod cuda_lib;
 mod dispatcher;
 
 use cuda_lib::*;
-extern crate network;
 extern crate codegen;
+extern crate network;
 
 use codegen::gen_exe;
 use dispatcher::dispatch;
 use network::{
-    cudaError_t,
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },
-    CommChannel, CommChannelError, Transportable
+    type_impl::{
+        basic::MemPtr,
+        cudart::{
+            cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
+        },
+        nvml::nvmlReturn_t,
+    },
+    CommChannel, CommChannelError, Transportable,
 };
 
 #[allow(unused_imports)]

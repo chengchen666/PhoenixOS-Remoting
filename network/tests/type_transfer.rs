@@ -1,9 +1,9 @@
 extern crate network;
 
 use network::{
-    cudaError_t,
     ringbufferchannel::{ChannelBufferManager, LocalChannelBufferManager, RingBuffer},
-    CommChannel, Transportable, FromPrimitive,
+    type_impl::cudart::cudaError_t,
+    CommChannel, FromPrimitive, Transportable,
 };
 
 use std::sync::{Arc, Barrier};

@@ -4,7 +4,7 @@ extern crate lazy_static;
 
 extern crate network;
 use network::{
-    cudaError_t,
+    type_impl::cudart::cudaError_t,
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },

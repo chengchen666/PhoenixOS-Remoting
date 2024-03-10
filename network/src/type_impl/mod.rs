@@ -2,5 +2,4 @@ use crate::{RawMemory, RawMemoryMut, CommChannel, CommChannelError, Transportabl
 
 pub mod basic;
 pub mod cudart;
-
-pub use cudart::cudaError_t;
+pub mod nvml;

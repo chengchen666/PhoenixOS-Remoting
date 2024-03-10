@@ -14,8 +14,6 @@ pub use buffer::{BufferError, RawBuffer};
 pub mod ringbufferchannel;
 pub mod type_impl;
 
-pub use type_impl::cudaError_t;
-
 extern crate codegen;
 
 /// A raw memory struct
