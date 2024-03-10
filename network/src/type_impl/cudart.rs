@@ -155,7 +155,7 @@ pub struct CUuuid_st {
 pub type cudaUUID_t = CUuuid_st;
 
 #[repr(C)]
-#[derive(Copy, Clone, codegen::Transportable)]
+#[derive(Copy, Clone, codegen::Transportable, codegen::ZeroDefault)]
 #[allow(dead_code)]
 pub struct cudaDeviceProp {
     pub name: [::std::os::raw::c_char; 256usize],
@@ -234,12 +234,6 @@ pub struct cudaDeviceProp {
     pub sharedMemPerBlockOptin: usize,
     pub pageableMemoryAccessUsesHostPageTables: ::std::os::raw::c_int,
     pub directManagedMemAccessFromHost: ::std::os::raw::c_int,
-}
-
-impl Default for cudaDeviceProp {
-    fn default() -> Self {
-        unsafe { ::std::mem::zeroed() }
-    }
 }
 
 #[cfg(test)]

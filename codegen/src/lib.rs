@@ -8,7 +8,7 @@ mod utils;
 use utils::{Element, ElementMode, ExeParser, HijackParser};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// The derive macro for Transportable trait.
+/// The derive macros for auto trait impl.
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// The derive procedural macro to generate `Transportable` trait implementation for a *fixed-size* type.
@@ -69,6 +69,47 @@ pub fn transportable_derive(input: TokenStream) -> TokenStream {
                     true => Ok(()),
                     false => Err(CommChannelError::IoError),
                 }
+            }
+        }
+    };
+
+    gen.into()
+}
+
+/// The derive procedural macro to defaultly zero a type variable.
+/// 
+/// ### Example
+/// To use this macro, annotate a struct or enum with `#[derive(ZeroDefault)]`.
+/// 
+/// ```ignore
+/// #[derive(ZeroDefault)]
+/// pub struct MyStruct {
+///    ...
+/// }
+/// ```
+/// 
+/// This invocation generates a `Default` trait implementation for `MyStruct`,
+/// which is used for initializing the struct with zeroed memory.
+/// 
+/// Specifically, the implementation is expanded as:
+/// 
+/// ```ignore
+/// impl Default for MyStruct {
+///    fn default() -> Self {
+///       unsafe { ::std::mem::zeroed() }
+///   }
+/// }
+/// ```
+/// 
+#[proc_macro_derive(ZeroDefault)]
+pub fn defaultable_derive(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as syn::DeriveInput);
+    let name = &input.ident;
+
+    let gen = quote! {
+        impl Default for #name {
+            fn default() -> Self {
+                unsafe { ::std::mem::zeroed() }
             }
         }
     };
