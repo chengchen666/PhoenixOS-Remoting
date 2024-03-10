@@ -4,8 +4,7 @@
 
 int main()
 {
-    const int iterations = 1;
-    int count = 0;
+    // const int iterations = 1;
     cudaError_t error;
 
     error = cudaGetLastError();

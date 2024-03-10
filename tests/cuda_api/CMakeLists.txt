@@ -18,6 +18,7 @@ foreach(source IN LISTS sources)
     add_executable(${source_name} ${source})
     # Link against the CUDA libraries
     target_link_libraries(${source_name} PRIVATE ${CUDA_LIBRARIES} ${CUDA_CUDART_LIBRARY})
+    target_link_libraries(${source_name} PRIVATE nvidia-ml)
     # Specify C++11 as the standard for the host compiler
     set_target_properties(${source_name} PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
@@ -27,7 +28,7 @@ foreach(source IN LISTS sources)
 endforeach()
 
 # Set optimization level and pass other flags to the CUDA NVCC compiler
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O2;-std=c++11;-lcudnn)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O2;-std=c++11;-lcudnn;-lcuda;-lcudart;-lnvidia-ml)
 
 # If you need to specify architecture-specific flags, for example:
 # set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_30,code=sm_30)
