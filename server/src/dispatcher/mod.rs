@@ -1,8 +1,11 @@
 use super::*;
 
 mod cudart_exe;
-use self::cudart_exe::*;
+mod cudart_exe_custom;
 mod nvml_exe;
+
+use self::cudart_exe::*;
+use self::cudart_exe_custom::*;
 use self::nvml_exe::*;
 
 pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_receiver: &mut T) {
