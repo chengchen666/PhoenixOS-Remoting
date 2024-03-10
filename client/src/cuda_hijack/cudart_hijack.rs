@@ -117,3 +117,11 @@ gen_hijack!(
     "cudaStream_t",
     "*mut cudaStreamCaptureStatus"
 );
+
+gen_hijack!(
+    9,
+    "cudaGetDeviceProperties",
+    "cudaError_t",
+    "*mut cudaDeviceProp",
+    "::std::os::raw::c_int"
+);

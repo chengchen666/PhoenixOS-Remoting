@@ -71,3 +71,10 @@ gen_exe!(
     "cudaStream_t",
     "*mut cudaStreamCaptureStatus"
 );
+
+gen_exe!(
+    "cudaGetDeviceProperties",
+    "cudaError_t",
+    "*mut cudaDeviceProp",
+    "::std::os::raw::c_int"
+);

@@ -43,6 +43,13 @@ extern "C" {
     ) -> cudaError_t;
 }
 
+extern "C" {
+    pub fn cudaGetDeviceProperties(
+        prop: *mut cudaDeviceProp,
+        device: ::std::os::raw::c_int,
+    ) -> cudaError_t;
+}
+
 // #[no_mangle]
 // pub extern "C" fn __cudaRegisterFatBinary(fatCubin: &FatHeader) -> *mut u64 {
 //     // println!("Hijacked __cudaRegisterFatBinary(fatCubin:{:#x?})", fatCubin);
@@ -134,13 +141,6 @@ extern "C" {
 //         args: *mut *mut ::std::os::raw::c_void,
 //         sharedMem: usize,
 //         stream: cudaStream_t,
-//     ) -> cudaError_t;
-// }
-
-// extern "C" {
-//     pub fn cudaGetDeviceProperties(
-//         prop: *mut cudaDeviceProp,
-//         device: ::std::os::raw::c_int,
 //     ) -> cudaError_t;
 // }
 
