@@ -15,6 +15,6 @@
 - [x] cudaMemcpyAsyncDeviceToHost
 - [x] cudaStreamIsCapturing
 - [x] cudaStreamSynchronize
-- [ ] nvmlDeviceGetCount_v2
-- [ ] nvmlInitWithFlags
-- [ ] nvmlInit_v2
+- [x] nvmlDeviceGetCount_v2
+- [x] nvmlInitWithFlags
+- [x] nvmlInit_v2
