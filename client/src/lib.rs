@@ -22,6 +22,10 @@ use codegen::gen_hijack;
 pub mod cuda_hijack;
 pub use cuda_hijack::*;
 
+pub mod elf;
+use elf::ElfController;
+use elf::interfaces::{fat_header, kernel_info_t};
+
 use std::sync::Mutex;
 
 lazy_static! {
@@ -33,4 +37,5 @@ lazy_static! {
         let manager = SHMChannelBufferManager::new_client(SHM_NAME_STOC, SHM_SIZE).unwrap();
         Mutex::new(RingBuffer::new(manager))
     };
+    static ref ELF_CONTROLLER: ElfController = ElfController::new();
 }
