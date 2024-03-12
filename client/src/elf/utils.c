@@ -60,7 +60,7 @@ int cpu_utils_launch_child(const char *file, char **args)
         close(filedes[1]);
         close(filedes[0]);
         char *env[] = {NULL};
-        execvpe(file, args, env);
+        execve(file, args, env);
         exit(1);
     }
     close(filedes[1]);
