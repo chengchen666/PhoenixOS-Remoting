@@ -233,7 +233,7 @@ int cpu_utils_contains_kernel(const char *path)
     return ret == 0 && child_exit == 0;
 }
 
-int cpu_utils_parameter_info(char *path)
+int utils_parameter_info(char *path)
 {
     int ret = 1;
     char linktarget[PATH_MAX] = {0};
