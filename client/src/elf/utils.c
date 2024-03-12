@@ -40,65 +40,6 @@ void add_kernel_name(const char* name, kernel_info_t* info) {
     }
 }
 
-int cpu_utils_command(char **command)
-{
-    FILE* fd;
-    char str[128] = {0};
-    size_t comm_len = 0;
-    int ret = -1;
-    if ((fd = fopen("/proc/self/comm", "r")) == NULL) {
-        LOGE(LOG_ERROR, "%s can't be opened.", "/proc/self/comm");
-        return -1;
-    }
-
-    if ((comm_len = fread(str, 1, 128, fd)) == 0) {
-        LOGE(LOG_ERROR, "could not read from /proc/self/comm");
-        goto cleanup;
-    }
-
-    if ((*command = realloc(*command, comm_len)) == NULL) {
-        LOGE(LOG_ERROR, "realloc failed");
-        goto cleanup;
-    }
-    
-    strncpy(*command, str, comm_len-1);
-    (*command)[comm_len-1] = '\0';
-    ret = 0;
- cleanup:
-    fclose(fd);
-    return ret;
-
-}
-
-int cpu_utils_md5hash(char *filename, unsigned long *high, unsigned long *low)
-{
-    unsigned char c[MD5_DIGEST_LENGTH];
-    FILE *fd;
-    MD5_CTX mdContext;
-    int bytes;
-    unsigned char data[1024];
-
-    if (filename == NULL || high == NULL || low == NULL) {
-        return -1;
-    }
-
-    if ((fd = fopen(filename, "rb")) == NULL) {
-        LOGE(LOG_ERROR, "%s can't be opened.", filename);
-        return -1;
-    }
-
-    MD5_Init (&mdContext);
-    while ((bytes = fread(data, 1, 1024, fd)) != 0)
-        MD5_Update(&mdContext, data, bytes);
-    MD5_Final(c, &mdContext);
-    fclose (fd);
-    *high = *((unsigned long*)c);
-    *low  = *((unsigned long*)(c+8));
-    return 0;
-}
-
-
-
 int cpu_utils_launch_child(const char *file, char **args)
 {
     int filedes[2];
@@ -401,38 +342,5 @@ void kernel_infos_free()
         free(info->param_offsets);
         free(info->param_sizes);
         free(info);
-    }
-}
-
-void hexdump(const uint8_t* data, size_t size)
-{
-    return;
-    size_t pos = 0;
-    while (pos < size) {
-        printf("%#05zx: ", pos);
-        for (int i = 0; i < 16; i++) {
-            if (pos + i < size) {
-                printf("%02x", data[pos + i]);
-            } else {
-                printf("  ");
-            }
-            if (i % 4 == 3) {
-                printf(" ");
-            }
-        }
-        printf(" | ");
-        for (int i = 0; i < 16; i++) {
-            if (pos + i < size) {
-                if (data[pos + i] >= 0x20 && data[pos + i] <= 0x7e) {
-                    printf("%c", data[pos + i]);
-                } else {
-                    printf(".");
-                }
-            } else {
-                printf(" ");
-            }
-        }
-        printf("\n");
-        pos += 16;
     }
 }

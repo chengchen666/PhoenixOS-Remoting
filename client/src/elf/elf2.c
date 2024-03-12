@@ -57,6 +57,39 @@ struct  __attribute__((__packed__)) fat_text_header
 #define FATBIN_FLAG_LINUX     0x0000000000000010LL
 #define FATBIN_FLAG_COMPRESS  0x0000000000002000LL
 
+static void hexdump(const uint8_t* data, size_t size)
+{
+    return;
+    size_t pos = 0;
+    while (pos < size) {
+        printf("%#05zx: ", pos);
+        for (int i = 0; i < 16; i++) {
+            if (pos + i < size) {
+                printf("%02x", data[pos + i]);
+            } else {
+                printf("  ");
+            }
+            if (i % 4 == 3) {
+                printf(" ");
+            }
+        }
+        printf(" | ");
+        for (int i = 0; i < 16; i++) {
+            if (pos + i < size) {
+                if (data[pos + i] >= 0x20 && data[pos + i] <= 0x7e) {
+                    printf("%c", data[pos + i]);
+                } else {
+                    printf(".");
+                }
+            } else {
+                printf(" ");
+            }
+        }
+        printf("\n");
+        pos += 16;
+    }
+}
+
 int elf2_init(void)
 {
     if (elf_version(EV_CURRENT) == EV_NONE) {

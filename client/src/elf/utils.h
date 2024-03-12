@@ -30,12 +30,7 @@ void add_kernel_host_func(const void* func, kernel_info_t* info);
 void add_kernel_name(const char* name, kernel_info_t* info);
 
 void kernel_infos_free();
-int cpu_utils_command(char **command);
-int cpu_utils_md5hash(char *filename, unsigned long *high, unsigned long *low);
-int cricketd_utils_launch_child(const char *file, char **args);
 int cpu_utils_parameter_info(char *path);
 kernel_info_t* utils_search_info(const char *kernelname);
-void hexdump(const uint8_t* data, size_t size);
-
 
 #endif //_CPU_UTILS_H_
