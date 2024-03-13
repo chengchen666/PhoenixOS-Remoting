@@ -2,10 +2,10 @@
 .PHONY: all clean
 
 CC = gcc
-CFLAGS = -O2
+CFLAGS = -lelf -lz -O2
 SRC = $(wildcard *.c)
 OBJ = $(patsubst %.c, %.o, $(SRC))
-LIB = libelf.a
+LIB = libelfctrl.a
 
 all: $(LIB)
 
