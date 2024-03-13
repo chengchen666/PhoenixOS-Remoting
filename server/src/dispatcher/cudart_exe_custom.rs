@@ -59,3 +59,16 @@ pub fn __cudaRegisterFatBinaryExe<T: CommChannel>(channel_sender: &mut T, channe
     result.send(channel_sender).unwrap();
     channel_sender.flush_out().unwrap();
 }
+
+// TODO: We should also remove associated function handles
+pub fn __cudaUnregisterFatBinaryExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+    info!("[{}:{}] __cudaUnregisterFatBinary", std::file!(), std::line!());
+    let mut client_address: MemPtr = Default::default();
+    client_address.recv(channel_receiver).unwrap();
+
+    let module = get_module(client_address).unwrap();
+    let result = unsafe { cuModuleUnload(module) };
+
+    result.send(channel_sender).unwrap();
+    channel_sender.flush_out().unwrap();
+}

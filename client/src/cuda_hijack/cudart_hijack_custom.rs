@@ -141,3 +141,47 @@ pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_voi
     }
     return client_address;
 }
+
+#[no_mangle]
+pub extern "C" fn __cudaUnregisterFatBinary(fatCubinHandle: MemPtr) {
+    println!(
+        "[{}:{}] __cudaUnregisterFatBinary",
+        std::file!(),
+        std::line!()
+    );
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+
+    let proc_id = 101;
+    let mut result: CUresult = Default::default();
+
+    match proc_id.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send proc_id: {:?}", e),
+    }
+    match fatCubinHandle.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send fatCubinHandle: {:?}", e),
+    }
+    match channel_sender.flush_out() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send: {:?}", e),
+    }
+
+    match result.recv(channel_receiver) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive result: {:?}", e),
+    }
+    if CUresult::CUDA_SUCCESS != result {
+        panic!("error unregistering fatbin: {:?}", result);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn __cudaRegisterFatBinaryEnd(fatCubinHandle: MemPtr) {
+    println!(
+        "[{}:{}] __cudaRegisterFatBinaryEnd",
+        std::file!(),
+        std::line!()
+    );
+}

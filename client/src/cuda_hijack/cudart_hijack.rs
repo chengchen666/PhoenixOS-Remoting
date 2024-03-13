@@ -48,3 +48,9 @@ gen_hijack!(
 //     "MemPtr",
 //     "*const ::std::os::raw::c_void"
 // );
+// gen_hijack!(
+//     101,
+//     "__cudaUnregisterFatBinary",
+//     "null",
+//     "MemPtr"
+// );

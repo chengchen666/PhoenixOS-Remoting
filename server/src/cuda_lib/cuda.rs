@@ -6,3 +6,7 @@ extern "C" {
         image: *const ::std::os::raw::c_void,
     ) -> CUresult;
 }
+
+extern "C" {
+    pub fn cuModuleUnload(hmod: CUmodule) -> CUresult;
+}

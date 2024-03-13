@@ -22,6 +22,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         9 => cudaStreamIsCapturingExe(channel_sender, channel_receiver),
         10 => cudaGetDevicePropertiesExe(channel_sender, channel_receiver),
         100 => __cudaRegisterFatBinaryExe(channel_sender, channel_receiver),
+        101 => __cudaUnregisterFatBinaryExe(channel_sender, channel_receiver),
         1000 => nvmlInit_v2Exe(channel_sender, channel_receiver),
         1001 => nvmlDeviceGetCount_v2Exe(channel_sender, channel_receiver),
         1002 => nvmlInitWithFlagsExe(channel_sender, channel_receiver),
