@@ -13,7 +13,7 @@ $(LIB): $(OBJ)
 	ar rcs $@ $^
 
 %.o: %.c
-	$(CC) $(CFLAGS) $< -c -o $@
+	$(CC) $(CFLAGS) $< -fPIC -c -o $@
 
 clean:
 	rm -f $(OBJ) $(LIB)
