@@ -2,8 +2,8 @@
 
 - [ ] __cudaPopCallConfiguration
 - [ ] __cudaPushCallConfiguration
-- [ ] __cudaRegisterFatBinary
-- [ ] __cudaRegisterFatBinaryEnd
+- [x] __cudaRegisterFatBinary
+- [x] __cudaRegisterFatBinaryEnd
 - [ ] __cudaRegisterFunction
 - [ ] __cudaRegisterVar
 - [x] cudaGetDevice
