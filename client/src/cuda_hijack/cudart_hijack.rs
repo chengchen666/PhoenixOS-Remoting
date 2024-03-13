@@ -42,3 +42,9 @@ gen_hijack!(
     "*mut cudaDeviceProp",
     "::std::os::raw::c_int"
 );
+// gen_hijack!(
+//     100,
+//     "__cudaRegisterFatBinary",
+//     "MemPtr",
+//     "*const ::std::os::raw::c_void"
+// );

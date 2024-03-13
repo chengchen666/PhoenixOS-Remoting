@@ -14,6 +14,7 @@ use network::{
     },
     type_impl::{
         basic::MemPtr,
+        cuda::{CUmodule, CUresult},
         cudart::{
             cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
         },
@@ -24,6 +25,24 @@ use network::{
 
 #[allow(unused_imports)]
 use log::{debug, error, info, log_enabled, Level};
+
+extern crate lazy_static;
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::sync::Mutex;
+
+lazy_static! {
+    // client_address -> module
+    static ref MODULES: Mutex<HashMap<MemPtr, CUmodule>> = Mutex::new(HashMap::new());
+}
+
+fn add_module(client_address: MemPtr, module: CUmodule) {
+    MODULES.lock().unwrap().insert(client_address, module);
+}
+
+fn get_module(client_address: MemPtr) -> Option<CUmodule> {
+    MODULES.lock().unwrap().get(&client_address).cloned()
+}
 
 fn create_buffer() -> (
     RingBuffer<SHMChannelBufferManager>,

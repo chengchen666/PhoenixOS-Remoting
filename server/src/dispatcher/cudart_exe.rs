@@ -33,3 +33,8 @@ gen_exe!(
     "*mut cudaDeviceProp",
     "::std::os::raw::c_int"
 );
+// gen_exe!(
+//     "__cudaRegisterFatBinary",
+//     "MemPtr",
+//     "*const ::std::os::raw::c_void"
+// );

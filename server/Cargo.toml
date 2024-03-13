@@ -11,6 +11,7 @@ network = { path = "../network" }
 codegen = { path = "../codegen" }
 log = "0.4.0"
 env_logger = "0.9"
+lazy_static = "1.4.0"
 
 [build-dependencies]
 glob = "0.3"
