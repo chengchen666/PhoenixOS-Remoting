@@ -37,7 +37,7 @@ extern "C" {
 }
 
 extern "C" {
-    pub fn cudaFree(devPtr: *mut MemPtr) -> cudaError_t;
+    pub fn cudaFree(devPtr: MemPtr) -> cudaError_t;
 }
 
 extern "C" {

@@ -27,7 +27,7 @@ gen_hijack!(6, "cudaMalloc", "cudaError_t", "*mut MemPtr", "usize");
 //     "usize",
 //     "cudaMemcpyKind"
 // );
-gen_hijack!(8, "cudaFree", "cudaError_t", "*mut MemPtr");
+gen_hijack!(8, "cudaFree", "cudaError_t", "MemPtr");
 gen_hijack!(
     9,
     "cudaStreamIsCapturing",

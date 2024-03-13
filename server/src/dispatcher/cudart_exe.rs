@@ -20,7 +20,7 @@ gen_exe!("cudaMalloc", "cudaError_t", "*mut MemPtr", "usize");
 //     "usize",
 //     "cudaMemcpyKind"
 // );
-gen_exe!("cudaFree", "cudaError_t", "*mut MemPtr");
+gen_exe!("cudaFree", "cudaError_t", "MemPtr");
 gen_exe!(
     "cudaStreamIsCapturing",
     "cudaError_t",
