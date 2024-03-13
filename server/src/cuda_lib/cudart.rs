@@ -37,6 +37,10 @@ extern "C" {
 }
 
 extern "C" {
+    pub fn cudaFree(devPtr: *mut MemPtr) -> cudaError_t;
+}
+
+extern "C" {
     pub fn cudaStreamIsCapturing(
         stream: cudaStream_t,
         pCaptureStatus: *mut cudaStreamCaptureStatus,
