@@ -6,6 +6,9 @@ project(remoting_test LANGUAGES CXX CUDA)
 set(CUDA_USE_STATIC_CUDA_RUNTIME OFF CACHE INTERNAL "")
 find_package(CUDA REQUIRED)
 
+# set cuda compiler
+set(CMAKE_CXX_COMPILER g++)
+
 # Include directories for CUDA
 include_directories(${CUDA_INCLUDE_DIRS})
 message(STATUS "CUDA Libraries: ${CUDA_CUDART_LIBRARY}")
@@ -19,16 +22,14 @@ foreach(source IN LISTS sources)
     # Link against the CUDA libraries
     target_link_libraries(${source_name} PRIVATE ${CUDA_LIBRARIES} ${CUDA_CUDART_LIBRARY})
     target_link_libraries(${source_name} PRIVATE nvidia-ml)
+    target_link_libraries(${source_name} PRIVATE cudnn)
     # Specify C++11 as the standard for the host compiler
     set_target_properties(${source_name} PROPERTIES
-        CUDA_SEPARABLE_COMPILATION ON
+        CUDA_RUNTIME_LIBRARY Shared
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
     )
 endforeach()
-
-# Set optimization level and pass other flags to the CUDA NVCC compiler
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O2;-std=c++11;-lcudnn;-lcuda;-lcudart;-lnvidia-ml)
 
 # If you need to specify architecture-specific flags, for example:
 # set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_30,code=sm_30)
