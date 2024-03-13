@@ -178,7 +178,7 @@ pub extern "C" fn __cudaUnregisterFatBinary(fatCubinHandle: MemPtr) {
 }
 
 #[no_mangle]
-pub extern "C" fn __cudaRegisterFatBinaryEnd(fatCubinHandle: MemPtr) {
+pub extern "C" fn __cudaRegisterFatBinaryEnd(_fatCubinHandle: MemPtr) {
     println!(
         "[{}:{}] __cudaRegisterFatBinaryEnd",
         std::file!(),
