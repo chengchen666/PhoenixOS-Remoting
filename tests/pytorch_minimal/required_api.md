@@ -5,7 +5,7 @@
 - [x] __cudaRegisterFatBinary
 - [x] __cudaRegisterFatBinaryEnd
 - [x] __cudaRegisterFunction
-- [ ] __cudaRegisterVar
+- [x] __cudaRegisterVar
 - [x] cudaGetDevice
 - [x] cudaGetDeviceCount
 - [x] cudaGetDeviceProperties
