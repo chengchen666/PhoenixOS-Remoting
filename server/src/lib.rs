@@ -17,6 +17,7 @@ use network::{
         cuda::{CUdeviceptr, CUfunction, CUmodule, CUresult},
         cudart::{
             cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
+            dim3,
         },
         nvml::nvmlReturn_t,
     },

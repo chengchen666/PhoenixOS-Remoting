@@ -236,6 +236,14 @@ pub struct cudaDeviceProp {
     pub directManagedMemAccessFromHost: ::std::os::raw::c_int,
 }
 
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq, codegen::Transportable)]
+pub struct dim3 {
+    pub x: ::std::os::raw::c_uint,
+    pub y: ::std::os::raw::c_uint,
+    pub z: ::std::os::raw::c_uint,
+}
+
 #[cfg(test)]
 mod tests{
     use super::*;

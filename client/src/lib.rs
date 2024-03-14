@@ -11,6 +11,7 @@ use network::{
         cuda::CUresult,
         cudart::{
             cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
+            dim3,
         },
         nvml::nvmlReturn_t,
     },
@@ -24,8 +25,8 @@ pub mod cuda_hijack;
 pub use cuda_hijack::*;
 
 pub mod elf;
-use elf::ElfController;
 use elf::interfaces::{fat_header, kernel_info_t};
+use elf::ElfController;
 
 use std::sync::Mutex;
 
