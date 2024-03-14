@@ -54,17 +54,6 @@ extern "C" {
     ) -> cudaError_t;
 }
 
-extern "C" {
-    pub fn cudaLaunchKernel(
-        func: CUfunction,
-        gridDim: dim3,
-        blockDim: dim3,
-        args: *mut *mut ::std::os::raw::c_void,
-        sharedMem: usize,
-        stream: cudaStream_t,
-    ) -> cudaError_t;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

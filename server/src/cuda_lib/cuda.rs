@@ -27,3 +27,19 @@ extern "C" {
         name: *const ::std::os::raw::c_char,
     ) -> CUresult;
 }
+
+extern "C" {
+    pub fn cuLaunchKernel(
+        f: CUfunction,
+        gridDimX: ::std::os::raw::c_uint,
+        gridDimY: ::std::os::raw::c_uint,
+        gridDimZ: ::std::os::raw::c_uint,
+        blockDimX: ::std::os::raw::c_uint,
+        blockDimY: ::std::os::raw::c_uint,
+        blockDimZ: ::std::os::raw::c_uint,
+        sharedMemBytes: ::std::os::raw::c_uint,
+        hStream: CUstream,
+        kernelParams: *mut *mut ::std::os::raw::c_void,
+        extra: *mut *mut ::std::os::raw::c_void,
+    ) -> CUresult;
+}
