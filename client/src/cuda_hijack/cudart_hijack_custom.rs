@@ -303,3 +303,81 @@ pub extern "C" fn __cudaRegisterVar(
         panic!("error registering var: {:?}", result);
     }
 }
+
+#[no_mangle]
+pub extern "C" fn cudaLaunchKernel(
+    func: MemPtr,
+    gridDim: dim3,
+    blockDim: dim3,
+    args: *mut *mut ::std::os::raw::c_void,
+    sharedMem: usize,
+    stream: cudaStream_t,
+) -> cudaError_t {
+    println!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+
+    let proc_id = 200;
+    let mut result: cudaError_t = Default::default();
+
+    let info: *mut kernel_info_t =
+        ELF_CONTROLLER.find_kernel_host_func(func as *mut ::std::os::raw::c_void);
+    if info.is_null() {
+        panic!("request to call unknown kernel.");
+    }
+    let info = unsafe { &mut *info };
+
+    let argc = info.param_num;
+    let mut arg_vec: Vec<Vec<u8>> = Vec::new();
+    for i in 0..argc {
+        let size = unsafe { *info.param_sizes.wrapping_add(i) as usize };
+        let arg: Vec<u8> =
+            unsafe { std::slice::from_raw_parts((*args.add(i)) as *const u8, size).to_vec() };
+        arg_vec.push(arg);
+    }
+
+    match proc_id.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send proc_id: {:?}", e),
+    }
+    match func.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send func: {:?}", e),
+    }
+    match gridDim.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send gridDim: {:?}", e),
+    }
+    match blockDim.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send blockDim: {:?}", e),
+    }
+    match argc.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send argc: {:?}", e),
+    }
+    for arg in arg_vec.iter() {
+        match arg.send(channel_sender) {
+            Ok(()) => {}
+            Err(e) => panic!("failed to send arg: {:?}", e),
+        }
+    }
+    match sharedMem.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send sharedMem: {:?}", e),
+    }
+    match stream.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send stream: {:?}", e),
+    }
+    match channel_sender.flush_out() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send: {:?}", e),
+    }
+
+    match result.recv(channel_receiver) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive result: {:?}", e),
+    }
+    return result;
+}

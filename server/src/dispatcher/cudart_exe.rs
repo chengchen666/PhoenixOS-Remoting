@@ -65,3 +65,13 @@ gen_exe!(
 //     "::std::os::raw::c_int",
 //     "::std::os::raw::c_int"
 // );
+// gen_exe!(
+//     "cudaLaunchKernel",
+//     "cudaError_t",
+//     "*const ::std::os::raw::c_void",
+//     "dim3",
+//     "dim3",
+//     "*mut *mut ::std::os::raw::c_void",
+//     "usize",
+//     "cudaStream_t"
+// );
