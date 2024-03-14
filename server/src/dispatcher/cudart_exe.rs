@@ -39,3 +39,14 @@ gen_exe!(
 //     "*const ::std::os::raw::c_void"
 // );
 // gen_exe!("__cudaUnregisterFatBinary", "null", "MemPtr");
+// gen_exe!(
+//     "__cudaRegisterFunction",
+//     "MemPtr",
+//     "MemPtr",
+//     "*const ::std::os::raw::c_void",
+//     "*const ::std::os::raw::c_char",
+//     "::std::os::raw::c_int",
+//     "::std::os::raw::c_int",
+//     "MemPtr",
+//     "MemPtr"
+// );

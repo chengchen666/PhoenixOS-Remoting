@@ -10,3 +10,11 @@ extern "C" {
 extern "C" {
     pub fn cuModuleUnload(hmod: CUmodule) -> CUresult;
 }
+
+extern "C" {
+    pub fn cuModuleGetFunction(
+        hfunc: *mut CUfunction,
+        hmod: CUmodule,
+        name: *const ::std::os::raw::c_char,
+    ) -> CUresult;
+}

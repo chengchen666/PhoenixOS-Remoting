@@ -34,6 +34,8 @@ use std::sync::Mutex;
 lazy_static! {
     // client_address -> module
     static ref MODULES: Mutex<HashMap<MemPtr, CUmodule>> = Mutex::new(HashMap::new());
+    // host_func -> device_func
+    static ref FUNCTIONS: Mutex<HashMap<MemPtr, CUfunction>> = Mutex::new(HashMap::new());
 }
 
 fn add_module(client_address: MemPtr, module: CUmodule) {
@@ -42,6 +44,14 @@ fn add_module(client_address: MemPtr, module: CUmodule) {
 
 fn get_module(client_address: MemPtr) -> Option<CUmodule> {
     MODULES.lock().unwrap().get(&client_address).cloned()
+}
+
+fn add_function(host_func: MemPtr, device_func: CUfunction) {
+    FUNCTIONS.lock().unwrap().insert(host_func, device_func);
+}
+
+fn get_function(host_func: MemPtr) -> Option<CUfunction> {
+    FUNCTIONS.lock().unwrap().get(&host_func).cloned()
 }
 
 fn create_buffer() -> (

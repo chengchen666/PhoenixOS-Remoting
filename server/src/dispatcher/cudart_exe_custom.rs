@@ -72,3 +72,22 @@ pub fn __cudaUnregisterFatBinaryExe<T: CommChannel>(channel_sender: &mut T, chan
     result.send(channel_sender).unwrap();
     channel_sender.flush_out().unwrap();
 }
+
+pub fn __cudaRegisterFunctionExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+    info!("[{}:{}] __cudaRegisterFunction", std::file!(), std::line!());
+    let mut fatCubinHandle: MemPtr = Default::default();
+    fatCubinHandle.recv(channel_receiver).unwrap();
+    let mut hostFun: MemPtr = Default::default();
+    hostFun.recv(channel_receiver).unwrap();
+    let mut deviceName: Vec<u8> = Default::default();
+    deviceName.recv(channel_receiver).unwrap();
+
+    let mut device_func: CUfunction = Default::default();
+
+    let module = get_module(fatCubinHandle).unwrap();
+    let result = unsafe { cuModuleGetFunction(&mut device_func, module, deviceName.as_ptr() as *const std::os::raw::c_char) };
+    add_function(hostFun, device_func);
+
+    result.send(channel_sender).unwrap();
+    channel_sender.flush_out().unwrap();
+}
