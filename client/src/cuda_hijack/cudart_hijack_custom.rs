@@ -184,4 +184,5 @@ pub extern "C" fn __cudaRegisterFatBinaryEnd(_fatCubinHandle: MemPtr) {
         std::file!(),
         std::line!()
     );
+    // TODO: no actual impact
 }
