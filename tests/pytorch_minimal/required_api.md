@@ -6,11 +6,12 @@
 - [x] __cudaRegisterFatBinaryEnd
 - [x] __cudaRegisterFunction
 - [x] __cudaRegisterVar
+- [x] __cudaUnregisterFatBinary
 - [x] cudaGetDevice
 - [x] cudaGetDeviceCount
 - [x] cudaGetDeviceProperties
 - [x] cudaGetLastError
-- [ ] cudaLaunchKernel
+- [x] cudaLaunchKernel
 - [x] cudaMalloc
 - [x] cudaMemcpyAsyncDeviceToHost
 - [x] cudaStreamIsCapturing
