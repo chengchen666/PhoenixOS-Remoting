@@ -101,6 +101,8 @@ pub use self::cudaError_enum as CUresult;
 
 pub type CUmodule = usize;
 
+pub type CUfunction = usize;
+
 #[cfg(test)]
 mod tests{
     use super::*;
