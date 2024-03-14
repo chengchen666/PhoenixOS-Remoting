@@ -14,7 +14,7 @@ use network::{
     },
     type_impl::{
         basic::MemPtr,
-        cuda::{CUfunction, CUmodule, CUresult},
+        cuda::{CUdeviceptr, CUfunction, CUmodule, CUresult},
         cudart::{
             cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
         },

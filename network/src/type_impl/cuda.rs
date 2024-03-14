@@ -103,6 +103,8 @@ pub type CUmodule = usize;
 
 pub type CUfunction = usize;
 
+pub type CUdeviceptr = u64;
+
 #[cfg(test)]
 mod tests{
     use super::*;
