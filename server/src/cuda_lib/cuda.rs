@@ -18,3 +18,12 @@ extern "C" {
         name: *const ::std::os::raw::c_char,
     ) -> CUresult;
 }
+
+extern "C" {
+    pub fn cuModuleGetGlobal_v2(
+        dptr: *mut CUdeviceptr,
+        bytes: *mut usize,
+        hmod: CUmodule,
+        name: *const ::std::os::raw::c_char,
+    ) -> CUresult;
+}

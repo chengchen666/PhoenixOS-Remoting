@@ -36,6 +36,8 @@ lazy_static! {
     static ref MODULES: Mutex<HashMap<MemPtr, CUmodule>> = Mutex::new(HashMap::new());
     // host_func -> device_func
     static ref FUNCTIONS: Mutex<HashMap<MemPtr, CUfunction>> = Mutex::new(HashMap::new());
+    // host_var -> device_var
+    static ref VARIABLES: Mutex<HashMap<MemPtr, CUdeviceptr>> = Mutex::new(HashMap::new());
 }
 
 fn add_module(client_address: MemPtr, module: CUmodule) {
@@ -52,6 +54,14 @@ fn add_function(host_func: MemPtr, device_func: CUfunction) {
 
 fn get_function(host_func: MemPtr) -> Option<CUfunction> {
     FUNCTIONS.lock().unwrap().get(&host_func).cloned()
+}
+
+fn add_variable(host_var: MemPtr, device_var: CUdeviceptr) {
+    VARIABLES.lock().unwrap().insert(host_var, device_var);
+}
+
+fn get_variable(host_var: MemPtr) -> Option<CUdeviceptr> {
+    VARIABLES.lock().unwrap().get(&host_var).cloned()
 }
 
 fn create_buffer() -> (

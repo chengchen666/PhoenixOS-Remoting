@@ -41,12 +41,27 @@ gen_exe!(
 // gen_exe!("__cudaUnregisterFatBinary", "null", "MemPtr");
 // gen_exe!(
 //     "__cudaRegisterFunction",
+//     "null",
 //     "MemPtr",
 //     "MemPtr",
-//     "*const ::std::os::raw::c_void",
+//     "*mut ::std::os::raw::c_char",
 //     "*const ::std::os::raw::c_char",
 //     "::std::os::raw::c_int",
-//     "::std::os::raw::c_int",
+//     "MemPtr",
+//     "MemPtr",
+//     "MemPtr",
 //     "MemPtr",
 //     "MemPtr"
+// );
+// gen_exe!(
+//     "__cudaRegisterVar",
+//     "null",
+//     "MemPtr",
+//     "MemPtr",
+//     "*const ::std::os::raw::c_char",
+//     "*const ::std::os::raw::c_char",
+//     "::std::os::raw::c_int",
+//     "usize",
+//     "::std::os::raw::c_int",
+//     "::std::os::raw::c_int"
 // );

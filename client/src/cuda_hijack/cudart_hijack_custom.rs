@@ -250,3 +250,56 @@ pub extern "C" fn __cudaRegisterFunction(
     info.host_fun = hostFun as *mut ::std::os::raw::c_void;
     ELF_CONTROLLER.add_kernel_host_func(hostFun as *mut ::std::os::raw::c_void, info);
 }
+
+#[no_mangle]
+pub extern "C" fn __cudaRegisterVar(
+    fatCubinHandle: MemPtr,
+    hostVar: MemPtr,
+    _deviceAddress: *mut ::std::os::raw::c_char,
+    deviceName: *const ::std::os::raw::c_char,
+    _ext: ::std::os::raw::c_int,
+    _size: usize,
+    _constant: ::std::os::raw::c_int,
+    _global: ::std::os::raw::c_int,
+) {
+    println!("[{}:{}] __cudaRegisterVar", std::file!(), std::line!());
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+
+    let proc_id = 103;
+    let mut result: CUresult = Default::default();
+
+    let mut deviceName: Vec<u8> = unsafe { std::ffi::CStr::from_ptr(deviceName) }
+        .to_bytes()
+        .to_vec();
+    deviceName.push(0);
+
+    match proc_id.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send proc_id: {:?}", e),
+    }
+    match fatCubinHandle.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send fatCubinHandle: {:?}", e),
+    }
+    match hostVar.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send hostVar: {:?}", e),
+    }
+    match deviceName.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send deviceName: {:?}", e),
+    }
+    match channel_sender.flush_out() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send: {:?}", e),
+    }
+
+    match result.recv(channel_receiver) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive result: {:?}", e),
+    }
+    if CUresult::CUDA_SUCCESS != result {
+        panic!("error registering var: {:?}", result);
+    }
+}

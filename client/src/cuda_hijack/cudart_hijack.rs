@@ -57,6 +57,7 @@ gen_hijack!(
 // gen_hijack!(
 //     102,
 //     "__cudaRegisterFunction",
+//     "null",
 //     "MemPtr",
 //     "MemPtr",
 //     "*mut ::std::os::raw::c_char",
@@ -67,4 +68,17 @@ gen_hijack!(
 //     "MemPtr",
 //     "MemPtr",
 //     "MemPtr"
+// );
+// gen_hijack!(
+//     103,
+//     "__cudaRegisterVar",
+//     "null",
+//     "MemPtr",
+//     "MemPtr",
+//     "*const ::std::os::raw::c_char",
+//     "*const ::std::os::raw::c_char",
+//     "::std::os::raw::c_int",
+//     "usize",
+//     "::std::os::raw::c_int",
+//     "::std::os::raw::c_int"
 // );

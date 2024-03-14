@@ -91,3 +91,23 @@ pub fn __cudaRegisterFunctionExe<T: CommChannel>(channel_sender: &mut T, channel
     result.send(channel_sender).unwrap();
     channel_sender.flush_out().unwrap();
 }
+
+pub fn __cudaRegisterVarExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+    info!("[{}:{}] __cudaRegisterVar", std::file!(), std::line!());
+    let mut fatCubinHandle: MemPtr = Default::default();
+    fatCubinHandle.recv(channel_receiver).unwrap();
+    let mut hostVar: MemPtr = Default::default();
+    hostVar.recv(channel_receiver).unwrap();
+    let mut deviceName: Vec<u8> = Default::default();
+    deviceName.recv(channel_receiver).unwrap();
+
+    let mut dptr: CUdeviceptr = Default::default();
+    let mut size: usize = Default::default();
+
+    let module = get_module(fatCubinHandle).unwrap();
+    let result = unsafe { cuModuleGetGlobal_v2(&mut dptr, &mut size, module, deviceName.as_ptr() as *const std::os::raw::c_char) };
+    add_variable(hostVar, dptr);
+
+    result.send(channel_sender).unwrap();
+    channel_sender.flush_out().unwrap();
+}
