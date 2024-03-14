@@ -13,10 +13,18 @@ __global__ void addKernel(int *c, const int *a, const int *b, int size)
 
 int main(int argc, char **argv)
 {
-    const int size = 1000000;
+    const int size = 10;
     const int iterations = 1;
-    int a[size] = { 0 };
+    int *a = new int[size];
     int *dev_a = nullptr;
+
+    for (int i = 0; i < size; i++) {
+        a[i] = i;
+    }
+    for (int i = 0; i < size; i++) {
+        std::cout << a[i] << " ";
+    }
+    std::cout << std::endl;
 
     // Allocate GPU buffers for three vectors (two input, one output)
     cudaMalloc((void **)&dev_a, size * sizeof(int));
@@ -47,6 +55,11 @@ int main(int argc, char **argv)
     // Copy output vector from GPU buffer to host memory.
     cudaMemcpy(a, dev_a, size * sizeof(int), cudaMemcpyDeviceToHost);
     cudaFree(dev_a);
+
+    for (int i = 0; i < size; i++) {
+        std::cout << a[i] << " ";
+    }
+    std::cout << std::endl;
 
     return 0;
 }
