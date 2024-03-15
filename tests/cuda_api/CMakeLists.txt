@@ -21,8 +21,9 @@ foreach(source IN LISTS sources)
     add_executable(${source_name} ${source})
     # Link against the CUDA libraries
     target_link_libraries(${source_name} PRIVATE ${CUDA_LIBRARIES} ${CUDA_CUDART_LIBRARY})
-    target_link_libraries(${source_name} PRIVATE nvidia-ml)
+    target_link_libraries(${source_name} PRIVATE cuda)
     target_link_libraries(${source_name} PRIVATE cudnn)
+    target_link_libraries(${source_name} PRIVATE nvidia-ml)
     # Specify C++11 as the standard for the host compiler
     set_target_properties(${source_name} PROPERTIES
         CUDA_RUNTIME_LIBRARY Shared
