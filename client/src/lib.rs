@@ -8,7 +8,7 @@ use network::{
     },
     type_impl::{
         basic::MemPtr,
-        cuda::CUresult,
+        cuda::{CUdevice, CUresult},
         cudart::{
             cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
             dim3,

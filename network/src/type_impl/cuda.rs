@@ -103,6 +103,8 @@ pub type CUmodule = usize;
 
 pub type CUfunction = usize;
 
+pub type CUdevice = ::std::os::raw::c_int;
+
 pub type CUdeviceptr = u64;
 
 pub type CUstream = usize;
