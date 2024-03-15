@@ -7,6 +7,7 @@
 - [x] __cudaRegisterFunction
 - [x] __cudaRegisterVar
 - [x] __cudaUnregisterFatBinary
+- [ ] cuDevicePrimaryCtxGetState
 - [x] cudaGetDevice
 - [x] cudaGetDeviceCount
 - [x] cudaGetDeviceProperties
@@ -19,3 +20,4 @@
 - [x] nvmlDeviceGetCount_v2
 - [x] nvmlInitWithFlags
 - [x] nvmlInit_v2
+- [ ] shutdown
