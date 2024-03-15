@@ -30,6 +30,8 @@ int main()
         }
     }
 
+    cudaFree(d_data);
+
     // // remove initial overhead
     // for (int i = 0; i < 10; i++) {
     //     cudaMemcpy(d_data, h_data, n, cudaMemcpyHostToDevice);

@@ -148,24 +148,26 @@ pub fn defaultable_derive(input: TokenStream) -> TokenStream {
 /// #[no_mangle]
 /// pub extern "C" fn cudaGetDevice(param1: *mut ::std::os::raw::c_int) -> cudaError_t {
 ///     println!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
+///     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+///     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 ///     let proc_id = 0;
 ///     let mut var1: ::std::os::raw::c_int = Default::default();
 ///     let mut result: cudaError_t = Default::default();
 
-///     match proc_id.send(&mut (*CHANNEL_SENDER.lock().unwrap())) {
+///     match proc_id.send(channel_sender) {
 ///         Ok(()) => {}
 ///         Err(e) => panic!("failed to send proc_id: {:?}", e),
 ///     }
-///     match CHANNEL_SENDER.lock().unwrap().flush_out() {
+///     match channel_sender.flush_out() {
 ///         Ok(()) => {}
 ///         Err(e) => panic!("failed to send: {:?}", e),
 ///     }
 
-///     match var1.recv(&mut (*CHANNEL_RECEIVER.lock().unwrap())) {
+///     match var1.recv(channel_receiver) {
 ///         Ok(()) => {}
 ///         Err(e) => panic!("failed to receive var1: {:?}", e),
 ///     }
-///     match result.recv(&mut (*CHANNEL_RECEIVER.lock().unwrap())) {
+///     match result.recv(channel_receiver) {
 ///         Ok(()) => {}
 ///         Err(e) => panic!("failed to receive result: {:?}", e),
 ///     }
@@ -207,7 +209,7 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
         .map(|param| {
             let name = &param.name;
             quote! {
-                match #name.send(&mut (*CHANNEL_SENDER.lock().unwrap())) {
+                match #name.send(channel_sender) {
                     Ok(()) => {}
                     Err(e) => panic!("failed to send #name: {:?}", e),
                 }
@@ -218,7 +220,7 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
     let recv_statements = vars.iter().map(|var| {
         let name = &var.name;
         quote! {
-            match #name.recv(&mut (*CHANNEL_RECEIVER.lock().unwrap())) {
+            match #name.recv(channel_receiver) {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive #name: {:?}", e),
             }
@@ -250,23 +252,25 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
         #[no_mangle]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             println!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+            let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
             let proc_id = #proc_id;
             #( #def_statements )*
             let mut #result_name: #result_ty = Default::default();
 
-            match proc_id.send(&mut (*CHANNEL_SENDER.lock().unwrap())) {
+            match proc_id.send(channel_sender) {
                 Ok(()) => {}
                 Err(e) => panic!("failed to send proc_id: {:?}", e),
             }
             #( #send_statements )*
-            match CHANNEL_SENDER.lock().unwrap().flush_out() {
+            match channel_sender.flush_out() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to flush_out: {:?}", e),
             }
 
             #( #recv_statements )*
             #( #assign_statements )*
-            match #result_name.recv(&mut (*CHANNEL_RECEIVER.lock().unwrap())) {
+            match #result_name.recv(channel_receiver) {
                 Ok(()) => {}
                 Err(e) => panic!("failed to send #result_name: {:?}", e),
             }

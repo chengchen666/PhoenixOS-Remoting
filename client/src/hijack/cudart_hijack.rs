@@ -1,18 +1,25 @@
 #![allow(non_snake_case)]
 use super::*;
 
-gen_exe!("cudaSetDevice", "cudaError_t", "::std::os::raw::c_int");
-gen_exe!("cudaGetDevice", "cudaError_t", "*mut ::std::os::raw::c_int");
-gen_exe!(
+gen_hijack!(
+    0,
+    "cudaGetDevice",
+    "cudaError_t",
+    "*mut ::std::os::raw::c_int"
+);
+gen_hijack!(1, "cudaSetDevice", "cudaError_t", "::std::os::raw::c_int");
+gen_hijack!(
+    2,
     "cudaGetDeviceCount",
     "cudaError_t",
     "*mut ::std::os::raw::c_int"
 );
-gen_exe!("cudaGetLastError", "cudaError_t");
-gen_exe!("cudaPeekAtLastError", "cudaError_t");
-gen_exe!("cudaStreamSynchronize", "cudaError_t", "cudaStream_t");
-gen_exe!("cudaMalloc", "cudaError_t", "*mut MemPtr", "usize");
-// gen_exe!(
+gen_hijack!(3, "cudaGetLastError", "cudaError_t");
+gen_hijack!(4, "cudaPeekAtLastError", "cudaError_t");
+gen_hijack!(5, "cudaStreamSynchronize", "cudaError_t", "cudaStream_t");
+gen_hijack!(6, "cudaMalloc", "cudaError_t", "*mut MemPtr", "usize");
+// gen_hijack!(
+//     7,
 //     "cudaMemcpy",
 //     "cudaError_t",
 //     "MemPtr",
@@ -20,26 +27,35 @@ gen_exe!("cudaMalloc", "cudaError_t", "*mut MemPtr", "usize");
 //     "usize",
 //     "cudaMemcpyKind"
 // );
-gen_exe!("cudaFree", "cudaError_t", "MemPtr");
-gen_exe!(
+gen_hijack!(8, "cudaFree", "cudaError_t", "MemPtr");
+gen_hijack!(
+    9,
     "cudaStreamIsCapturing",
     "cudaError_t",
     "cudaStream_t",
     "*mut cudaStreamCaptureStatus"
 );
-gen_exe!(
+gen_hijack!(
+    10,
     "cudaGetDeviceProperties",
     "cudaError_t",
     "*mut cudaDeviceProp",
     "::std::os::raw::c_int"
 );
-// gen_exe!(
+// gen_hijack!(
+//     100,
 //     "__cudaRegisterFatBinary",
 //     "MemPtr",
 //     "*const ::std::os::raw::c_void"
 // );
-// gen_exe!("__cudaUnregisterFatBinary", "null", "MemPtr");
-// gen_exe!(
+// gen_hijack!(
+//     101,
+//     "__cudaUnregisterFatBinary",
+//     "null",
+//     "MemPtr"
+// );
+// gen_hijack!(
+//     102,
 //     "__cudaRegisterFunction",
 //     "null",
 //     "MemPtr",
@@ -53,7 +69,8 @@ gen_exe!(
 //     "MemPtr",
 //     "MemPtr"
 // );
-// gen_exe!(
+// gen_hijack!(
+//     103,
 //     "__cudaRegisterVar",
 //     "null",
 //     "MemPtr",
@@ -65,7 +82,8 @@ gen_exe!(
 //     "::std::os::raw::c_int",
 //     "::std::os::raw::c_int"
 // );
-// gen_exe!(
+// gen_hijack!(
+//     200,
 //     "cudaLaunchKernel",
 //     "cudaError_t",
 //     "*const ::std::os::raw::c_void",

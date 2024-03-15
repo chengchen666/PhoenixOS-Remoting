@@ -8,8 +8,10 @@ use network::{
     },
     type_impl::{
         basic::MemPtr,
+        cuda::{CUdevice, CUresult},
         cudart::{
             cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
+            dim3,
         },
         nvml::nvmlReturn_t,
     },
@@ -19,8 +21,12 @@ use network::{
 extern crate codegen;
 use codegen::gen_hijack;
 
-pub mod cuda_hijack;
-pub use cuda_hijack::*;
+pub mod hijack;
+pub use hijack::*;
+
+pub mod elf;
+use elf::interfaces::{fat_header, kernel_info_t};
+use elf::ElfController;
 
 use std::sync::Mutex;
 
@@ -33,4 +39,5 @@ lazy_static! {
         let manager = SHMChannelBufferManager::new_client(SHM_NAME_STOC, SHM_SIZE).unwrap();
         Mutex::new(RingBuffer::new(manager))
     };
+    static ref ELF_CONTROLLER: ElfController = ElfController::new();
 }
