@@ -43,3 +43,11 @@ extern "C" {
         extra: *mut *mut ::std::os::raw::c_void,
     ) -> CUresult;
 }
+
+extern "C" {
+    pub fn cuDevicePrimaryCtxGetState(
+        dev: CUdevice,
+        flags: *mut ::std::os::raw::c_uint,
+        active: *mut ::std::os::raw::c_int,
+    ) -> CUresult;
+}

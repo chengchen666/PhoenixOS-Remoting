@@ -1,9 +1,11 @@
 use super::*;
 
+mod cuda_exe;
 mod cudart_exe;
 mod cudart_exe_custom;
 mod nvml_exe;
 
+use self::cuda_exe::*;
 use self::cudart_exe::*;
 use self::cudart_exe_custom::*;
 use self::nvml_exe::*;
@@ -26,6 +28,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         102 => __cudaRegisterFunctionExe(channel_sender, channel_receiver),
         103 => __cudaRegisterVarExe(channel_sender, channel_receiver),
         200 => cudaLaunchKernelExe(channel_sender, channel_receiver),
+        300 => cuDevicePrimaryCtxGetStateExe(channel_sender, channel_receiver),
         1000 => nvmlInit_v2Exe(channel_sender, channel_receiver),
         1001 => nvmlDeviceGetCount_v2Exe(channel_sender, channel_receiver),
         1002 => nvmlInitWithFlagsExe(channel_sender, channel_receiver),
