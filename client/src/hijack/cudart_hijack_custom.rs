@@ -87,11 +87,11 @@ pub extern "C" fn cudaMemcpyAsync(
 
 #[no_mangle]
 pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_void) -> MemPtr {
-    println!(
-        "[{}:{}] __cudaRegisterFatBinary",
-        std::file!(),
-        std::line!()
-    );
+    // println!(
+    //     "[{}:{}] __cudaRegisterFatBinary",
+    //     std::file!(),
+    //     std::line!()
+    // );
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -144,11 +144,11 @@ pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_voi
 
 #[no_mangle]
 pub extern "C" fn __cudaUnregisterFatBinary(fatCubinHandle: MemPtr) {
-    println!(
-        "[{}:{}] __cudaUnregisterFatBinary",
-        std::file!(),
-        std::line!()
-    );
+    // println!(
+    //     "[{}:{}] __cudaUnregisterFatBinary",
+    //     std::file!(),
+    //     std::line!()
+    // );
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -179,11 +179,11 @@ pub extern "C" fn __cudaUnregisterFatBinary(fatCubinHandle: MemPtr) {
 
 #[no_mangle]
 pub extern "C" fn __cudaRegisterFatBinaryEnd(_fatCubinHandle: MemPtr) {
-    println!(
-        "[{}:{}] __cudaRegisterFatBinaryEnd",
-        std::file!(),
-        std::line!()
-    );
+    // println!(
+    //     "[{}:{}] __cudaRegisterFatBinaryEnd",
+    //     std::file!(),
+    //     std::line!()
+    // );
     // TODO: no actual impact
 }
 
@@ -200,7 +200,7 @@ pub extern "C" fn __cudaRegisterFunction(
     _gDim: MemPtr,
     _wSize: MemPtr,
 ) {
-    println!("[{}:{}] __cudaRegisterFunction", std::file!(), std::line!());
+    // println!("[{}:{}] __cudaRegisterFunction", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -262,7 +262,7 @@ pub extern "C" fn __cudaRegisterVar(
     _constant: ::std::os::raw::c_int,
     _global: ::std::os::raw::c_int,
 ) {
-    println!("[{}:{}] __cudaRegisterVar", std::file!(), std::line!());
+    // println!("[{}:{}] __cudaRegisterVar", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 

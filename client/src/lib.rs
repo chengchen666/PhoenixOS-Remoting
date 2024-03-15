@@ -21,8 +21,8 @@ use network::{
 extern crate codegen;
 use codegen::gen_hijack;
 
-pub mod cuda_hijack;
-pub use cuda_hijack::*;
+pub mod hijack;
+pub use hijack::*;
 
 pub mod elf;
 use elf::interfaces::{fat_header, kernel_info_t};
