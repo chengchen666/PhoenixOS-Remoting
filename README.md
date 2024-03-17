@@ -9,7 +9,7 @@ Consits of 4 parts:
 - `network`
 - `codegen`
 
-### Requirements
+## Requirements
 
 - Environment setup: please run a docker container mounting the `xpuremoting` directory and enter it. (On `meepo3` or `meepo4`, you can use image `xpu_remoting:latest`). An example command is:
 
@@ -24,7 +24,7 @@ docker run -dit  --shm-size 8G  --name $container_name  --gpus all  --privileged
   - Rust: `cargo 1.78.0-nightly`
   - CMake: `3.22.1`
 
-### Build
+## Build
 
 First we should build the ELF parsing static library from source:
 
@@ -39,15 +39,15 @@ Then we can build the project using cargo:
 cd /path/to/xpuremoting && cargo build
 ```
 
-### Test
+## Test
 
-#### Unit test
+### Unit test
 
 ```shell
 cargo test
 ```
 
-#### Integration test
+### Integration test
 
 Launch two terminals, one for server and the other for client.
 
@@ -66,3 +66,9 @@ cmake .. && make
 cd ..
 ./startclient.sh ./build/remoting_test
 ```
+
+## Appendix
+
+### Build the docker image
+
+Please refer to the [link](https://x8csr71rzs.feishu.cn/docx/DdXFdGSYOo8cktxgj8hcYh12nHf), and use the Dockerfile in the root directory.
