@@ -34,7 +34,7 @@ fn main() {
 
     // Write the bindings to the $CARGO_MANIFEST_DIR/src/cuda_runtime.rs.
     let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
-    let out_dir = root.join("src/");
+    let out_dir = root.join("src/bindings");
     bindings
         .write_to_file(out_dir.join("cuda_runtime.rs"))
         .expect("Couldn't write bindings!");
