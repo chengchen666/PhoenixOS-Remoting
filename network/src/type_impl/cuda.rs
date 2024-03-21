@@ -112,7 +112,6 @@ pub type CUstream = usize;
 #[cfg(test)]
 mod tests{
     use super::*;
-    use crate::FromPrimitive;
     use crate::ringbufferchannel::{
         channel::META_AREA,
         LocalChannelBufferManager, RingBuffer
