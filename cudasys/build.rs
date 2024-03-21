@@ -42,8 +42,9 @@ pub fn find_cuda() -> (Vec<PathBuf>, Vec<PathBuf>) {
 }
 
 fn bind_gen(
-    paths: Vec<PathBuf>,
+    paths: &Vec<PathBuf>,
     library: &str,
+    output: &str,
     allowlist_types: Vec<&str>,
     allowlist_vars: Vec<&str>,
     allowlist_funcs: Vec<&str>,
@@ -55,6 +56,14 @@ fn bind_gen(
         if header.is_file() {
             header_path = Some(header);
             break;
+        }
+    }
+    // find in this directory
+    if header_path.is_none() {
+        let header = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap())
+            .join(format!("include/{}.h", library));
+        if header.is_file() {
+            header_path = Some(header);
         }
     }
     let header_path = header_path.expect("Could not find CUDA header file");
@@ -76,7 +85,7 @@ fn bind_gen(
         bindings = bindings.allowlist_function(func);
     }
 
-    let bindings = bindings
+    bindings = bindings
         // Set the default enum style to be more Rust-like
         .default_enum_style(bindgen::EnumVariation::Rust {
             non_exhaustive: false,
@@ -87,12 +96,17 @@ fn bind_gen(
         .derive_default(true)
         .derive_eq(true)
         .derive_hash(true)
-        .derive_ord(true)
+        .derive_ord(true);
         // TODO: add callbacks
         // // Allow configuring different kinds of types in different situations.
         // .parse_callbacks(Box::new(bindgen::CargoCallbacks))
-        // Add include path
-        .clang_arg("-I/opt/cuda/include")
+
+    // Add include paths
+    for path in paths {
+        bindings = bindings.clang_arg(format!("-I{}/include", path.to_str().unwrap()));
+    }
+
+    let bindings = bindings
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
@@ -102,7 +116,7 @@ fn bind_gen(
     let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
     let out_dir = root.join("src/bindings");
     bindings
-        .write_to_file(out_dir.join(format!("{}.rs", library)))
+        .write_to_file(out_dir.join(format!("{}.rs", output)))
         .expect("Couldn't write bindings!");
 }
 
@@ -122,10 +136,20 @@ fn main() {
 
     // Use bindgen to automatically generate the FFI (in `src/bindings`).
     bind_gen(
-        cuda_paths,
+        &cuda_paths,
         "cuda_runtime",
+        "cudart",
         vec!["^cuda.*", "^surfaceReference", "^textureReference"],
         vec!["^cuda.*"],
         vec!["^cuda.*"],
+    );
+
+    bind_gen(
+        &cuda_paths,
+        "cuda_wrapper",
+        "cuda",
+        vec!["^CU.*", "^cuuint(32|64)_t", "^cudaError_enum", "^cu.*Complex$", "^cuda.*", "^libraryPropertyType.*"],
+        vec!["^CU.*"],
+        vec!["^cu.*"],
     );
 }
