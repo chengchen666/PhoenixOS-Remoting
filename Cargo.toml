@@ -2,7 +2,7 @@
 members = [
     "client",
     "codegen",
-    "cudalib",
+    "cudasys",
     "network",
     "server",
 ]
