@@ -1,1 +1,2 @@
-bindings/*
+src/bindings/*
+!src/bindings/README.md
