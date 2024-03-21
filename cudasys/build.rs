@@ -88,9 +88,11 @@ fn bind_gen(
         .derive_eq(true)
         .derive_hash(true)
         .derive_ord(true)
-        // Tell cargo to tell rustc to link the system bzip2
-        // shared library.
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        // TODO: add callbacks
+        // // Allow configuring different kinds of types in different situations.
+        // .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        // Add include path
+        .clang_arg("-I/opt/cuda/include")
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
