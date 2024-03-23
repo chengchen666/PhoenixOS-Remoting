@@ -155,7 +155,7 @@ pub struct CUuuid_st {
 pub type cudaUUID_t = CUuuid_st;
 
 #[repr(C)]
-#[derive(Copy, Clone, codegen::Transportable, codegen::ZeroDefault)]
+#[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq, codegen::Transportable, codegen::ZeroDefault)]
 #[allow(dead_code)]
 pub struct cudaDeviceProp {
     pub name: [::std::os::raw::c_char; 256usize],
