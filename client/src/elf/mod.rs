@@ -1,3 +1,4 @@
+// TODO: add allowlist for bindgen
 pub mod interfaces;
 use self::interfaces::{elf2_init, fat_header, kernel_info_t, kernel_infos_free};
 
