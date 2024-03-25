@@ -8,9 +8,6 @@ edition = "2021"
 [dependencies]
 codegen = { path = "../codegen" }
 libc = "*"
-num = "0.2"
-num-traits = "0.2"
-num-derive = "0.4"
 log = "0.4.0"
 errno = "0.2.7" 
 

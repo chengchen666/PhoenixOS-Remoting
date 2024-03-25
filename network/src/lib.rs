@@ -3,11 +3,6 @@
 use std::error::Error;
 use std::fmt;
 
-extern crate num;
-pub use num::FromPrimitive;
-#[macro_use]
-extern crate num_derive;
-
 pub mod buffer;
 pub use buffer::{BufferError, RawBuffer};
 

@@ -16,7 +16,7 @@ use network::{
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },
-    type_impl::basic::MemPtr,
+    type_impl::MemPtr,
     CommChannel, Transportable,
 };
 
