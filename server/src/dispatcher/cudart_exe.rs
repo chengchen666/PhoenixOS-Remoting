@@ -11,16 +11,16 @@ gen_exe!(
 gen_exe!("cudaGetLastError", "cudaError_t");
 gen_exe!("cudaPeekAtLastError", "cudaError_t");
 gen_exe!("cudaStreamSynchronize", "cudaError_t", "cudaStream_t");
-gen_exe!("cudaMalloc", "cudaError_t", "*mut MemPtr", "usize");
+// gen_exe!("cudaMalloc", "cudaError_t", "*mut MemPtr", "size_t");
 // gen_exe!(
 //     "cudaMemcpy",
 //     "cudaError_t",
 //     "MemPtr",
 //     "MemPtr",
-//     "usize",
+//     "size_t",
 //     "cudaMemcpyKind"
 // );
-gen_exe!("cudaFree", "cudaError_t", "MemPtr");
+// gen_exe!("cudaFree", "cudaError_t", "MemPtr");
 gen_exe!(
     "cudaStreamIsCapturing",
     "cudaError_t",

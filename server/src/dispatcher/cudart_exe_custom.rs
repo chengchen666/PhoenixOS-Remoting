@@ -31,7 +31,7 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
         dst = data_buf as MemPtr;
     }
 
-    let result = unsafe { cudaMemcpy(dst, src, count, kind) };
+    let result = unsafe { cudaMemcpy(dst as *mut std::os::raw::c_void, src as *const std::os::raw::c_void, count as size_t, kind) };
 
     if cudaMemcpyKind::cudaMemcpyHostToDevice == kind {
         unsafe { dealloc(data_buf, Layout::from_size_align(count, 1).unwrap()) };
@@ -41,6 +41,27 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
         data.send(channel_sender).unwrap();
         unsafe { dealloc(data_buf, Layout::from_size_align(count, 1).unwrap()) };
     }
+    result.send(channel_sender).unwrap();
+    channel_sender.flush_out().unwrap();
+}
+
+pub fn cudaMallocExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+    info!("[{}:{}] cudaMalloc", std::file!(), std::line!());
+    let mut param1 = 0 as *mut ::std::os::raw::c_void;
+    let mut param2: usize = Default::default();
+    param2.recv(channel_receiver).unwrap();
+    let result: cudaError_t = unsafe { cudaMalloc(&mut param1 as *mut *mut ::std::os::raw::c_void, param2 as size_t) };
+    let param1 = param1 as MemPtr;
+    param1.send(channel_sender).unwrap();
+    result.send(channel_sender).unwrap();
+    channel_sender.flush_out().unwrap();
+}
+
+pub fn cudaFreeExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+    info!("[{}:{}] cudaFree", std::file!(), std::line!());
+    let mut param1: MemPtr = Default::default();
+    param1.recv(channel_receiver).unwrap();
+    let result: cudaError_t = unsafe { cudaFree(param1 as *mut ::std::os::raw::c_void) };
     result.send(channel_sender).unwrap();
     channel_sender.flush_out().unwrap();
 }
