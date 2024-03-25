@@ -17,10 +17,7 @@ extern crate codegen;
 
 pub mod cuda;
 
-pub mod cudart {
-    use super::*;
-    include!("bindings/cudart.rs");
-}
+pub mod cudart;
 
 #[cfg(test)]
 mod tests {

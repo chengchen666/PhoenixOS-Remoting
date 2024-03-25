@@ -9,17 +9,19 @@ extern crate network;
 
 use codegen::gen_exe;
 use dispatcher::dispatch;
-use cudasys::cuda::{CUdevice, CUdeviceptr, CUfunction, CUmodule, CUresult, CUstream};
+use cudasys::{
+    cuda::{CUdevice, CUdeviceptr, CUfunction, CUmodule, CUresult, CUstream},
+    cudart::{
+        cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
+        dim3,
+    },
+};
 use network::{
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },
     type_impl::{
         basic::MemPtr,
-        cudart::{
-            cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
-            dim3,
-        },
         nvml::nvmlReturn_t,
     },
     CommChannel, CommChannelError, Transportable,
