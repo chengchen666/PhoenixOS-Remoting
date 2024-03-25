@@ -10,15 +10,13 @@ use cudasys::{
         cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
         dim3,
     },
+    nvml::nvmlReturn_t,
 };
 use network::{
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },
-    type_impl::{
-        basic::MemPtr,
-        nvml::nvmlReturn_t,
-    },
+    type_impl::basic::MemPtr,
     CommChannel, Transportable,
 };
 

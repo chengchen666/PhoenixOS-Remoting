@@ -19,6 +19,8 @@ pub mod cuda;
 
 pub mod cudart;
 
+pub mod nvml;
+
 #[cfg(test)]
 mod tests {
     use super::*;

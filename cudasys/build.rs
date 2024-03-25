@@ -236,4 +236,13 @@ fn main() {
         vec!["^CU.*"],
         vec!["^cu.*"],
     );
+
+    bind_gen(
+        &cuda_paths,
+        "nvml",
+        "nvml",
+        vec![],
+        vec![],
+        vec![],
+    );
 }
