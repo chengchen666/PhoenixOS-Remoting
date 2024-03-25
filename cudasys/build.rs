@@ -1,6 +1,12 @@
 extern crate glob;
 use glob::glob;
-use std::{env, path::PathBuf};
+use std::{
+    collections::VecDeque,
+    env,
+    fs::{File, OpenOptions},
+    io::{BufRead, BufReader, Write},
+    path::PathBuf,
+};
 
 pub fn read_env() -> Vec<PathBuf> {
     if let Ok(path) = env::var("CUDA_LIBRARY_PATH") {
@@ -39,6 +45,77 @@ pub fn find_cuda() -> (Vec<PathBuf>, Vec<PathBuf>) {
     }
     eprintln!("Found CUDA paths: {:?}", valid_paths);
     (candidates, valid_paths)
+}
+
+fn decorate(file_path: PathBuf) {
+    // Read the file.
+    let file = File::open(&file_path).expect(format!("Failed to open file {:?}", file_path).as_str());
+    let reader = BufReader::new(file);
+    let mut cache: VecDeque<String> = VecDeque::new();
+
+    let mut decorated_buf = String::new();
+    let mut emit = |line: &str| {
+        decorated_buf.push_str(line);
+        decorated_buf.push_str("\n");
+    };
+
+    // Process in line level.
+    for line in reader.lines() {
+        let line = line.expect("Failed to read line");
+        if line.starts_with("#[derive(") {
+            cache.push_back(line);
+            // No emitting.
+        } else if line.starts_with("pub enum") {
+            // sanity check
+            assert_eq!(1, cache.len());
+            // #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+            // -> #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, FromPrimitive, codegen::Transportable)]
+            let mut prev = cache.pop_front().unwrap();
+            prev = prev.replace(")]", ", Default, FromPrimitive, codegen::Transportable)]");
+            emit(&prev);
+            emit(&line);
+            // #[default]
+            emit("#[default]");
+        } else if line.starts_with("pub struct") || line.starts_with("pub union") {
+            // sanity check
+            assert_eq!(1, cache.len());
+            // #[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+            // -> #[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq, codegen::Transportable)]
+            let mut prev = cache.pop_front().unwrap();
+            prev = prev.replace(")]", ", codegen::Transportable)]");
+            // if not contains `Default`
+            // if !prev.contains("Default") {
+            //     prev = prev.replace(")]", ", codegen::ZeroDefault)]");
+            // }
+            emit(&prev);
+            emit(&line);
+        } else if line.starts_with("pub type") && line.contains('*') {
+            let index = line.find('*').unwrap();
+            // sanity check
+            if 0 != cache.len() {
+                panic!("Cache is not empty: {:?}", cache);
+            }
+            // = *[mut, const] Struct;
+            // -> = usize;
+            let line = line[..index].to_string() + "usize;";
+            emit(&line);
+        } else {
+            // sanity check
+            if 0 != cache.len() {
+                panic!("Cache is not empty: {:?}", cache);
+            }
+            emit(&line);
+        }
+    }
+
+    // Overwrite the original file with decorated contents.
+    let mut file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(&file_path)
+        .expect("Failed to open bindings for writing");
+    file.write_all(decorated_buf.as_bytes())
+        .expect("Failed to write modified content");
 }
 
 fn bind_gen(
@@ -97,9 +174,6 @@ fn bind_gen(
         .derive_eq(true)
         .derive_hash(true)
         .derive_ord(true);
-        // TODO: add callbacks
-        // // Allow configuring different kinds of types in different situations.
-        // .parse_callbacks(Box::new(bindgen::CargoCallbacks))
 
     // Add include paths
     for path in paths {
@@ -114,10 +188,13 @@ fn bind_gen(
 
     // Write the bindings to the `$CARGO_MANIFEST_DIR/src/library.rs`.
     let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
-    let out_dir = root.join("src/bindings");
+    let out_file = root.join("src/bindings").join(format!("{}.rs", output));
     bindings
-        .write_to_file(out_dir.join(format!("{}.rs", output)))
+        .write_to_file(out_file.clone())
         .expect("Couldn't write bindings!");
+
+    // Format the generated bindings for our purposes.
+    decorate(out_file);
 }
 
 fn main() {
@@ -148,7 +225,14 @@ fn main() {
         &cuda_paths,
         "cuda_wrapper",
         "cuda",
-        vec!["^CU.*", "^cuuint(32|64)_t", "^cudaError_enum", "^cu.*Complex$", "^cuda.*", "^libraryPropertyType.*"],
+        vec![
+            "^CU.*",
+            "^cuuint(32|64)_t",
+            "^cudaError_enum",
+            "^cu.*Complex$",
+            "^cuda.*",
+            "^libraryPropertyType.*",
+        ],
         vec!["^CU.*"],
         vec!["^cu.*"],
     );
