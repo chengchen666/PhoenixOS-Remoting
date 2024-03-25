@@ -44,4 +44,36 @@ mod tests{
         b.recv(&mut buffer).unwrap();
         assert_eq!(a, b);
     }
+
+    #[test]
+    pub fn cuda_ffi() {
+        let mut device = 0;
+        let mut device_num = 0;
+
+        if let cudaError_t::cudaSuccess = unsafe { cudaGetDeviceCount(&mut device_num as *mut i32) }
+        {
+            println!("device count: {}", device_num);
+        } else {
+            panic!("failed to get device count");
+        }
+
+        if let cudaError_t::cudaSuccess = unsafe { cudaGetDevice(&mut device as *mut i32) } {
+            assert_eq!(device, 0);
+            println!("device: {}", device);
+        } else {
+            panic!("failed to get device");
+        }
+
+        if let cudaError_t::cudaSuccess = unsafe { cudaSetDevice(device_num - 1) } {
+        } else {
+            panic!("failed to set device");
+        }
+
+        if let cudaError_t::cudaSuccess = unsafe { cudaGetDevice(&mut device as *mut i32) } {
+            assert_eq!(device, device_num - 1);
+            println!("device: {}", device);
+        } else {
+            panic!("failed to get device");
+        }
+    }
 }
