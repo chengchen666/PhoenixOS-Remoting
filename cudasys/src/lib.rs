@@ -6,11 +6,22 @@
     dead_code
 )]
 
+extern crate num;
+pub use num::FromPrimitive;
+#[macro_use]
+extern crate num_derive;
+
+extern crate network;
+use network::{RawMemory, RawMemoryMut, CommChannel, CommChannelError, Transportable};
+extern crate codegen;
+
 pub mod cuda {
+    use super::*;
     include!("bindings/cuda.rs");
 }
 
 pub mod cudart {
+    use super::*;
     include!("bindings/cudart.rs");
 }
 
