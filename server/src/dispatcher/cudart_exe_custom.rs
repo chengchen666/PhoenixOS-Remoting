@@ -123,7 +123,7 @@ pub fn __cudaRegisterVarExe<T: CommChannel>(channel_sender: &mut T, channel_rece
     deviceName.recv(channel_receiver).unwrap();
 
     let mut dptr: CUdeviceptr = Default::default();
-    let mut size: usize = Default::default();
+    let mut size: size_t = Default::default();
 
     let module = get_module(fatCubinHandle).unwrap();
     let result = unsafe {
