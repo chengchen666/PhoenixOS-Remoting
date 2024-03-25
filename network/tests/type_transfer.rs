@@ -1,8 +1,9 @@
+extern crate cudasys;
 extern crate network;
 
+use cudasys::cudart::cudaError_t;
 use network::{
     ringbufferchannel::{ChannelBufferManager, LocalChannelBufferManager, RingBuffer},
-    type_impl::cudart::cudaError_t,
     CommChannel, FromPrimitive, Transportable,
 };
 

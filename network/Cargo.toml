@@ -13,3 +13,6 @@ num-traits = "0.2"
 num-derive = "0.4"
 log = "0.4.0"
 errno = "0.2.7" 
+
+[dev-dependencies]
+cudasys = { path = "../cudasys" }
