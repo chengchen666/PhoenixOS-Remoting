@@ -26,8 +26,10 @@ macro_rules! impl_transportable {
 
 impl_transportable!(u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, usize, isize, f32, f64, bool, char);
 
-/// a pointer type, we just need to use usize to represent it.
-/// the raw type `*mut void` is hard to handle:(
+/// a pointer type, we just need to use usize to represent it
+/// the raw type `*mut void` is hard to handle:(.
+/// 
+/// IMPORTANT on replacing `*mut *mut` like parameters in memory operations.
 pub type MemPtr = usize;
 
 impl<S> Transportable for [S] {
