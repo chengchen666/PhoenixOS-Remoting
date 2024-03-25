@@ -1,14 +1,16 @@
 #[macro_use]
 extern crate lazy_static;
 
+extern crate cudasys;
 extern crate network;
+
+use cudasys::cuda::{CUdevice, CUresult};
 use network::{
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },
     type_impl::{
         basic::MemPtr,
-        cuda::{CUdevice, CUresult},
         cudart::{
             cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
             dim3,

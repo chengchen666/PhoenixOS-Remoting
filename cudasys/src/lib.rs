@@ -15,10 +15,7 @@ extern crate network;
 use network::{RawMemory, RawMemoryMut, CommChannel, CommChannelError, Transportable};
 extern crate codegen;
 
-pub mod cuda {
-    use super::*;
-    include!("bindings/cuda.rs");
-}
+pub mod cuda;
 
 pub mod cudart {
     use super::*;
