@@ -17,14 +17,14 @@ gen_hijack!(
 gen_hijack!(3, "cudaGetLastError", "cudaError_t");
 gen_hijack!(4, "cudaPeekAtLastError", "cudaError_t");
 gen_hijack!(5, "cudaStreamSynchronize", "cudaError_t", "cudaStream_t");
-gen_hijack!(6, "cudaMalloc", "cudaError_t", "*mut MemPtr", "usize");
+gen_hijack!(6, "cudaMalloc", "cudaError_t", "*mut MemPtr", "size_t");
 // gen_hijack!(
 //     7,
 //     "cudaMemcpy",
 //     "cudaError_t",
 //     "MemPtr",
 //     "MemPtr",
-//     "usize",
+//     "size_t",
 //     "cudaMemcpyKind"
 // );
 gen_hijack!(8, "cudaFree", "cudaError_t", "MemPtr");

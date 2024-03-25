@@ -8,7 +8,7 @@ use cudasys::{
     cuda::{CUdevice, CUresult},
     cudart::{
         cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
-        dim3,
+        dim3, size_t,
     },
     nvml::nvmlReturn_t,
 };

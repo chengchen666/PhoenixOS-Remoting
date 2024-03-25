@@ -1,8 +1,6 @@
 extern crate log;
-mod cuda_lib;
 mod dispatcher;
 
-use cuda_lib::*;
 extern crate codegen;
 extern crate cudasys;
 extern crate network;
@@ -10,12 +8,9 @@ extern crate network;
 use codegen::gen_exe;
 use dispatcher::dispatch;
 use cudasys::{
-    cuda::{CUdevice, CUdeviceptr, CUfunction, CUmodule, CUresult, CUstream},
-    cudart::{
-        cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
-        dim3,
-    },
-    nvml::nvmlReturn_t,
+    cuda::*,
+    cudart::*,
+    nvml::*,
 };
 use network::{
     ringbufferchannel::{
