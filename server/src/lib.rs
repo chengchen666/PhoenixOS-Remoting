@@ -6,12 +6,11 @@ extern crate cudasys;
 extern crate network;
 
 use codegen::gen_exe;
-use dispatcher::dispatch;
 use cudasys::{
-    cuda::*,
-    cudart::*,
-    nvml::*,
+    cuda::{CUdeviceptr, CUfunction, CUmodule},
+    cudart::{cudaDeviceSynchronize, cudaError_t},
 };
+use dispatcher::dispatch;
 use network::{
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,

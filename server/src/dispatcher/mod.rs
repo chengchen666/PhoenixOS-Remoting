@@ -1,11 +1,13 @@
 use super::*;
 
 mod cuda_exe;
+mod cuda_exe_custom;
 mod cudart_exe;
 mod cudart_exe_custom;
 mod nvml_exe;
 
 use self::cuda_exe::*;
+use self::cuda_exe_custom::*;
 use self::cudart_exe::*;
 use self::cudart_exe_custom::*;
 use self::nvml_exe::*;
