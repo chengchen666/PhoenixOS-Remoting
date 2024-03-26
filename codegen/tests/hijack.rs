@@ -2,9 +2,11 @@
 #[macro_use]
 extern crate lazy_static;
 
+extern crate cudasys;
 extern crate network;
+
+use cudasys::cudart::cudaError_t;
 use network::{
-    type_impl::cudart::cudaError_t,
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },

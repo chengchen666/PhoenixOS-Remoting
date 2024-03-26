@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 use super::*;
+use cudasys::cuda::*;
 
 gen_exe!(
     "cuDevicePrimaryCtxGetState",

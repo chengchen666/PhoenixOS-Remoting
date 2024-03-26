@@ -1,9 +1,10 @@
 [workspace]
 members = [
-    "codegen",
     "client",
-    "server",
+    "codegen",
+    "cudasys",
     "network",
+    "server",
 ]
 
 resolver = "2"

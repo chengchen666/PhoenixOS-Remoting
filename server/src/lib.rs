@@ -1,26 +1,21 @@
 extern crate log;
-mod cuda_lib;
 mod dispatcher;
 
-use cuda_lib::*;
 extern crate codegen;
+extern crate cudasys;
 extern crate network;
 
 use codegen::gen_exe;
+use cudasys::{
+    cuda::{CUdeviceptr, CUfunction, CUmodule},
+    cudart::{cudaDeviceSynchronize, cudaError_t},
+};
 use dispatcher::dispatch;
 use network::{
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
     },
-    type_impl::{
-        basic::MemPtr,
-        cuda::{CUdevice, CUdeviceptr, CUfunction, CUmodule, CUresult, CUstream},
-        cudart::{
-            cudaDeviceProp, cudaError_t, cudaMemcpyKind, cudaStreamCaptureStatus, cudaStream_t,
-            dim3,
-        },
-        nvml::nvmlReturn_t,
-    },
+    type_impl::MemPtr,
     CommChannel, CommChannelError, Transportable,
 };
 
