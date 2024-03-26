@@ -37,4 +37,4 @@ The code is in `build.rs`. Logic:
 
 - Use `bindgen` to generate Rust bindings for the *raw* CUDA toolkit APIs.
 - Decorate the generated bindings for usability like being `Transportable` in `network`.
-- Split the bindings into separate parts (`types` and `funcs`) for client/server separating usage, `types` parts are in `src/types`, `funcs` parts are in `src/`.
+- Split the bindings into separate parts (`types` and `funcs`) for client/server separating usage, `types` part is in `src/types`, `funcs` part is in `src/`, and raw bindings code are left in `src/bindings`.
