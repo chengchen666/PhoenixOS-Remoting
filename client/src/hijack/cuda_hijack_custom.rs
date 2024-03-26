@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 use super::*;
+use cudasys::types::cuda::*;
 
 #[no_mangle]
 pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_void) -> MemPtr {

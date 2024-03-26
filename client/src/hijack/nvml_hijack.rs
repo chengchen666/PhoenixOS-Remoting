@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 use super::*;
+use cudasys::types::nvml::*;
 
 gen_hijack!(1000, "nvmlInit_v2", "nvmlReturn_t");
 gen_hijack!(

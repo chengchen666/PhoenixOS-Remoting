@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 use super::*;
+use cudasys::types::cudart::*;
 
 #[no_mangle]
 pub extern "C" fn cudaMemcpy(
