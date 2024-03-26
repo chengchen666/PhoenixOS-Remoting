@@ -1,5 +1,6 @@
 use super::*;
-include!("bindings/nvml.rs");
+pub use crate::types::nvml::*;
+include!("bindings/funcs/nvml.rs");
 
 #[cfg(test)]
 mod tests{

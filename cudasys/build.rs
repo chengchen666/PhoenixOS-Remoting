@@ -1,5 +1,7 @@
 extern crate glob;
 use glob::glob;
+extern crate regex;
+use regex::Regex;
 use std::{
     collections::VecDeque,
     env,
@@ -118,6 +120,38 @@ fn decorate(file_path: PathBuf) {
         .expect("Failed to write modified content");
 }
 
+/// Read the file, split it into two parts: one with the types and the other with the functions.
+/// Remove the original file.
+fn split(file_path: PathBuf, types_file: PathBuf, funcs_file: PathBuf) {
+    // Read the file.
+    let content = std::fs::read_to_string(&file_path).expect(format!("Failed to read file {:?}", file_path).as_str());
+
+    // regex to match `extern "C" { ... }`
+    let re = Regex::new(r#"(?s)extern "C" \{.*?\}"#).unwrap();
+
+    // Extract all blocks that match the regex
+    let funcs: Vec<_> = re.find_iter(&content).map(|mat| mat.as_str()).collect();
+    let types = re.replace_all(&content, "");
+
+    // Write the types and functions to separate files.
+    if let Some(parent) = types_file.parent() {
+        std::fs::create_dir_all(parent).expect(format!("Failed to create directory {:?}", parent).as_str());
+    }
+    let mut types_file = File::create(types_file.clone()).expect(format!("Failed to create file {:?}", types_file).as_str());
+    writeln!(types_file, "{}", types).expect("Failed to write types");
+
+    if let Some(parent) = funcs_file.parent() {
+        std::fs::create_dir_all(parent).expect(format!("Failed to create directory {:?}", parent).as_str());
+    }
+    let mut funcs_file = File::create(funcs_file.clone()).expect(format!("Failed to create file {:?}", funcs_file).as_str());
+    for f in funcs {
+        writeln!(funcs_file, "{}\n", f).expect("Failed to write function");
+    }
+
+    // Remove the original file.
+    std::fs::remove_file(file_path.clone()).expect(format!("Failed to remove file {:?}", file_path).as_str());
+}
+
 fn bind_gen(
     paths: &Vec<PathBuf>,
     library: &str,
@@ -194,7 +228,12 @@ fn bind_gen(
         .expect("Couldn't write bindings!");
 
     // Format the generated bindings for our purposes.
-    decorate(out_file);
+    decorate(out_file.clone());
+
+    // Split the file into two parts: one with the types and the other with the functions.
+    let types_file = root.join("src/bindings/types").join(format!("{}.rs", output));
+    let funcs_file = root.join("src/bindings/funcs").join(format!("{}.rs", output));
+    split(out_file, types_file, funcs_file);
 }
 
 fn main() {

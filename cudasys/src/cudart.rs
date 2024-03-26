@@ -1,5 +1,6 @@
 use super::*;
-include!("bindings/cudart.rs");
+pub use crate::types::cudart::*;
+include!("bindings/funcs/cudart.rs");
 
 /// cudaStream_t is a pointer type, we just need to use usize to represent it.
 /// It is not necessary to define a struct for it, as the struct is also just a placeholder.

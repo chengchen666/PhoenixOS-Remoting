@@ -1,5 +1,6 @@
 use super::*;
-include!("bindings/cuda.rs");
+pub use crate::types::cuda::*;
+include!("bindings/funcs/cuda.rs");
 
 #[cfg(test)]
 mod tests{
