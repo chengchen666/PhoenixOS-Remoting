@@ -23,6 +23,7 @@ docker run -dit  --shm-size 8G  --name $container_name  --gpus all  --privileged
 - Version checklist
   - Rust: `cargo 1.78.0-nightly`
   - CMake: `3.22.1`
+  - Clang: `6.0.0-1ubuntu2`
 
 ## Build
 
