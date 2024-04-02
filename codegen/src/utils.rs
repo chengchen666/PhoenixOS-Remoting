@@ -2,7 +2,10 @@ use quote::format_ident;
 use syn::{
     parse::{Parse, ParseStream},
     Ident, Type, LitInt, LitStr, Result, Token,
+    Signature, ReturnType,
+    parse_str,
 };
+use quote::ToTokens;
 
 /// - "type", - "*mut type"
 /// the former is input to native function,
@@ -117,5 +120,81 @@ impl Parse for HijackParser {
             result,
             params,
         })
+    }
+}
+
+pub fn sig_parse(input: &str, proc_id: i32) -> Result<HijackParser> {
+    let proc_id = syn::parse_str::<LitInt>(&proc_id.to_string()).expect("Expected valid proc_id");
+
+    let s = input
+        .trim_start_matches('"')
+        .trim_end_matches('"')
+        .trim_start_matches("pub ")
+        .trim_end_matches(";");
+    let sig = parse_str::<Signature>(s).expect("Failed to parse function signature");
+
+    // get func name
+    let func = sig.ident;
+
+    // get func return type
+    let result = Element {
+        name: format_ident!("result"),
+        ty: match sig.output {
+            ReturnType::Type(_, t) => *t,
+            ReturnType::Default => panic!("Unimplement no return func"),
+        },
+        mode: ElementMode::Output,
+    };
+
+    // get params
+    let mut params = Vec::new();
+    let mut i: usize = 0;
+    for param in sig.inputs.iter() {
+        if let syn::FnArg::Typed(pat_type) = param {
+            let ty: &Type = &(*pat_type.ty);
+            let mut ty_str = type_to_string(ty);
+            let mode = if ty_str.starts_with("*mut ") {
+                ty_str = ty_str.replace("*mut ", "");
+                ElementMode::Output
+            } else {
+                ElementMode::Input
+            };
+            let ty = syn::parse_str::<Type>(&ty_str).expect("Expected valid type");
+            params.push(Element {
+                name: format_ident!("param{}", i + 1),
+                ty,
+                mode,
+            });
+            i += 1;
+        }
+    }
+
+    Ok(HijackParser {
+        proc_id,
+        func,
+        result,
+        params,
+    })
+}
+
+fn type_to_string(ty: &Type) -> String {
+    match ty {
+        Type::Ptr(type_ptr) => {
+            let const_token = if type_ptr.const_token.is_some() { "const " } else { "" };
+
+            let mutability = if type_ptr.mutability.is_some() {
+                "mut "
+            } else {
+                ""
+            };
+            let inner_type = type_to_string(&*type_ptr.elem);
+            format!("*{}{}{}", const_token, mutability, inner_type)
+        }
+        Type::Path(_) => {
+            ty.to_token_stream().to_string().replace(" ", "")
+        }
+        _ => {
+            panic!("Unimplemented type {:#?}", ty);
+        }
     }
 }

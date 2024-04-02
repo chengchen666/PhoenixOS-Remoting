@@ -5,7 +5,7 @@ use quote::{format_ident, quote};
 use syn::{parse_macro_input, Ident};
 
 mod utils;
-use utils::{Element, ElementMode, ExeParser, HijackParser};
+use utils::{Element, ElementMode, ExeParser, HijackParser, sig_parse};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The derive macros for auto trait impl.
@@ -489,6 +489,35 @@ pub fn gen_deserialize(input: TokenStream) -> TokenStream {
         fn #fn_name(buf : &mut RawBuffer, #(#params),*) -> Result<(),BufferError> {
             #( #deserialize_statements )*
             Ok(())
+        }
+    };
+
+    gen_fn.into()
+}
+
+#[proc_macro]
+pub fn gen_unimplement(input: TokenStream) -> TokenStream {
+    let sig = input.into_iter().next();
+    let sig_str = sig.map_or("".to_string(), |token| token.to_string());
+
+    let input = sig_parse(&sig_str, 0).unwrap();
+
+    let (_proc_id, func, result, params) = (input.proc_id, input.func, input.result, input.params);
+    let func_str = func.to_string();
+
+    let params = params.iter().map(|param| {
+        let name = &param.name;
+        let ty = &param.ty;
+        match param.mode {
+            ElementMode::Input => quote! { #name: #ty },
+            ElementMode::Output => quote! { #name: *mut #ty },
+        }
+    });
+    let result_ty = &result.ty;
+    let gen_fn = quote! {
+        #[no_mangle]
+        pub extern "C" fn #func(#(#params),*) -> #result_ty {
+            unimplemented!("{}", #func_str);
         }
     };
 
