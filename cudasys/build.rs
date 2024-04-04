@@ -2,6 +2,9 @@ extern crate glob;
 use glob::glob;
 extern crate regex;
 use regex::Regex;
+extern crate syn;
+use syn::{Signature, Type, parse_str};
+use syn::__private::ToTokens;
 use std::{
     collections::VecDeque,
     env,
@@ -145,6 +148,9 @@ fn split(file_path: PathBuf, types_file: PathBuf, funcs_file: PathBuf) {
     }
     let mut funcs_file = File::create(funcs_file.clone()).expect(format!("Failed to create file {:?}", funcs_file).as_str());
     for f in funcs {
+        // TOOD: write gen macro to a proper file
+        // let sig = parse_sig(f);
+        // write_macro(&funcs_file, "gen_unimplement", sig);
         writeln!(funcs_file, "{}\n", f).expect("Failed to write function");
     }
 
@@ -234,6 +240,85 @@ fn bind_gen(
     let types_file = root.join("src/bindings/types").join(format!("{}.rs", output));
     let funcs_file = root.join("src/bindings/funcs").join(format!("{}.rs", output));
     split(out_file, types_file, funcs_file);
+}
+
+struct SigParser {
+    func_name: String,
+    result_ty: String,
+    params_ty: Vec<String>,
+}
+
+fn write_macro(mut file: &File, macro_name: &str, sig: SigParser) {
+    let mut params = String::new();
+    params.push_str(format!("\"{}\"", sig.func_name).as_str());
+    params.push_str(format!(", \"{}\"", sig.result_ty).as_str());
+    for p in &sig.params_ty {
+        params.push_str(format!(", \"{}\"", p).as_str());
+    }
+    let _ = file.write_all(format!("{}!({});\n", macro_name, params).as_bytes());
+}
+
+fn parse_sig(input: &str) -> SigParser {
+    let re = Regex::new(r#"(?s)extern "C" \{(.*?)\}"#).unwrap();
+    let input = match re.captures(input) {
+        Some(code) => {
+            match code.get(1) {
+                Some(sig) => sig.as_str().trim(),
+                None => input,
+            }
+        }
+        None => input,
+    };
+    let input = input.trim_start_matches("pub ").trim_end_matches(";");
+
+    let sig = parse_str::<Signature>(input).expect(format!("Failed to parse {}", input).as_str());
+
+    let func_name = sig.ident.to_string();
+
+    let result_ty = match &sig.output {
+        syn::ReturnType::Type(_, pat_ty) => type_to_string(&pat_ty),
+        _ => String::from(""),
+    };
+
+    let mut params_ty = Vec::new();
+    for param in sig.inputs.iter() {
+        if let syn::FnArg::Typed(pat_ty) = param {
+            let ty = &pat_ty.ty;
+            params_ty.push(type_to_string(ty));
+        }
+    }
+
+    SigParser {
+        func_name,
+        result_ty,
+        params_ty,
+    }
+}
+
+fn type_to_string(ty: &Type) -> String {
+    match ty {
+        Type::Ptr(ty_ptr) => {
+            let const_token = if ty_ptr.const_token.is_some() {
+                "const "
+            } else {
+                ""
+            };
+
+            let mutability = if ty_ptr.mutability.is_some() {
+                "mut "
+            } else {
+                ""
+            };
+            let inner_type = type_to_string(&ty_ptr.elem);
+            format!("*{}{}{}", const_token, mutability, inner_type)
+        }
+        Type::Path(_) => {
+            ty.into_token_stream().to_string().replace(" ", "")
+        }
+        _ => {
+            panic!("Unimplemented type {:#?}", ty);
+        }
+    }
 }
 
 fn main() {
