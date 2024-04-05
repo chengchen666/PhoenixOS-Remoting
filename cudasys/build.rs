@@ -125,7 +125,7 @@ fn decorate(file_path: PathBuf) {
 
 /// Read the file, split it into two parts: one with the types and the other with the functions.
 /// Remove the original file.
-fn split(file_path: PathBuf, types_file: PathBuf, funcs_file: PathBuf) {
+fn split(file_path: PathBuf, types_file: PathBuf, funcs_file: PathBuf, unimplemented_file: PathBuf) {
     // Read the file.
     let content = std::fs::read_to_string(&file_path).expect(format!("Failed to read file {:?}", file_path).as_str());
 
@@ -147,10 +147,18 @@ fn split(file_path: PathBuf, types_file: PathBuf, funcs_file: PathBuf) {
         std::fs::create_dir_all(parent).expect(format!("Failed to create directory {:?}", parent).as_str());
     }
     let mut funcs_file = File::create(funcs_file.clone()).expect(format!("Failed to create file {:?}", funcs_file).as_str());
+
+    if let Some(parent) = unimplemented_file.parent() {
+        std::fs::create_dir_all(parent).expect(format!("Failed to create directory {:?}", parent).as_str());
+    }
+    let unimplemented_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(unimplemented_file.clone())
+        .expect(format!("Failed to open or create file {:?}", unimplemented_file).as_str());
+
     for f in funcs {
-        // TOOD: write gen macro to a proper file
-        // let sig = parse_sig(f);
-        // write_macro(&funcs_file, "gen_unimplement", sig);
+        write_macro(&unimplemented_file, "gen_unimplement", parse_sig(f));
         writeln!(funcs_file, "{}\n", f).expect("Failed to write function");
     }
 
@@ -239,7 +247,8 @@ fn bind_gen(
     // Split the file into two parts: one with the types and the other with the functions.
     let types_file = root.join("src/bindings/types").join(format!("{}.rs", output));
     let funcs_file = root.join("src/bindings/funcs").join(format!("{}.rs", output));
-    split(out_file, types_file, funcs_file);
+    let unimplemented_file = root.join("src/hijack/unimplemented.rs");
+    split(out_file, types_file, funcs_file, unimplemented_file);
 }
 
 struct SigParser {
