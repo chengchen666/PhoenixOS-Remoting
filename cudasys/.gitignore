@@ -1,3 +1,2 @@
 src/bindings/*
-src/hijack/*
 !src/bindings/README.md

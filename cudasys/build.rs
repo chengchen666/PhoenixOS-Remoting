@@ -6,12 +6,15 @@ extern crate syn;
 use syn::{Signature, Type, parse_str};
 use syn::__private::ToTokens;
 use std::{
-    collections::VecDeque,
+    collections::{VecDeque, HashMap},
     env,
     fs::{File, OpenOptions},
     io::{BufRead, BufReader, Write},
     path::PathBuf,
 };
+extern crate toml;
+extern crate serde;
+use serde::Deserialize;
 
 pub fn read_env() -> Vec<PathBuf> {
     if let Ok(path) = env::var("CUDA_LIBRARY_PATH") {
@@ -125,7 +128,7 @@ fn decorate(file_path: PathBuf) {
 
 /// Read the file, split it into two parts: one with the types and the other with the functions.
 /// Remove the original file.
-fn split(file_path: PathBuf, types_file: PathBuf, funcs_file: PathBuf, unimplemented_file: PathBuf) {
+fn split(file_path: PathBuf, types_file: PathBuf, funcs_file: PathBuf) {
     // Read the file.
     let content = std::fs::read_to_string(&file_path).expect(format!("Failed to read file {:?}", file_path).as_str());
 
@@ -148,22 +151,60 @@ fn split(file_path: PathBuf, types_file: PathBuf, funcs_file: PathBuf, unimpleme
     }
     let mut funcs_file = File::create(funcs_file.clone()).expect(format!("Failed to create file {:?}", funcs_file).as_str());
 
+    for f in funcs {
+        writeln!(funcs_file, "{}\n", f).expect("Failed to write function");
+    }
+}
+
+#[derive(Deserialize)]
+struct HookConfig {
+    default: bool,
+    client_hook: Option<String>,
+    server_hook: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct UserHook {
+    cuda: HashMap<String, HookConfig>,
+    cudart: HashMap<String, HookConfig>,
+    nvml: HashMap<String, HookConfig>,
+}
+
+fn write(file_path: PathBuf, output: &str) {
+    let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
+
+    let hook_path = root.join("../client/hook.toml");
+    let hook_content = std::fs::read_to_string(&hook_path).expect(format!("Failed to read file {:?}", hook_path).as_str());
+    let user_hooks: UserHook = toml::from_str(&hook_content).expect("Failed to parse hook.toml file");
+    let user_hook = match output {
+        "cuda" => &user_hooks.cuda,
+        "cudart" => &user_hooks.cudart,
+        "nvml" => &user_hooks.nvml,
+        &_ => todo!(),
+    };
+
+    let content = std::fs::read_to_string(&file_path).expect(format!("Failed to read file {:?}", file_path).as_str());
+    let re = Regex::new(r#"(?s)extern "C" \{.*?\}"#).unwrap();
+    let funcs: Vec<_> = re.find_iter(&content).map(|mat| mat.as_str()).collect();
+
+    let header = format!("#![allow(non_snake_case)]\nuse super::*;\nuse cudasys::types::{}::*;", output);
+
+    let unimplemented_file = root.join("../client/src/hijack").join(format!("{}_unimplement.rs", output));
     if let Some(parent) = unimplemented_file.parent() {
         std::fs::create_dir_all(parent).expect(format!("Failed to create directory {:?}", parent).as_str());
     }
-    let unimplemented_file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(unimplemented_file.clone())
-        .expect(format!("Failed to open or create file {:?}", unimplemented_file).as_str());
+    let mut unimplemented_file = File::create(unimplemented_file.clone()).expect(format!("Failed to create file {:?}", unimplemented_file).as_str());
+    writeln!(unimplemented_file, "{}\n", header).expect("Failed to write header");
 
     for f in funcs {
-        write_macro(&unimplemented_file, "gen_unimplement", parse_sig(f));
-        writeln!(funcs_file, "{}\n", f).expect("Failed to write function");
+        let sig = parse_sig(f);
+        match user_hook.get(&sig.func_name) {
+            Some(config) => {
+                // TODO: read user config, then default gen_hijack or use client_hook and server_hook
+            }
+            _ => write_macro(&unimplemented_file, "gen_unimplement", sig),
+        };
     }
-
-    // Remove the original file.
-    std::fs::remove_file(file_path.clone()).expect(format!("Failed to remove file {:?}", file_path).as_str());
 }
 
 fn bind_gen(
@@ -247,8 +288,13 @@ fn bind_gen(
     // Split the file into two parts: one with the types and the other with the functions.
     let types_file = root.join("src/bindings/types").join(format!("{}.rs", output));
     let funcs_file = root.join("src/bindings/funcs").join(format!("{}.rs", output));
-    let unimplemented_file = root.join("src/hijack/unimplemented.rs");
-    split(out_file, types_file, funcs_file, unimplemented_file);
+    split(out_file.clone(), types_file, funcs_file);
+
+    // write gen_xxx macro to client/src/hijack folder, with name output_xxx
+    write(out_file.clone(), output);
+
+    // Remove the original file.
+    std::fs::remove_file(out_file.clone()).expect(format!("Failed to remove file {:?}", out_file).as_str());
 }
 
 struct SigParser {
