@@ -1,0 +1,27 @@
+[cuda]
+cuDevicePrimaryCtxGetState = { default = true }
+__cudaRegisterFatBinary = { default = false, client_hook = "todo", server_hook = "todo" }
+__cudaUnregisterFatBinary = { default = false, client_hook = "todo", server_hook = "todo" }
+__cudaRegisterFatBinaryEnd = { default = false, client_hook = "todo", server_hook = "todo" }
+__cudaRegisterFunction = { default = false, client_hook = "todo", server_hook = "todo" }
+__cudaRegisterVar = { default = false, client_hook = "todo", server_hook = "todo" }
+
+[cudart]
+cudaGetDevice = { default = true }
+cudaSetDevice = { default = true }
+cudaGetDeviceCount = { default = true }
+cudaGetLastError = { default = true }
+cudaPeekAtLastError = { default = true }
+cudaStreamSynchronize = { default = true }
+cudaMalloc = { default = true }
+cudaFree = { default = true }
+cudaStreamIsCapturing = { default = true }
+cudaGetDeviceProperties = { default = true }
+cudaMemcpy = { default = false, client_hook = "todo", server_hook = "todo" }
+cudaMemcpyAsync = { default = false, client_hook = "todo", server_hook = "todo" }
+cudaLaunchKernel = { default = false, client_hook = "todo", server_hook = "todo" }
+
+[nvml]
+nvmlInit_v2 = { default = true }
+nvmlDeviceGetCount_v2 = { default = true }
+nvmlInitWithFlags = { default = true }

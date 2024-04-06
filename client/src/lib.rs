@@ -14,6 +14,7 @@ use network::{
 
 extern crate codegen;
 use codegen::gen_hijack;
+use codegen::gen_unimplement;
 
 pub mod hijack;
 pub use hijack::*;
