@@ -4,6 +4,10 @@ extern crate lazy_static;
 extern crate cudasys;
 extern crate network;
 
+extern crate log;
+#[allow(unused_imports)]
+use log::{debug, error, info, log_enabled, Level};
+
 use network::{
     ringbufferchannel::{
         RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
@@ -23,6 +27,9 @@ pub mod elf;
 use elf::interfaces::{fat_header, kernel_info_t};
 use elf::ElfController;
 
+pub mod dl;
+pub use dl::*;
+
 use std::sync::Mutex;
 
 lazy_static! {
@@ -35,4 +42,11 @@ lazy_static! {
         Mutex::new(RingBuffer::new(manager))
     };
     static ref ELF_CONTROLLER: ElfController = ElfController::new();
+    static ref ENABLE_LOG: bool = {
+        if std::env::var("RUST_LOG").is_err() {
+            std::env::set_var("RUST_LOG", "debug");
+        }
+        env_logger::init();
+        true
+    };
 }

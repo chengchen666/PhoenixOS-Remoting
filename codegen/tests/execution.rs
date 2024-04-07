@@ -1,11 +1,13 @@
 #![allow(non_snake_case)]
 
+extern crate log;
+use log::info;
+
 extern crate codegen;
 
 use codegen::gen_exe;
 use cudasys::cudart::cudaError_t;
 use network::{CommChannel, Transportable};
-use log::info;
 
 extern "C" {
     pub fn cudaSetDevice(device: ::std::os::raw::c_int) -> cudaError_t;

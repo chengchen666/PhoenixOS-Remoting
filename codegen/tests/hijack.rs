@@ -2,6 +2,9 @@
 #[macro_use]
 extern crate lazy_static;
 
+extern crate log;
+use log::info;
+
 extern crate cudasys;
 extern crate network;
 
@@ -23,6 +26,13 @@ lazy_static! {
     static ref CHANNEL_RECEIVER: Mutex<RingBuffer<SHMChannelBufferManager>> = {
         let manager = SHMChannelBufferManager::new_client(SHM_NAME_STOC, SHM_SIZE).unwrap();
         Mutex::new(RingBuffer::new(manager))
+    };
+    static ref ENABLE_LOG: bool = {
+        if std::env::var("RUST_LOG").is_err() {
+            std::env::set_var("RUST_LOG", "debug");
+        }
+        env_logger::init();
+        true
     };
 }
 
