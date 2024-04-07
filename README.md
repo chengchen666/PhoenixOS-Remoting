@@ -68,6 +68,8 @@ cd ..
 ./startclient.sh ./build/remoting_test
 ```
 
+P.S. Can use `RUST_LOG` environment to control the log level (default=debug).
+
 ## Appendix
 
 ### Build the docker image

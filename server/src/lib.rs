@@ -8,7 +8,7 @@ extern crate network;
 use codegen::gen_exe;
 use cudasys::{
     cuda::{CUdeviceptr, CUfunction, CUmodule},
-    cudart::{cudaDeviceSynchronize, cudaError_t},
+    cudart::{cudaDeviceSynchronize, cudaError_t, cudaGetDeviceCount, cudaSetDevice},
 };
 use dispatcher::dispatch;
 use network::{
@@ -84,6 +84,34 @@ fn receive_request<T: CommChannel>(channel_receiver: &mut T) -> Result<i32, Comm
 pub fn launch_server() {
     let (mut channel_sender, mut channel_receiver) = create_buffer();
     info!("[{}:{}] shm buffer created", std::file!(), std::line!());
+    let mut max_devices = 0;
+    if let cudaError_t::cudaSuccess =
+        unsafe { cudaGetDeviceCount(&mut max_devices as *mut ::std::os::raw::c_int) }
+    {
+        info!(
+            "[{}:{}] found {} cuda devices",
+            std::file!(),
+            std::line!(),
+            max_devices
+        );
+    } else {
+        error!(
+            "[{}:{}] failed to find cuda devices",
+            std::file!(),
+            std::line!()
+        );
+        panic!();
+    }
+    if let cudaError_t::cudaSuccess = unsafe { cudaSetDevice(0) } {
+        info!("[{}:{}] cuda device set to 0", std::file!(), std::line!());
+    } else {
+        error!(
+            "[{}:{}] failed to set cuda device",
+            std::file!(),
+            std::line!()
+        );
+        panic!();
+    }
     if let cudaError_t::cudaSuccess = unsafe { cudaDeviceSynchronize() } {
         info!(
             "[{}:{}] cuda driver initialized",

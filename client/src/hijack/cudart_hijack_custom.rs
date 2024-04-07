@@ -9,7 +9,8 @@ pub extern "C" fn cudaMemcpy(
     count: usize,
     kind: cudaMemcpyKind,
 ) -> cudaError_t {
-    println!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
+    assert_eq!(true, *ENABLE_LOG);
+    info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -82,7 +83,8 @@ pub extern "C" fn cudaMemcpyAsync(
     kind: cudaMemcpyKind,
     _stream: cudaStream_t,
 ) -> cudaError_t {
-    println!("[{}:{}] cudaMemcpyAsync", std::file!(), std::line!());
+    assert_eq!(true, *ENABLE_LOG);
+    info!("[{}:{}] cudaMemcpyAsync", std::file!(), std::line!());
     cudaMemcpy(dst, src, count, kind)
 }
 
@@ -95,7 +97,8 @@ pub extern "C" fn cudaLaunchKernel(
     sharedMem: usize,
     stream: cudaStream_t,
 ) -> cudaError_t {
-    println!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
+    assert_eq!(true, *ENABLE_LOG);
+    info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 

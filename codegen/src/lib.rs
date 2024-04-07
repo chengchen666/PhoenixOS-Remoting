@@ -147,7 +147,8 @@ pub fn defaultable_derive(input: TokenStream) -> TokenStream {
 /// ```ignore
 /// #[no_mangle]
 /// pub extern "C" fn cudaGetDevice(param1: *mut ::std::os::raw::c_int) -> cudaError_t {
-///     println!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
+///     assert_eq!(true, *ENABLE_LOG);
+///     info!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
 ///     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
 ///     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 ///     let proc_id = 0;
@@ -251,7 +252,8 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
     let gen_fn = quote! {
         #[no_mangle]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
-            println!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            assert_eq!(true, *ENABLE_LOG);
+            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
             let proc_id = #proc_id;

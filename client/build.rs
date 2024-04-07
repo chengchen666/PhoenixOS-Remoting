@@ -27,6 +27,7 @@ fn main() {
     println!("cargo:rustc-link-lib=static=elfctrl");
     println!("cargo:rustc-link-lib=dylib=elf");
     println!("cargo:rustc-link-lib=dylib=z");
+    println!("cargo:rustc-link-lib=dylib=dl");
 
     let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
     let library_dir = root.join("src/elf/");
