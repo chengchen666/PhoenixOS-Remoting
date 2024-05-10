@@ -33,3 +33,16 @@ Please decribe your overall MR/PR
 
 - If  it is small (e.g., typo fixes), you can go brief.
 - If it is large and you have changed a lot, please describe it using templates 
+
+
+
+###  MR/PR content and issues
+
+For the MR/PR content, please note, it it is a **new feature**, please include the following:
+
+- A high-level design (in a separate issue) of the MR/PR. 
+- Files changed. 
+- Unittests for the feature. 
+- Necessary comments especially for the function/module descriptions. Can use AI (e.g., https://github.com/binary-husky/gpt_academic) but should check the content manually. 
+- (Recommendation) You can use tools to enhance the quality of the code quality, e.g., https://github.com/binary-husky/gpt_academic. 
+
