@@ -1,5 +1,7 @@
 # XPURemoting
 
+This is a virtualization framework for CUDA API.  The developer can easily add customization to the execution CUDA API, e.g., execute it as an RPC at a remote machine. 
+
 ## Minimal demo
 
 Consits of 4 parts:
@@ -8,6 +10,12 @@ Consits of 4 parts:
 - `client`
 - `network`
 - `codegen`
+
+## Getting started
+
+- How to add customization to a CUDA API:  [implement_new_apis.md](docs/implement_new_apis.md) 
+
+
 
 ## Requirements
 
@@ -69,6 +77,8 @@ cd ..
 ```
 
 P.S. Can use `RUST_LOG` environment to control the log level (default=debug).
+
+
 
 ## Appendix
 
