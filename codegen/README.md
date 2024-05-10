@@ -25,6 +25,7 @@ Most macros are explained by the comment documentation in the source code. The t
 - `transportable_derive`: the macro for deriving the `Transportable` trait for user-defined types.
 - `gen_hijack`: the macro for generating the hijack functions for client intercepting application calls.
 - `gen_execution`: the macro for generating the execution functions for server dispatching application calls.
+- `gen_unimplement`: the macro for generating the unimplemented functions for client side. If the client calls the unimplemented functions, the server will throw `unimplemented!` error.
 
 ## Tests
 
