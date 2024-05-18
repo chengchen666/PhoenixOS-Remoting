@@ -3,11 +3,12 @@ mod tests {
     use super::super::channel::META_AREA;
     use super::super::{LocalChannelBufferManager, RingBuffer};
     use crate::{CommChannel, RawMemory, RawMemoryMut};
+    use std::boxed::Box;
 
     #[test]
     fn basic_send_receive() {
-        let mut buffer: RingBuffer<LocalChannelBufferManager> =
-            RingBuffer::new(LocalChannelBufferManager::new(10 + META_AREA));
+        let mut buffer: RingBuffer =
+            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
         let data_to_send: [u8; 5] = [1, 2, 3, 4, 5];
         let mut receive_buffer = [0u8; 5];
 
@@ -23,8 +24,8 @@ mod tests {
 
     #[test]
     fn partial_receive() {
-        let mut buffer: RingBuffer<LocalChannelBufferManager> =
-            RingBuffer::new(LocalChannelBufferManager::new(10 + META_AREA));
+        let mut buffer: RingBuffer =
+            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
         let data_to_send: [u8; 5] = [1, 2, 3, 4, 5];
         let mut receive_buffer = [0u8; 3];
 
@@ -41,8 +42,8 @@ mod tests {
     #[test]
     fn wrap_around() {
         println!("Wrap around test");
-        let mut buffer: RingBuffer<LocalChannelBufferManager> =
-            RingBuffer::new(LocalChannelBufferManager::new(5 + META_AREA));
+        let mut buffer: RingBuffer =
+            RingBuffer::new(Box::new(LocalChannelBufferManager::new(5 + META_AREA)));
 
         let first_send: [u8; 3] = [1, 2, 3];
         let second_send: [u8; 3] = [4, 5, 6];

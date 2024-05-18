@@ -2,6 +2,10 @@
 #![feature(generic_const_exprs)]
 use std::error::Error;
 use std::fmt;
+use serde::Deserialize;
+
+#[macro_use]
+extern crate lazy_static;
 
 pub mod buffer;
 pub use buffer::{BufferError, RawBuffer};
@@ -10,6 +14,28 @@ pub mod ringbufferchannel;
 pub mod type_impl;
 
 extern crate codegen;
+
+#[derive(Deserialize)]
+pub struct NetworkConfig {
+    pub comm_type: String,
+    pub sender_socket: String,
+    pub receiver_socket: String,
+    pub stoc_channel_name: String,
+    pub ctos_channel_name: String,
+    pub buf_size: usize,
+}
+
+lazy_static! {
+    pub static ref CONFIG: NetworkConfig = {
+        // Use environment variable to set config file's path.
+        let path = match std::env::var("NETWORK_CONFIG") {
+            Ok(val) => val,
+            Err(_) => "/workspace/xpuremoting/config.toml".to_string(),
+        };
+        let content = std::fs::read_to_string(path).expect("Failed to read config.toml");
+        toml::from_str(&content).expect("Failed to parse config.toml")
+    };
+}
 
 /// A raw memory struct
 /// used to wrap raw memory pointer and length,

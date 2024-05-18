@@ -1,15 +1,14 @@
-use std::ptr::{self, NonNull};
-
-use super::ChannelBufferManager;
+use super::{ChannelBufferManager, CACHE_LINE_SZ};
 use crate::{CommChannel, CommChannelError, RawMemory, RawMemoryMut};
+use std::boxed::Box;
 
 /// we reserve the first 128B for the header and tailer
 /// 128 = cacheline size * 2
 /// FIXME: should be hardware dependent
 ///
 pub const HEAD_OFF: usize = 0;
-pub const TAIL_OFF: usize = 64;
-pub const META_AREA: usize = 128;
+pub const TAIL_OFF: usize = CACHE_LINE_SZ;
+pub const META_AREA: usize = CACHE_LINE_SZ * 2;
 
 /// A ring buffer where the buffer can be shared between different processes/threads
 /// It uses the head 4B + 4B to store the head and tail
@@ -19,8 +18,9 @@ pub const META_AREA: usize = 128;
 /// ```no_compile
 /// use ringbufferchannel::{LocalChannelBufferManager, RingBuffer};
 /// use crate::CommChannel;
+/// use std::boxed::Box;
 ///
-/// let mut buffer: RingBuffer<LocalChannelBufferManager> = RingBuffer::new(LocalChannelBufferManager::new(10 + 8));
+/// let mut buffer: RingBuffer = RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + 8)));
 /// let data_to_send = [1, 2, 3, 4, 5];
 /// let mut receive_buffer = [0u8; 5];
 ///
@@ -31,33 +31,27 @@ pub const META_AREA: usize = 128;
 ///
 /// ```
 ///
-pub struct RingBuffer<T: ChannelBufferManager> {
-    _manager: T,
-    buffer: NonNull<u8>,
+pub struct RingBuffer {
+    manager: Box<dyn ChannelBufferManager>,
     capacity: usize, // Capacity of the buffer excluding head and tail.
 }
 
-unsafe impl<T: ChannelBufferManager> Send for RingBuffer<T> {}
-unsafe impl<T: ChannelBufferManager> Sync for RingBuffer<T> {}
+unsafe impl Send for RingBuffer {}
+unsafe impl Sync for RingBuffer {}
 
-impl<T> RingBuffer<T>
-where
-    T: ChannelBufferManager,
+impl RingBuffer
 {
-    pub fn new(manager: T) -> RingBuffer<T> {
-        let (ptr, len) = manager.get_managed_memory();
+    pub fn new(manager: Box<dyn ChannelBufferManager>) -> RingBuffer {
+        let (_ptr, len) = manager.get_managed_memory();
         assert!(len > META_AREA, "Buffer size is too small");
-        assert!(
-            super::utils::is_cache_line_aligned(ptr),
-            "Buffer is not cache line aligned"
-        );
-
-        let buffer: NonNull<u8> = NonNull::new(ptr).unwrap();
+        // assert!(
+        //     super::utils::is_cache_line_aligned(ptr),
+        //     "Buffer is not cache line aligned"
+        // );
 
         let capacity = len - META_AREA;
         let mut res = RingBuffer {
-            _manager: manager,
-            buffer,
+            manager,
             capacity,
         };
         res.write_head_volatile(0);
@@ -66,7 +60,7 @@ where
     }
 }
 
-impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
+impl CommChannel for RingBuffer {
     fn put_bytes(&mut self, src: &RawMemory) -> Result<usize, CommChannelError> {
         let mut len = src.len;
         let mut offset = 0;
@@ -85,11 +79,7 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
             let current = std::cmp::min(self.num_adjacent_bytes_to_write(read_tail), len);
 
             unsafe {
-                std::ptr::copy_nonoverlapping(
-                    src.ptr.add(offset),
-                    self.buffer.as_ptr().add(META_AREA).add(read_tail),
-                    current,
-                );
+                let _ = self.manager.write_at(META_AREA + read_tail, src.ptr.add(offset), current);
             }
             std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
 
@@ -129,11 +119,7 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
             let current = std::cmp::min(self.num_adjacent_bytes_to_read(read_head), len);
 
             unsafe {
-                std::ptr::copy_nonoverlapping(
-                    self.buffer.as_ptr().add(META_AREA).add(read_head),
-                    dst.ptr.add(offset),
-                    current,
-                );
+                self.manager.read_at(META_AREA + read_head, dst.ptr.add(offset), current);
             }
 
             std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
@@ -160,9 +146,7 @@ impl<T: ChannelBufferManager> CommChannel for RingBuffer<T> {
     }
 }
 
-impl<T> RingBuffer<T>
-where
-    T: ChannelBufferManager,
+impl RingBuffer
 {
     /// The space that has not been consumed by the consumer
     #[inline]
@@ -190,28 +174,27 @@ where
     }
 }
 
-impl<T> RingBuffer<T>
-where
-    T: ChannelBufferManager,
+impl RingBuffer
 {
+    // WARNING: May need volatile in the future
     fn read_head_volatile(&self) -> u32 {
-        unsafe { ptr::read_volatile(self.buffer.as_ptr().add(HEAD_OFF) as *const u32) }
+        let mut head: u32 = 0;
+        self.manager.read_at(HEAD_OFF, &mut head as *mut u32 as *mut u8, std::mem::size_of::<u32>());
+        head
     }
 
     fn write_head_volatile(&mut self, head: u32) {
-        unsafe {
-            ptr::write_volatile(self.buffer.as_ptr().add(HEAD_OFF) as *mut u32, head);
-        }
+        self.manager.write_at(HEAD_OFF, &head as *const u32 as *const u8, std::mem::size_of::<u32>());
     }
 
     fn read_tail_volatile(&self) -> u32 {
-        unsafe { ptr::read_volatile(self.buffer.as_ptr().add(TAIL_OFF) as _) }
+        let mut tail: u32 = 0;
+        self.manager.read_at(TAIL_OFF, &mut tail as *mut u32 as *mut u8, std::mem::size_of::<u32>());
+        tail
     }
 
     fn write_tail_volatile(&mut self, tail: u32) {
-        unsafe {
-            ptr::write_volatile(self.buffer.as_ptr().add(TAIL_OFF) as _, tail);
-        }
+        self.manager.write_at(TAIL_OFF, &tail as *const u32 as *const u8, std::mem::size_of::<u32>());
     }
 
     #[inline]

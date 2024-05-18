@@ -11,12 +11,15 @@ use cudasys::{
     cudart::{cudaDeviceSynchronize, cudaError_t, cudaGetDeviceCount, cudaSetDevice},
 };
 use dispatcher::dispatch;
+
+#[allow(unused_imports)]
 use network::{
     ringbufferchannel::{
-        RingBuffer, SHMChannelBufferManager, SHM_NAME_CTOS, SHM_NAME_STOC, SHM_SIZE,
+        RingBuffer, SHMChannelBufferManager, RDMAChannelBufferManager,
     },
     type_impl::MemPtr,
     CommChannel, CommChannelError, Transportable,
+    CONFIG,
 };
 
 #[allow(unused_imports)]
@@ -26,6 +29,7 @@ extern crate lazy_static;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::boxed::Box;
 
 lazy_static! {
     // client_address -> module
@@ -61,15 +65,33 @@ fn get_variable(host_var: MemPtr) -> Option<CUdeviceptr> {
 }
 
 fn create_buffer() -> (
-    RingBuffer<SHMChannelBufferManager>,
-    RingBuffer<SHMChannelBufferManager>,
+    RingBuffer,
+    RingBuffer,
 ) {
-    let manager_sender = SHMChannelBufferManager::new_server(SHM_NAME_STOC, SHM_SIZE).unwrap();
-    let manager_receiver = SHMChannelBufferManager::new_server(SHM_NAME_CTOS, SHM_SIZE).unwrap();
-    (
-        RingBuffer::new(manager_sender),
-        RingBuffer::new(manager_receiver),
-    )
+    // Use features when compiling to decide what arm(s) will be supported.
+    // In the server side, the sender's name is stoc_channel_name,
+    // receiver's name is ctos_channel_name.
+    match CONFIG.comm_type.as_str() {
+        #[cfg(feature = "shm")]
+        "shm" => {
+            let sender = SHMChannelBufferManager::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap();
+            let receiver = SHMChannelBufferManager::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap();
+            (
+                RingBuffer::new(Box::new(sender)),
+                RingBuffer::new(Box::new(receiver)),
+            )
+        }
+        #[cfg(feature = "rdma")]
+        "rdma" => {
+            let sender = RDMAChannelBufferManager::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size, CONFIG.sender_socket.parse().unwrap()).unwrap();
+            let receiver = RDMAChannelBufferManager::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size, CONFIG.receiver_socket.parse().unwrap()).unwrap();
+            (
+                RingBuffer::new(Box::new(sender)),
+                RingBuffer::new(Box::new(receiver)),
+            )
+        }
+        &_ => panic!("Unsupported communication type in config"),
+    }
 }
 
 fn receive_request<T: CommChannel>(channel_receiver: &mut T) -> Result<i32, CommChannelError> {
