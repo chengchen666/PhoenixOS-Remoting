@@ -1,3 +1,4 @@
+use std::boxed::Box;
 use super::*;
 pub use crate::types::cudart::*;
 include!("bindings/funcs/cudart.rs");
@@ -26,8 +27,8 @@ mod tests{
 
     #[test]
     fn test_cudaError_t_io() {
-        let mut buffer: RingBuffer<LocalChannelBufferManager> =
-            RingBuffer::new(LocalChannelBufferManager::new(10 + META_AREA));
+        let mut buffer: RingBuffer =
+            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
         let a = cudaError_t::cudaErrorInvalidValue;
         let mut b = cudaError_t::cudaSuccess;
         a.send(&mut buffer).unwrap();
@@ -37,8 +38,8 @@ mod tests{
 
     #[test]
     fn test_cudaStream_t_io() {
-        let mut buffer: RingBuffer<LocalChannelBufferManager> =
-            RingBuffer::new(LocalChannelBufferManager::new(10 + META_AREA));
+        let mut buffer: RingBuffer =
+            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
         let a = 100usize as cudaStream_t;
         let mut b: cudaStream_t = 0usize as cudaStream_t;
         a.send(&mut buffer).unwrap();

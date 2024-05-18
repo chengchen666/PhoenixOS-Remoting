@@ -16,3 +16,7 @@ lazy_static = "1.4.0"
 
 [lib]
 crate-type = ["cdylib"]
+
+[features]
+shm = []
+rdma = []

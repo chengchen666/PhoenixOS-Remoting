@@ -9,11 +9,12 @@ mod tests{
         channel::META_AREA,
         LocalChannelBufferManager, RingBuffer
     };
+    use std::boxed::Box;
 
     #[test]
     fn test_CUresult_io() {
-        let mut buffer: RingBuffer<LocalChannelBufferManager> =
-            RingBuffer::new(LocalChannelBufferManager::new(10 + META_AREA));
+        let mut buffer: RingBuffer =
+            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
         let a = CUresult::CUDA_ERROR_ALREADY_ACQUIRED;
         let mut b = CUresult::CUDA_SUCCESS;
         a.send(&mut buffer).unwrap();

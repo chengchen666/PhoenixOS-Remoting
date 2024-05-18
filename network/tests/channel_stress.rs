@@ -8,6 +8,7 @@ use network::{
 use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::Duration;
+use std::boxed::Box;
 
 pub struct ConsumerManager {
     buf: *mut u8,
@@ -17,6 +18,20 @@ pub struct ConsumerManager {
 impl ChannelBufferManager for ConsumerManager {
     fn get_managed_memory(&self) -> (*mut u8, usize) {
         (self.buf, self.capacity)
+    }
+
+    fn read_at(&self, offset: usize, dst: *mut u8, count: usize) -> usize {
+        unsafe {
+            std::ptr::copy_nonoverlapping(self.buf.add(offset) as _, dst, count);
+        }
+        count
+    }
+
+    fn write_at(&self, offset: usize, src: *const u8, count: usize) -> usize {
+        unsafe {
+            std::ptr::copy_nonoverlapping(src, self.buf.add(offset) as _, count);
+        }
+        count
     }
 }
 
@@ -43,7 +58,7 @@ fn test_ring_buffer_producer_consumer() {
 
     // Producer thread
     let producer = thread::spawn(move || {
-        let mut producer_ring_buffer = RingBuffer::new(p_shared_buffer);
+        let mut producer_ring_buffer = RingBuffer::new(Box::new(p_shared_buffer));
         producer_barrier.wait(); // Wait for both threads to be ready
 
         for i in 0..test_iters {
@@ -57,7 +72,7 @@ fn test_ring_buffer_producer_consumer() {
 
     // Consumer thread
     let consumer = thread::spawn(move || {
-        let mut consumer_ring_buffer = RingBuffer::new(c_shared_buffer);
+        let mut consumer_ring_buffer = RingBuffer::new(Box::new(c_shared_buffer));
         consumer_barrier.wait(); // Wait for both threads to be ready
 
         let mut received = 0;

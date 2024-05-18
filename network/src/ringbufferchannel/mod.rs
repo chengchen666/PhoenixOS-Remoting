@@ -10,13 +10,12 @@ pub mod shm;
 #[cfg(target_os = "linux")]
 pub use shm::SHMChannelBufferManager;
 
+pub mod rdma;
+pub use rdma::RDMAChannelBufferManager;
+
 pub mod utils;
 
 pub const CACHE_LINE_SZ: usize = 64;
-
-pub const SHM_SIZE: usize = 104857520;
-pub const SHM_NAME_STOC: &str = "/stoc";
-pub const SHM_NAME_CTOS: &str = "/ctos";
 
 /// A ring buffer can use arbitrary memory for its channel
 ///
@@ -25,6 +24,8 @@ pub const SHM_NAME_CTOS: &str = "/ctos";
 /// - The buffer memory deallocation
 pub trait ChannelBufferManager {
     fn get_managed_memory(&self) -> (*mut u8, usize);
+    fn read_at(&self, offset: usize, dst: *mut u8, count: usize) -> usize;
+    fn write_at(&self, offset: usize, src: *const u8, count: usize) -> usize;
 }
 
 /// A simple local channel buffer manager
@@ -53,6 +54,20 @@ impl LocalChannelBufferManager {
 impl ChannelBufferManager for LocalChannelBufferManager {
     fn get_managed_memory(&self) -> (*mut u8, usize) {
         (self.buffer.as_ptr(), self.size)
+    }
+
+    fn read_at(&self, offset: usize, dst: *mut u8, count: usize) -> usize {
+        unsafe {
+            std::ptr::copy_nonoverlapping(self.buffer.as_ptr().add(offset) as _, dst, count);
+        }
+        count
+    }
+
+    fn write_at(&self, offset: usize, src: *const u8, count: usize) -> usize {
+        unsafe {
+            std::ptr::copy_nonoverlapping(src, self.buffer.as_ptr().add(offset) as _, count);
+        }
+        count
     }
 }
 

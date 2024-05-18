@@ -23,8 +23,8 @@ mod tests{
 
     #[test]
     fn test_nvmlReturn_t_io() {
-        let mut buffer: RingBuffer<LocalChannelBufferManager> =
-            RingBuffer::new(LocalChannelBufferManager::new(10 + META_AREA));
+        let mut buffer: RingBuffer =
+            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
         let a = nvmlReturn_t::NVML_ERROR_UNINITIALIZED;
         let mut b = nvmlReturn_t::NVML_SUCCESS;
         a.send(&mut buffer).unwrap();

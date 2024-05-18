@@ -10,8 +10,8 @@ use errno::errno;
 /// A shared memory channel buffer manager
 pub struct SHMChannelBufferManager {
     shm_name: String,
-    shm_len: usize,
     shm_ptr: *mut libc::c_void,
+    shm_len: usize,
 }
 
 impl SHMChannelBufferManager {
@@ -89,6 +89,20 @@ impl Drop for SHMChannelBufferManager {
 impl ChannelBufferManager for SHMChannelBufferManager {
     fn get_managed_memory(&self) -> (*mut u8, usize) {
         (self.shm_ptr as *mut u8, self.shm_len)
+    }
+
+    fn read_at(&self, offset: usize, dst: *mut u8, count: usize) -> usize {
+        unsafe {
+            std::ptr::copy_nonoverlapping(self.shm_ptr.add(offset) as _, dst, count);
+        }
+        count
+    }
+
+    fn write_at(&self, offset: usize, src: *const u8, count: usize) -> usize {
+        unsafe {
+            std::ptr::copy_nonoverlapping(src, self.shm_ptr.add(offset) as _, count);
+        }
+        count
     }
 }
 

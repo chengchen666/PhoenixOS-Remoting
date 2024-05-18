@@ -48,6 +48,12 @@ Then we can build the project using cargo:
 cd /path/to/xpuremoting && cargo build
 ```
 
+## Config
+
+You can use `config.toml` file to config communication type, buffer size, RDMA server listener socket and so on.
+
+Due to `cargo` will use cwd as running root folder, use absolute path for config file. The default path will be `/workspace/xpuremoting/config.toml`. If you want a specific path, you can use environment variable `NETWORK_CONFIG` customize it. For example: `NETWORK_CONFG="/path/to/my/config cargo run`.
+
 ## Test
 
 ### Unit test
@@ -63,8 +69,10 @@ Launch two terminals, one for server and the other for client.
 - server side:
 
 ```shell
-cargo run server
+cargo run [--features shm,rdma] server
 ```
+
+You should use `features` to decide what communication methods will be compiled. For example: if you do not want rdma communication method to be compiled, run with `cargo run --features shm server`.
 
 - client side:
 
