@@ -10,3 +10,17 @@ gen_hijack!(
     "*mut ::std::os::raw::c_uint",
     "*mut ::std::os::raw::c_int"
 );
+
+gen_hijack!(
+    501,
+    "cuDriverGetVersion",
+    "CUresult",
+    "*mut ::std::os::raw::c_int"
+);
+
+gen_hijack!(
+    502,
+    "cuInit",
+    "CUresult",
+    "::std::os::raw::c_uint"
+);

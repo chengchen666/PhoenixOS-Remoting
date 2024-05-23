@@ -274,7 +274,7 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
             #( #assign_statements )*
             match #result_name.recv(channel_receiver) {
                 Ok(()) => {}
-                Err(e) => panic!("failed to send #result_name: {:?}", e),
+                Err(e) => panic!("failed to receive #result_name: {:?}", e),
             }
             return #result_name;
         }
@@ -376,6 +376,35 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
             #( #send_statements )*
             #result_name.send(channel_sender).unwrap();
             channel_sender.flush_out().unwrap();
+        }
+    };
+
+    gen_fn.into()
+}
+
+#[proc_macro]
+pub fn gen_unimplement(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as UnimplementParser);
+
+    let (func, result, params) = (input.func, input.result, input.params);
+
+    let func_str = func.to_string();
+
+    let result_ty = &result.ty;
+
+    let params = params.iter().map(|param| {
+        let name = &param.name;
+        let ty = &param.ty;
+        match param.mode {
+            ElementMode::Input => quote! { #name: #ty },
+            ElementMode::Output => quote! { #name: *mut #ty },
+        }
+    });
+
+    let gen_fn = quote! {
+        #[no_mangle]
+        pub extern "C" fn #func(#(#params),*) -> #result_ty {
+            unimplemented!("{}", #func_str);
         }
     };
 
@@ -491,35 +520,6 @@ pub fn gen_deserialize(input: TokenStream) -> TokenStream {
         fn #fn_name(buf : &mut RawBuffer, #(#params),*) -> Result<(),BufferError> {
             #( #deserialize_statements )*
             Ok(())
-        }
-    };
-
-    gen_fn.into()
-}
-
-#[proc_macro]
-pub fn gen_unimplement(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as UnimplementParser);
-
-    let (func, result, params) = (input.func, input.result, input.params);
-
-    let func_str = func.to_string();
-
-    let result_ty = &result.ty;
-
-    let params = params.iter().map(|param| {
-        let name = &param.name;
-        let ty = &param.ty;
-        match param.mode {
-            ElementMode::Input => quote! { #name: #ty },
-            ElementMode::Output => quote! { #name: *mut #ty },
-        }
-    });
-
-    let gen_fn = quote! {
-        #[no_mangle]
-        pub extern "C" fn #func(#(#params),*) -> #result_ty {
-            unimplemented!("{}", #func_str);
         }
     };
 

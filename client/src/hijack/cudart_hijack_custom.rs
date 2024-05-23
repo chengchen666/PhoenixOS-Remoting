@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 use super::*;
 use cudasys::types::cudart::*;
+use ::std::os::raw::*;
 
 #[no_mangle]
 pub extern "C" fn cudaMemcpy(
@@ -165,4 +166,87 @@ pub extern "C" fn cudaLaunchKernel(
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
     return result;
+}
+
+#[no_mangle]
+pub extern "C" fn cudaMallocManaged(
+    devPtr: MemPtr, // void**
+    size: size_t,
+    flags: c_uint,
+) -> cudaError_t{
+    // should update devPtr
+    info!(
+        "[{}:{}] cudaMallocManaged",
+        std::file!(),
+        std::line!()
+    );
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let proc_id = 11;
+    let mut result: cudaError_t = Default::default();
+    match proc_id.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send proc_id: {:?}", e),
+    }
+    match size.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send size: {:?}", e),
+    }
+    match flags.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send flags: {:?}", e),
+    }
+    let mut devPtr_: MemPtr = Default::default();
+    match devPtr_.recv(channel_receiver) {
+        Ok(()) => {
+            unsafe{*(devPtr as *mut MemPtr) = devPtr_};
+        }
+        Err(e) => panic!("failed to send devPtr: {:?}", e),
+    }
+    match result.recv(channel_receiver) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive result: {:?}", e),
+    }
+    result
+}
+
+
+pub extern "C" fn cudaHostAlloc(
+    pHost: *mut *mut ::std::os::raw::c_void,
+    size: size_t,
+    flags: c_uint,
+) -> cudaError_t {
+    info!(
+        "[{}:{}] cudaHostAlloc",
+        std::file!(),
+        std::line!()
+    );
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let proc_id = 13;
+    let mut result: cudaError_t = Default::default();
+    match proc_id.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send proc_id: {:?}", e),
+    }
+    match size.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send size: {:?}", e),
+    }
+    match flags.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send flags: {:?}", e),
+    }
+    let mut pHost_: MemPtr = Default::default();
+    match pHost_.recv(channel_receiver) {
+        Ok(()) => {
+            unsafe{*(pHost as *mut MemPtr) = pHost_};
+        }
+        Err(e) => panic!("failed to send pHost: {:?}", e),
+    }
+    match result.recv(channel_receiver) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive result: {:?}", e),
+    }
+    result
 }

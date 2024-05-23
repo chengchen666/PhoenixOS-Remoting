@@ -1,5 +1,9 @@
 [cuda]
 cuDevicePrimaryCtxGetState = { default = true }
+cuInit = { default = true }
+cuDriverGetVersion = { default = true }
+cuGetExportTable = { default = false, client_hook = "todo", server_hook = "todo" } 
+cuGetProcAddress = { default = false, client_hook = "todo", server_hook = "todo" }
 __cudaRegisterFatBinary = { default = false, client_hook = "todo", server_hook = "todo" }
 __cudaUnregisterFatBinary = { default = false, client_hook = "todo", server_hook = "todo" }
 __cudaRegisterFatBinaryEnd = { default = false, client_hook = "todo", server_hook = "todo" }
@@ -20,8 +24,54 @@ cudaGetDeviceProperties = { default = true }
 cudaMemcpy = { default = false, client_hook = "todo", server_hook = "todo" }
 cudaMemcpyAsync = { default = false, client_hook = "todo", server_hook = "todo" }
 cudaLaunchKernel = { default = false, client_hook = "todo", server_hook = "todo" }
+cudaMallocManaged = { default = false, client_hook = "todo", server_hook = "todo" }
+cudaHostAlloc = { default = false, client_hook = "todo", server_hook = "todo" }
+cudaPointerGetAttributes = { default = true }
 
 [nvml]
 nvmlInit_v2 = { default = true }
 nvmlDeviceGetCount_v2 = { default = true }
 nvmlInitWithFlags = { default = true }
+
+[cudnn]
+cudnnCreate = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnCreateTensorDescriptor = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnSetTensor4dDescriptor = { default = true }
+cudnnCreateActivationDescriptor = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnSetActivationDescriptor = { default = true }
+cudnnActivationForward = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnDestroy = { default = true }
+cudnnSetConvolution2dDescriptor = { default = true }
+cudnnSetStream = { default = true }
+cudnnSetTensorNdDescriptor = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnDestroyTensorDescriptor = { default = true }
+cudnnCreateFilterDescriptor = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnSetFilterNdDescriptor = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnDestroyFilterDescriptor = { default = true }
+cudnnCreateConvolutionDescriptor = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnDestroyConvolutionDescriptor = { default = true }
+cudnnSetConvolutionNdDescriptor = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnSetConvolutionGroupCount = { default = true }
+cudnnSetConvolutionMathType = { default = true }
+cudnnSetConvolutionReorderType = { default = true }
+cudnnGetConvolutionForwardAlgorithm_v7 = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnConvolutionForward = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize = { default = false, client_hook = "todo", server_hook = "todo" }
+cudnnGetBatchNormalizationTrainingExReserveSpaceSize = { default = false }
+cudnnBatchNormalizationForwardTrainingEx = { default = false }
+cudnnGetBatchNormalizationBackwardExWorkspaceSize = { default = false }
+cudnnBatchNormalizationBackwardEx = { default = false }
+cudnnGetConvolutionBackwardDataAlgorithm_v7 = { default = false }
+cudnnConvolutionBackwardData = { default = false }
+cudnnGetConvolutionBackwardFilterAlgorithm_v7 = { default = false }
+cudnnConvolutionBackwardFilter = { default = false }
+cudnnBatchNormalizationForwardInference = { default = false }
+
+
+[cublas]
+cublasCreate_v2 = { default = false }
+cublasDestroy_v2 = { default = true }
+cublasSetMathMode = { default = true }
+cublasSetStream_v2 = { default = true }
+cublasSgemm_v2 = { default = false }
+cublasSgemmStridedBatched = { default = false }

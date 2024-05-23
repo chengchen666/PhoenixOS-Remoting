@@ -1,8 +1,35 @@
-use quote::format_ident;
+extern crate proc_macro2;
+use quote::{format_ident, quote};
 use syn::{
     parse::{Parse, ParseStream},
     Ident, Type, LitInt, LitStr, Result, Token,
 };
+
+pub enum ElementType {
+    Void,
+    Type(syn::Type),
+}
+
+impl quote::ToTokens for ElementType {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        match self {
+            ElementType::Void => {
+                let void_ident = quote! { () };
+                void_ident.to_tokens(tokens)
+            },
+            ElementType::Type(ty) => ty.to_tokens(tokens),
+        }
+    }
+}
+
+impl Clone for ElementType {
+    fn clone(&self) -> Self {
+        match self {
+            ElementType::Void => ElementType::Void,
+            ElementType::Type(ty) => ElementType::Type(ty.clone()),
+        }
+    }
+}
 
 /// - "type", - "*mut type"
 /// the former is input to native function,
@@ -15,7 +42,7 @@ pub enum ElementMode {
 
 pub struct Element {
     pub name: Ident,
-    pub ty: syn::Type,
+    pub ty: ElementType,
     pub mode: ElementMode,
 }
 
@@ -32,7 +59,10 @@ impl Parse for ExeParser {
 
         let _comma: Option<Token![,]> = input.parse().ok();
         let result_ty = input.parse::<LitStr>().expect("Expected valid type as a string literal").value();
-        let result_ty = syn::parse_str::<Type>(&result_ty).expect("Expected valid type for result");
+        let result_ty = match result_ty.as_str() {
+            "" => ElementType::Void,
+            _ => ElementType::Type(syn::parse_str::<Type>(&result_ty).expect("Expected valid type for result")),
+        };
         let result = Element {
             name: format_ident!("result"),
             ty: result_ty,
@@ -50,7 +80,7 @@ impl Parse for ExeParser {
             } else {
                 ElementMode::Input
             };
-            let ty = syn::parse_str::<Type>(&ty_str).expect("Expected valid type");
+            let ty = ElementType::Type(syn::parse_str::<Type>(&ty_str).expect("Expected valid type"));
             params.push(Element {
                 name: format_ident!("param{}", i + 1),
                 ty,
@@ -84,7 +114,10 @@ impl Parse for HijackParser {
 
         let _comma: Option<Token![,]> = input.parse().ok();
         let result_ty = input.parse::<LitStr>().expect("Expected valid type as a string literal").value();
-        let result_ty = syn::parse_str::<Type>(&result_ty).expect("Expected valid type for result");
+        let result_ty = match result_ty.as_str() {
+            "" => ElementType::Void,
+            _ => ElementType::Type(syn::parse_str::<Type>(&result_ty).expect("Expected valid type for result")),
+        };
         let result = Element {
             name: format_ident!("result"),
             ty: result_ty,
@@ -102,7 +135,7 @@ impl Parse for HijackParser {
             } else {
                 ElementMode::Input
             };
-            let ty = syn::parse_str::<Type>(&ty_str).expect("Expected valid type");
+            let ty = ElementType::Type(syn::parse_str::<Type>(&ty_str).expect("Expected valid type"));
             params.push(Element {
                 name: format_ident!("param{}", i + 1),
                 ty,
@@ -133,7 +166,10 @@ impl Parse for UnimplementParser {
 
         let _comma: Option<Token![,]> = input.parse().ok();
         let result_ty = input.parse::<LitStr>().expect("Expected valid type as a string literal").value();
-        let result_ty = syn::parse_str::<Type>(&result_ty).expect("Expected valid type for result");
+        let result_ty = match result_ty.as_str() {
+            "" => ElementType::Void,
+            _ => ElementType::Type(syn::parse_str::<Type>(&result_ty).expect("Expected valid type for result")),
+        };
         let result = Element {
             name: format_ident!("result"),
             ty: result_ty,
@@ -151,7 +187,7 @@ impl Parse for UnimplementParser {
             } else {
                 ElementMode::Input
             };
-            let ty = syn::parse_str::<Type>(&ty_str).expect("Expected valid type");
+            let ty = ElementType::Type(syn::parse_str::<Type>(&ty_str).expect("Expected valid type"));
             params.push(Element {
                 name: format_ident!("param{}", i + 1),
                 ty,

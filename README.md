@@ -28,6 +28,14 @@ docker run -dit  --shm-size 8G  --name $container_name  --gpus all  --privileged
 
 - Note that we need Rust **nightly** toolchain to build the project, which is not installed in the docker image.
 
+```shell
+curl https://sh.rustup.rs -sSf | sh
+. "$HOME/.cargo/env"
+rustup toolchain install nightly-x86_64-unknown-linux-gnu
+rustup default nightly
+cargo +nightly install cargo-expand
+```
+
 - Version checklist
   - Rust: `cargo 1.78.0-nightly`
   - CMake: `3.22.1`
@@ -47,6 +55,8 @@ Then we can build the project using cargo:
 ```shell
 cd /path/to/xpuremoting && cargo build
 ```
+
+You should specify `default` feature in both `client/server`'s Cargo.toml to decide which communication methods will be compiled. For example, if you want rdma communication method to be compiled, you should add `"rdma"` into the `default` feature in `client/Cargo.toml` and `server/Cargo.toml`.
 
 ## Config
 
@@ -85,6 +95,11 @@ cd ..
 ```
 
 P.S. Can use `RUST_LOG` environment to control the log level (default=debug).
+
+
+### Application test
+
+Please refer to [application-guild](./tests/apps/README.md) to run applicatons
 
 
 

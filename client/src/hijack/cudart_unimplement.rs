@@ -86,14 +86,12 @@ gen_unimplement!("cudaLaunchHostFunc", "cudaError_t", "cudaStream_t", "cudaHostF
 gen_unimplement!("cudaOccupancyMaxActiveBlocksPerMultiprocessor", "cudaError_t", "*mut ::std::os::raw::c_int", "*const ::std::os::raw::c_void", "::std::os::raw::c_int", "size_t");
 gen_unimplement!("cudaOccupancyAvailableDynamicSMemPerBlock", "cudaError_t", "*mut size_t", "*const ::std::os::raw::c_void", "::std::os::raw::c_int", "::std::os::raw::c_int");
 gen_unimplement!("cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags", "cudaError_t", "*mut ::std::os::raw::c_int", "*const ::std::os::raw::c_void", "::std::os::raw::c_int", "size_t", "::std::os::raw::c_uint");
-gen_unimplement!("cudaMallocManaged", "cudaError_t", "*mut *mut ::std::os::raw::c_void", "size_t", "::std::os::raw::c_uint");
 gen_unimplement!("cudaMallocHost", "cudaError_t", "*mut *mut ::std::os::raw::c_void", "size_t");
 gen_unimplement!("cudaMallocPitch", "cudaError_t", "*mut *mut ::std::os::raw::c_void", "*mut size_t", "size_t", "size_t");
 gen_unimplement!("cudaMallocArray", "cudaError_t", "*mut cudaArray_t", "*const cudaChannelFormatDesc", "size_t", "size_t", "::std::os::raw::c_uint");
 gen_unimplement!("cudaFreeHost", "cudaError_t", "*mut ::std::os::raw::c_void");
 gen_unimplement!("cudaFreeArray", "cudaError_t", "cudaArray_t");
 gen_unimplement!("cudaFreeMipmappedArray", "cudaError_t", "cudaMipmappedArray_t");
-gen_unimplement!("cudaHostAlloc", "cudaError_t", "*mut *mut ::std::os::raw::c_void", "size_t", "::std::os::raw::c_uint");
 gen_unimplement!("cudaHostRegister", "cudaError_t", "*mut ::std::os::raw::c_void", "size_t", "::std::os::raw::c_uint");
 gen_unimplement!("cudaHostUnregister", "cudaError_t", "*mut ::std::os::raw::c_void");
 gen_unimplement!("cudaHostGetDevicePointer", "cudaError_t", "*mut *mut ::std::os::raw::c_void", "*mut ::std::os::raw::c_void", "::std::os::raw::c_uint");
@@ -155,7 +153,6 @@ gen_unimplement!("cudaMemPoolExportToShareableHandle", "cudaError_t", "*mut ::st
 gen_unimplement!("cudaMemPoolImportFromShareableHandle", "cudaError_t", "*mut cudaMemPool_t", "*mut ::std::os::raw::c_void", "cudaMemAllocationHandleType", "::std::os::raw::c_uint");
 gen_unimplement!("cudaMemPoolExportPointer", "cudaError_t", "*mut cudaMemPoolPtrExportData", "*mut ::std::os::raw::c_void");
 gen_unimplement!("cudaMemPoolImportPointer", "cudaError_t", "*mut *mut ::std::os::raw::c_void", "cudaMemPool_t", "*mut cudaMemPoolPtrExportData");
-gen_unimplement!("cudaPointerGetAttributes", "cudaError_t", "*mut cudaPointerAttributes", "*const ::std::os::raw::c_void");
 gen_unimplement!("cudaDeviceCanAccessPeer", "cudaError_t", "*mut ::std::os::raw::c_int", "::std::os::raw::c_int", "::std::os::raw::c_int");
 gen_unimplement!("cudaDeviceEnablePeerAccess", "cudaError_t", "::std::os::raw::c_int", "::std::os::raw::c_uint");
 gen_unimplement!("cudaDeviceDisablePeerAccess", "cudaError_t", "::std::os::raw::c_int");
