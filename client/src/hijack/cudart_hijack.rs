@@ -43,6 +43,13 @@ gen_hijack!(
     "*mut cudaDeviceProp",
     "::std::os::raw::c_int"
 );
+gen_hijack!(
+    12,
+    "cudaPointerGetAttributes", 
+    "cudaError_t", 
+    "*mut cudaPointerAttributes", 
+    "MemPtr"
+);
 // gen_hijack!(
 //     100,
 //     "__cudaRegisterFatBinary",

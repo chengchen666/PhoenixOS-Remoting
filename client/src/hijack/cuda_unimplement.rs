@@ -4,8 +4,6 @@ use cudasys::types::cuda::*;
 
 gen_unimplement!("cuGetErrorString", "CUresult", "CUresult", "*mut *const ::std::os::raw::c_char");
 gen_unimplement!("cuGetErrorName", "CUresult", "CUresult", "*mut *const ::std::os::raw::c_char");
-gen_unimplement!("cuInit", "CUresult", "::std::os::raw::c_uint");
-gen_unimplement!("cuDriverGetVersion", "CUresult", "*mut ::std::os::raw::c_int");
 gen_unimplement!("cuDeviceGet", "CUresult", "*mut CUdevice", "::std::os::raw::c_int");
 gen_unimplement!("cuDeviceGetCount", "CUresult", "*mut ::std::os::raw::c_int");
 gen_unimplement!("cuDeviceGetName", "CUresult", "*mut ::std::os::raw::c_char", "::std::os::raw::c_int", "CUdevice");
@@ -336,8 +334,6 @@ gen_unimplement!("cuGraphicsResourceGetMappedPointer_v2", "CUresult", "*mut CUde
 gen_unimplement!("cuGraphicsResourceSetMapFlags_v2", "CUresult", "CUgraphicsResource", "::std::os::raw::c_uint");
 gen_unimplement!("cuGraphicsMapResources", "CUresult", "::std::os::raw::c_uint", "*mut CUgraphicsResource", "CUstream");
 gen_unimplement!("cuGraphicsUnmapResources", "CUresult", "::std::os::raw::c_uint", "*mut CUgraphicsResource", "CUstream");
-gen_unimplement!("cuGetProcAddress", "CUresult", "*const ::std::os::raw::c_char", "*mut *mut ::std::os::raw::c_void", "::std::os::raw::c_int", "cuuint64_t");
-gen_unimplement!("cuGetExportTable", "CUresult", "*mut *const ::std::os::raw::c_void", "*const CUuuid");
 gen_unimplement!("cuFlushGPUDirectRDMAWrites", "CUresult", "CUflushGPUDirectRDMAWritesTarget", "CUflushGPUDirectRDMAWritesScope");
 gen_unimplement!("cuProfilerInitialize", "CUresult", "*const ::std::os::raw::c_char", "*const ::std::os::raw::c_char", "CUoutput_mode");
 gen_unimplement!("cuProfilerStart", "CUresult");

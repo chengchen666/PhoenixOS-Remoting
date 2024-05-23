@@ -1,0 +1,17 @@
+numpy
+accelerate
+lightning>=1.9
+omegaconf>=2.1.1
+lightning_lite
+transformers>=4.30
+diffusers>=0.19
+bitsandbytes-cuda113
+wandb
+ftfy
+torchvision
+requests
+timm
+safetensors
+torch-ema
+tensorboard
+h5py

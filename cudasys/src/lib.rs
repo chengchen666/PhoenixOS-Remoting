@@ -24,6 +24,10 @@ pub mod cudart;
 
 pub mod nvml;
 
+pub mod cudnn;
+
+pub mod cublas;
+
 #[cfg(test)]
 mod tests {
     use super::*;

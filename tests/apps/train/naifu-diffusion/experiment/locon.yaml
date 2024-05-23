@@ -1,0 +1,116 @@
+name: test-run
+
+lora:
+  use_locon: true
+  rank: 32
+  conv_rank: 32
+  lora_alpha: 16
+  conv_alpha: 16
+  multipier: 1.0
+  train_unet: true
+  train_text_encoder: true
+  unet_lr: 3e-4
+  encoder_lr: 1e-4
+  dropout: 0.0
+
+trainer:
+  model_path: "/notebooks/storage/webui/models/Stable-diffusion/Counterfeit-V2.0.ckpt"
+  batch_size: 2
+  resolution: 512
+  center_crop: false
+  gradient_checkpointing: true
+  clip_skip: 2
+  seed: 34
+  precision: fp32
+  use_ema: false
+  use_hivemind: false
+  lr_scale: sqrt
+  attention_slicing: false
+  vae_slicing: false
+
+  offset_noise: true
+  offset_noise_val: 0.02
+  min_snr: true
+  min_snr_val: 5
+  use_xformers: false
+
+checkpoint:
+  monitor: 'epoch'
+  dirpath: checkpoint
+  filename: 'sample-nd-epoch{epoch:02d}-loss{train_loss:.2f}'
+  auto_insert_metric_name: false
+  every_n_epochs: 3
+  save_top_k: 3
+  mode: 'max'
+  save_last: false
+
+lightning:
+  accelerator: gpu
+  devices: -1
+  auto_select_gpus: true
+  # limit_train_batches: 100
+  max_epochs: 40
+  precision: bf16-true
+  log_every_n_steps: 1
+  accumulate_grad_batches: 1
+
+dataset:
+  img_path: "/notebooks/PVC-XL"
+  tag_processor: data.processors.shuffle_prompts
+  center_crop: false
+  ucg: 0.1
+  debug_arb: false
+  process_tags: false
+  cache_latents: false
+  # cache_bsz: 8
+  # cache_dir: cache
+
+optimizer:
+  name: torch.optim.AdamW
+  # name: lion_pytorch.Lion
+  # name: dadaptation.DAdaptAdam
+  params:
+    lr: 5e-6
+    weight_decay: 1e-2
+    eps: 1e-7
+
+lr_scheduler:
+  name: transformers.get_constant_schedule_with_warmup
+  params:
+    num_warmup_steps: 50
+    last_epoch: -1
+
+monitor:
+  wandb_id: ""
+  huggingface_repo: ""
+  hf_auth_token: ""
+  store_checkpoints: true
+
+sampling:
+  enabled: true
+  use_wandb: true
+  every_n_steps: -1
+  every_n_epochs: 1
+  save_dir: "samples"
+  seed: 1432
+  height: 512
+  width: 512
+  steps: 28
+  cfg_scale: 9
+  negative_prompts: 
+    - "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry"
+  prompts: 
+    - "masterpiece, best quality, 1girl, oyama mahiro"
+
+# arb config will be calculated automatically if not specified
+# to override, uncomment and specify values
+#
+# arb:
+#   enabled: false
+#   debug: false
+#   base_res: [512, 512]
+#   max_size: [768, 512]
+#   divisible: 64
+#   max_ar_error: 4
+#   min_dim: 256
+#   dim_limit: 1024

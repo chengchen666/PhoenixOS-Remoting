@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 use super::*;
 use cudasys::types::cuda::*;
+use std::ffi::{CStr, CString};
 
 #[no_mangle]
 pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_void) -> MemPtr {
@@ -165,6 +166,11 @@ pub extern "C" fn __cudaRegisterFunction(
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
     if CUresult::CUDA_SUCCESS != result {
+        let c_str = unsafe{ CStr::from_ptr(_deviceFun) };
+        match c_str.to_str() {
+            Ok(rust_str) => println!("function name: {}", rust_str),
+            Err(_) => eprintln!("Failed to convert C string to Rust string"),
+        }
         panic!("error registering function: {:?}", result);
     }
 
@@ -223,5 +229,103 @@ pub extern "C" fn __cudaRegisterVar(
     }
     if CUresult::CUDA_SUCCESS != result {
         panic!("error registering var: {:?}", result);
+    }
+}
+
+
+#[no_mangle]
+pub extern "C" fn cuGetProcAddress(
+   symbol: *const ::std::os::raw::c_char,
+   pfn: MemPtr,
+   cudaVersion: ::std::os::raw::c_int,
+   flags: cuuint64_t, 
+){
+    info!("[{}:{}] cuGetProcAddress", std::file!(), std::line!());
+    let proc_id = 500;
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let mut result: CUresult = Default::default();
+    let mut symbol_: Vec<u8> = unsafe { std::ffi::CStr::from_ptr(symbol) }
+        .to_bytes()
+        .to_vec();
+    symbol_.push(0);
+    match proc_id.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send proc_id: {:?}", e),
+    }
+    match symbol_.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send symbol: {:?}", e),
+    }
+    match cudaVersion.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send cudaVersion: {:?}", e),
+    }
+    match flags.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send flags: {:?}", e),
+    }
+    match channel_sender.flush_out() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send: {:?}", e),
+    }
+    
+    let mut func_ptr: MemPtr = 0; // *void
+    match func_ptr.recv(channel_receiver) {
+        Ok(()) => {
+           unsafe{
+                *(pfn as *mut *mut ::std::os::raw::c_void) = func_ptr as *mut ::std::os::raw::c_void
+            };
+        }
+        Err(e) => panic!("failed to receive pfn: {:?}", e),
+    }
+    match result.recv(channel_receiver) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive result: {:?}", e),
+    }
+    if CUresult::CUDA_SUCCESS != result {
+        panic!("error getting function address: {:?}", result);
+    }
+}
+
+
+#[no_mangle]
+pub extern "C" fn cuGetExportTable(
+    ppExportTable: MemPtr,
+    pExportTableId: MemPtr,
+) {
+    info!("[{}:{}] cuGetExportTable", std::file!(), std::line!());
+    let proc_id = 503; 
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let mut result: CUresult = Default::default();
+    match proc_id.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send proc_id: {:?}", e),
+    }
+    let pExportTableId_: CUuuid = unsafe { *(pExportTableId as *const CUuuid) };
+    match pExportTableId_.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send pExportTableId: {:?}", e),
+    }
+    match channel_sender.flush_out() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send: {:?}", e),
+    }
+    let mut ppExportTable_: MemPtr = 0; // *const ::std::os::raw::c_void
+    match ppExportTable_.recv(channel_receiver) {
+        Ok(()) => {
+            unsafe{
+                *(ppExportTable as *mut *const ::std::os::raw::c_void) = ppExportTable_ as *const ::std::os::raw::c_void
+            };
+        }
+        Err(e) => panic!("failed to receive ppExportTable: {:?}", e),
+    }
+    match result.recv(channel_receiver) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive result: {:?}", e),
+    }
+    if CUresult::CUDA_SUCCESS != result {
+        panic!("error getting export table: {:?}", result);
     }
 }

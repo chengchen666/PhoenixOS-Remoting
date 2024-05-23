@@ -26,6 +26,16 @@ macro_rules! impl_transportable {
 
 impl_transportable!(u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, usize, isize, f32, f64, bool, char);
 
+impl Transportable for () {
+    fn send<T: CommChannel>(&self, _channel: &mut T) -> Result<(), CommChannelError> {
+        Ok(())
+    }
+
+    fn recv<T: CommChannel>(&mut self, _channel: &mut T) -> Result<(), CommChannelError> {
+        Ok(())
+    }
+}
+
 /// a pointer type, we just need to use usize to represent it
 /// the raw type `*mut void` is hard to handle:(.
 /// 

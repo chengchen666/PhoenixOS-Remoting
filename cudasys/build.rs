@@ -30,6 +30,7 @@ pub fn find_cuda() -> (Vec<PathBuf>, Vec<PathBuf>) {
     let mut candidates = read_env();
     candidates.push(PathBuf::from("/opt/cuda"));
     candidates.push(PathBuf::from("/usr/local/cuda"));
+    candidates.push(PathBuf::from("/usr"));
     for e in glob("/usr/local/cuda-*").unwrap() {
         if let Ok(path) = e {
             candidates.push(path)
@@ -48,7 +49,11 @@ pub fn find_cuda() -> (Vec<PathBuf>, Vec<PathBuf>) {
         if header.is_file() {
             valid_paths.push(base.join("lib"));
             valid_paths.push(base.join("lib/stubs"));
-            continue;
+        }
+        // cudnn
+        let cudnn_lib = PathBuf::from(base).join("include/x86_64-linux-gnu");
+        if cudnn_lib.is_dir() {
+            valid_paths.push(cudnn_lib);
         }
     }
     eprintln!("Found CUDA paths: {:?}", valid_paths);
@@ -168,6 +173,8 @@ struct UserHook {
     cuda: HashMap<String, HookConfig>,
     cudart: HashMap<String, HookConfig>,
     nvml: HashMap<String, HookConfig>,
+    cudnn: HashMap<String, HookConfig>,
+    cublas: HashMap<String, HookConfig>
 }
 
 fn write(file_path: PathBuf, output: &str) {
@@ -180,6 +187,8 @@ fn write(file_path: PathBuf, output: &str) {
         "cuda" => &user_hooks.cuda,
         "cudart" => &user_hooks.cudart,
         "nvml" => &user_hooks.nvml,
+        "cudnn" => &user_hooks.cudnn,
+        "cublas" => &user_hooks.cublas,
         &_ => todo!(),
     };
 
@@ -377,6 +386,8 @@ fn type_to_string(ty: &Type) -> String {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=../client/hook.toml");
+
     let (cuda_paths, cuda_libs) = find_cuda();
 
     // Tell rustc to link the CUDA library.
@@ -387,8 +398,12 @@ fn main() {
     println!("cargo:rustc-link-lib=dylib=cuda");
     println!("cargo:rustc-link-lib=dylib=cudart");
     println!("cargo:rustc-link-lib=dylib=nvidia-ml");
+    println!("cargo:rustc-link-lib=dylib=cudnn");
+    println!("cargo:rustc-link-lib=dylib=cublas");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=CUDA_LIBRARY_PATH");
+    println!("CUDA paths: {:?}", cuda_paths);
+    println!("CUDA libs: {:?}", cuda_libs);
 
     // Use bindgen to automatically generate the FFI (in `src/bindings`).
     bind_gen(
@@ -423,5 +438,23 @@ fn main() {
         vec![],
         vec![],
         vec![],
+    );
+    
+    bind_gen(
+        &cuda_paths,
+        "cudnn",
+        "cudnn",
+        vec!["^cudnn.*", "^CUDNN.*"],
+        vec!["^CUDNN.*", "^cudnn.*"],
+        vec!["^cudnn.*"],
+    );
+
+    bind_gen(
+        &cuda_paths,
+        "cublas",
+        "cublas",
+        vec!["^cublas.*", "^CUBLAS.*"],
+        vec!["^CUBLAS.*", "^cublas.*"],
+        vec!["^cublas.*"],
     );
 }
