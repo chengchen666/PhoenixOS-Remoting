@@ -105,7 +105,7 @@ fn receive_request<T: CommChannel>(channel_receiver: &mut T) -> Result<i32, Comm
 
 pub fn launch_server() {
     let (mut channel_sender, mut channel_receiver) = create_buffer();
-    info!("[{}:{}] shm buffer created", std::file!(), std::line!());
+    info!("[{}:{}] {} buffer created", std::file!(), std::line!(), CONFIG.comm_type);
     let mut max_devices = 0;
     if let cudaError_t::cudaSuccess =
         unsafe { cudaGetDeviceCount(&mut max_devices as *mut ::std::os::raw::c_int) }
