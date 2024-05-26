@@ -13,7 +13,7 @@ errno = "0.2.7"
 toml = "0.5"
 serde = "1.0"
 lazy_static = "1.4.0"
-KRdmaKit = { git = "https://github.com/SJTU-IPADS/krcore-artifacts.git", branch = "develop", features = ["user", "OFED_5_4"] }
+KRdmaKit = { git = "https://github.com/Gahow/krcore-artifacts.git", branch = "feat/send_mr", features = ["user", "OFED_5_4"] }
 
 [dev-dependencies]
 cudasys = { path = "../cudasys" }

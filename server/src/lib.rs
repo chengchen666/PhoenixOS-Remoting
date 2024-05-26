@@ -83,8 +83,9 @@ fn create_buffer() -> (
         }
         #[cfg(feature = "rdma")]
         "rdma" => {
-            let sender = RDMAChannelBufferManager::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size, CONFIG.sender_socket.parse().unwrap()).unwrap();
+            // Make sure to new receiver first! Client side sender will handshake with it first.
             let receiver = RDMAChannelBufferManager::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size, CONFIG.receiver_socket.parse().unwrap()).unwrap();
+            let sender = RDMAChannelBufferManager::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size, CONFIG.sender_socket.parse().unwrap()).unwrap();
             (
                 RingBuffer::new(Box::new(sender)),
                 RingBuffer::new(Box::new(receiver)),

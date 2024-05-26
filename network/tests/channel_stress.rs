@@ -19,20 +19,6 @@ impl ChannelBufferManager for ConsumerManager {
     fn get_managed_memory(&self) -> (*mut u8, usize) {
         (self.buf, self.capacity)
     }
-
-    fn read_at(&self, offset: usize, dst: *mut u8, count: usize) -> usize {
-        unsafe {
-            std::ptr::copy_nonoverlapping(self.buf.add(offset) as _, dst, count);
-        }
-        count
-    }
-
-    fn write_at(&self, offset: usize, src: *const u8, count: usize) -> usize {
-        unsafe {
-            std::ptr::copy_nonoverlapping(src, self.buf.add(offset) as _, count);
-        }
-        count
-    }
 }
 
 impl ConsumerManager {

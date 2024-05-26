@@ -24,8 +24,21 @@ pub const CACHE_LINE_SZ: usize = 64;
 /// - The buffer memory deallocation
 pub trait ChannelBufferManager {
     fn get_managed_memory(&self) -> (*mut u8, usize);
-    fn read_at(&self, offset: usize, dst: *mut u8, count: usize) -> usize;
-    fn write_at(&self, offset: usize, src: *const u8, count: usize) -> usize;
+    fn is_remoted(&self) -> bool {
+        false
+    }
+    fn read_at(&self, offset: usize, dst: *mut u8, size: usize, _remote: Option<bool>) -> usize {
+        unsafe {
+            std::ptr::copy_nonoverlapping(self.get_managed_memory().0.add(offset) as _, dst, size);
+        }
+        size
+    }
+    fn write_at(&self, offset: usize, src: *const u8, size: usize, _remote: Option<bool>) -> usize {
+        unsafe {
+            std::ptr::copy_nonoverlapping(src, self.get_managed_memory().0.add(offset) as _, size);
+        }
+        size
+    }
 }
 
 /// A simple local channel buffer manager
@@ -54,20 +67,6 @@ impl LocalChannelBufferManager {
 impl ChannelBufferManager for LocalChannelBufferManager {
     fn get_managed_memory(&self) -> (*mut u8, usize) {
         (self.buffer.as_ptr(), self.size)
-    }
-
-    fn read_at(&self, offset: usize, dst: *mut u8, count: usize) -> usize {
-        unsafe {
-            std::ptr::copy_nonoverlapping(self.buffer.as_ptr().add(offset) as _, dst, count);
-        }
-        count
-    }
-
-    fn write_at(&self, offset: usize, src: *const u8, count: usize) -> usize {
-        unsafe {
-            std::ptr::copy_nonoverlapping(src, self.buffer.as_ptr().add(offset) as _, count);
-        }
-        count
     }
 }
 

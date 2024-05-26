@@ -1,6 +1,7 @@
 use super::{ChannelBufferManager, CACHE_LINE_SZ};
 use crate::{CommChannel, CommChannelError, RawMemory, RawMemoryMut};
 use std::boxed::Box;
+use std::ptr;
 
 /// we reserve the first 128B for the header and tailer
 /// 128 = cacheline size * 2
@@ -34,6 +35,7 @@ pub const META_AREA: usize = CACHE_LINE_SZ * 2;
 pub struct RingBuffer {
     manager: Box<dyn ChannelBufferManager>,
     capacity: usize, // Capacity of the buffer excluding head and tail.
+    last_tail: u32,
 }
 
 unsafe impl Send for RingBuffer {}
@@ -53,9 +55,10 @@ impl RingBuffer
         let mut res = RingBuffer {
             manager,
             capacity,
+            last_tail: 0,
         };
-        res.write_head_volatile(0);
-        res.write_tail_volatile(0);
+        // res.write_head_volatile(0);
+        // res.write_tail_volatile(0);
         res
     }
 }
@@ -72,14 +75,14 @@ impl CommChannel for RingBuffer {
 
             // buf_head can be modified by the other side at any time
             // so we need to read it at the beginning and assume it is not changed
-            if self.num_bytes_stored() == self.capacity {
+            if self.is_full() {
                 self.flush_out()?;
             }
 
             let current = std::cmp::min(self.num_adjacent_bytes_to_write(read_tail), len);
 
             unsafe {
-                let _ = self.manager.write_at(META_AREA + read_tail, src.ptr.add(offset), current);
+                let _ = self.manager.write_at(META_AREA + read_tail, src.ptr.add(offset), current, None);
             }
             std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
 
@@ -110,7 +113,7 @@ impl CommChannel for RingBuffer {
         let mut offset = 0;
 
         while len > 0 {
-            if self.empty() {
+            if self.is_empty() {
                 return Ok(offset);
             }
 
@@ -119,7 +122,7 @@ impl CommChannel for RingBuffer {
             let current = std::cmp::min(self.num_adjacent_bytes_to_read(read_head), len);
 
             unsafe {
-                self.manager.read_at(META_AREA + read_head, dst.ptr.add(offset), current);
+                self.manager.read_at(META_AREA + read_head, dst.ptr.add(offset), current, None);
             }
 
             std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
@@ -139,7 +142,28 @@ impl CommChannel for RingBuffer {
     }
 
     fn flush_out(&mut self) -> Result<(), CommChannelError> {
-        while self.num_bytes_stored() == self.capacity {
+        if self.manager.is_remoted() {
+            let cur_tail = self.read_tail_volatile();
+            if self.last_tail < cur_tail {
+                unsafe {
+                    self.manager.write_at(META_AREA + self.last_tail as usize, self.manager.get_managed_memory().0.add(META_AREA + self.last_tail as usize), (cur_tail - self.last_tail) as usize, Some(true));
+                }
+            }
+            if cur_tail < self.last_tail {
+                unsafe {
+                    self.manager.write_at(META_AREA + self.last_tail as usize, self.manager.get_managed_memory().0.add(META_AREA + self.last_tail as usize), self.capacity - self.last_tail as usize, Some(true));
+                    self.manager.write_at(META_AREA, self.manager.get_managed_memory().0.add(META_AREA), cur_tail as usize, Some(true));
+                }
+            }
+
+            self.last_tail = cur_tail;
+            self.manager.write_at(TAIL_OFF, &cur_tail as *const u32 as *const u8, std::mem::size_of::<u32>(), Some(true));
+
+            let mut head: u32 = 0;
+            self.manager.read_at(HEAD_OFF, &mut head as *mut u32 as *mut u8, std::mem::size_of::<u32>(), Some(true));
+            self.write_head_volatile(head);
+        }
+        while self.is_full() {
             // Busy-waiting
         }
         Ok(())
@@ -169,32 +193,32 @@ impl RingBuffer
     }
 
     #[inline]
-    pub fn empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.read_head_volatile() == self.read_tail_volatile()
+    }
+
+    #[inline]
+    pub fn is_full(&self) -> bool {
+        self.num_bytes_stored() == self.capacity
     }
 }
 
 impl RingBuffer
 {
-    // WARNING: May need volatile in the future
     fn read_head_volatile(&self) -> u32 {
-        let mut head: u32 = 0;
-        self.manager.read_at(HEAD_OFF, &mut head as *mut u32 as *mut u8, std::mem::size_of::<u32>());
-        head
+        unsafe { ptr::read_volatile(self.manager.get_managed_memory().0.add(HEAD_OFF) as *const u32) }
     }
 
     fn write_head_volatile(&mut self, head: u32) {
-        self.manager.write_at(HEAD_OFF, &head as *const u32 as *const u8, std::mem::size_of::<u32>());
+        unsafe { ptr::write_volatile(self.manager.get_managed_memory().0.add(HEAD_OFF) as *mut u32, head)}
     }
 
     fn read_tail_volatile(&self) -> u32 {
-        let mut tail: u32 = 0;
-        self.manager.read_at(TAIL_OFF, &mut tail as *mut u32 as *mut u8, std::mem::size_of::<u32>());
-        tail
+        unsafe { ptr::read_volatile(self.manager.get_managed_memory().0.add(TAIL_OFF) as *const u32) }
     }
 
     fn write_tail_volatile(&mut self, tail: u32) {
-        self.manager.write_at(TAIL_OFF, &tail as *const u32 as *const u8, std::mem::size_of::<u32>());
+        unsafe { ptr::write_volatile(self.manager.get_managed_memory().0.add(TAIL_OFF) as *mut u32, tail)}
     }
 
     #[inline]
