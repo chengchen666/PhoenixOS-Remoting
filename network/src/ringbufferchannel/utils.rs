@@ -2,8 +2,7 @@ use std::alloc::{alloc, dealloc, Layout};
 use std::ptr::NonNull;
 
 pub fn allocate_cache_line_aligned(size: usize, cache_line_size: usize) -> NonNull<u8> {
-    let layout = Layout::from_size_align(size, cache_line_size)
-        .expect("Failed to create layout");
+    let layout = Layout::from_size_align(size, cache_line_size).expect("Failed to create layout");
 
     unsafe {
         let ptr = alloc(layout);
@@ -15,8 +14,7 @@ pub fn allocate_cache_line_aligned(size: usize, cache_line_size: usize) -> NonNu
 }
 
 pub fn deallocate(ptr: NonNull<u8>, size: usize, cache_line_size: usize) {
-    let layout = Layout::from_size_align(size, cache_line_size)
-        .expect("Failed to create layout");
+    let layout = Layout::from_size_align(size, cache_line_size).expect("Failed to create layout");
 
     unsafe {
         dealloc(ptr.as_ptr(), layout);

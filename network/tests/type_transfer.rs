@@ -1,41 +1,19 @@
 extern crate cudasys;
 extern crate network;
 
-use cudasys::{ cudart::cudaError_t, FromPrimitive};
-use network::{
-    ringbufferchannel::{ChannelBufferManager, LocalChannelBufferManager, RingBuffer},
-    CommChannel, Transportable,
-};
+use cudasys::{cudart::cudaError_t, FromPrimitive};
+use network::{ringbufferchannel::SHMChannel, Channel, CommChannel, Transportable};
 
 use std::sync::{Arc, Barrier};
 use std::thread;
-use std::boxed::Box;
-
-pub struct ConsumerManager {
-    buf: *mut u8,
-    capacity: usize,
-}
-
-impl ChannelBufferManager for ConsumerManager {
-    fn get_managed_memory(&self) -> (*mut u8, usize) {
-        (self.buf, self.capacity)
-    }
-}
-
-impl ConsumerManager {
-    pub fn new(producer: &LocalChannelBufferManager) -> Self {
-        let (buf, capacity) = producer.get_managed_memory();
-        ConsumerManager { buf, capacity }
-    }
-}
-
-unsafe impl Send for ConsumerManager {}
 
 #[test]
 fn test_cudaerror() {
-    let c_shared_buffer =
-        LocalChannelBufferManager::new(1024 + network::ringbufferchannel::channel::META_AREA);
-    let p_shared_buffer = ConsumerManager::new(&c_shared_buffer);
+    let shm_name = "/stoc";
+    let shm_len = 1024;
+
+    let mut consumer_channel = Channel::new(Box::new(SHMChannel::new_server(shm_name, shm_len).unwrap()));
+    let mut producer_channel = Channel::new(Box::new(SHMChannel::new_client(shm_name, shm_len).unwrap()));
 
     let barrier = Arc::new(Barrier::new(2)); // Set up a barrier for 2 threads
     let producer_barrier = barrier.clone();
@@ -45,7 +23,6 @@ fn test_cudaerror() {
 
     // Producer thread
     let producer = thread::spawn(move || {
-        let mut producer_ring_buffer = RingBuffer::new(Box::new(p_shared_buffer));
         producer_barrier.wait(); // Wait for both threads to be ready
 
         for i in 0..test_iters {
@@ -53,8 +30,8 @@ fn test_cudaerror() {
                 Some(v) => v,
                 None => panic!("failed to convert from u32"),
             };
-            var.send(&mut producer_ring_buffer).unwrap();
-            producer_ring_buffer.flush_out().unwrap();
+            var.send(&mut producer_channel).unwrap();
+            producer_channel.flush_out().unwrap();
         }
 
         println!("Producer done");
@@ -62,7 +39,6 @@ fn test_cudaerror() {
 
     // Consumer thread
     let consumer = thread::spawn(move || {
-        let mut consumer_ring_buffer = RingBuffer::new(Box::new(c_shared_buffer));
         consumer_barrier.wait(); // Wait for both threads to be ready
 
         let mut received = 0;
@@ -73,7 +49,7 @@ fn test_cudaerror() {
                 None => panic!("failed to convert from u32"),
             };
             let mut var = cudaError_t::cudaSuccess;
-            var.recv(&mut consumer_ring_buffer).unwrap();
+            var.recv(&mut consumer_channel).unwrap();
             assert_eq!(var, test);
             received += 1;
         }

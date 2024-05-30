@@ -3,7 +3,6 @@
 
 use super::*;
 use cudasys::cudnn::*;
-use network::ringbufferchannel::channel;
 use ::std::os::raw::*;
 
 

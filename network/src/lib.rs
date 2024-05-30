@@ -1,8 +1,9 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
-use std::error::Error;
-use std::fmt;
 use serde::Deserialize;
+use std::error::Error;
+use std::boxed::Box;
+use std::fmt;
 
 #[macro_use]
 extern crate lazy_static;
@@ -112,27 +113,72 @@ impl fmt::Display for CommChannelError {
 
 impl Error for CommChannelError {}
 
-///
-/// A communication channel allows TBD
 pub trait CommChannel {
+    fn get_inner(&self) -> &Box<dyn CommChannelInner>;
+
     /// Write bytes to the channel
     /// It may flush if the channel has no left space
-    fn put_bytes(&mut self, src: &RawMemory) -> Result<usize, CommChannelError>;
+    fn put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
+        self.get_inner().put_bytes(src)
+    }
 
     /// Non-block version
     /// Immediately return if error such as no left space
-    fn try_put_bytes(&mut self, src: &RawMemory) -> Result<usize, CommChannelError>;
+    fn try_put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
+        self.get_inner().try_put_bytes(src)
+    }
 
     /// Read bytes from the channel
     /// Wait if dont receive enough bytes
-    fn get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
+    fn get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
+        self.get_inner().get_bytes(dst)
+    }
 
     /// Non-block version
     /// Immediately return after receive however long bytes (maybe =0 or <len)
-    fn try_get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
+    fn try_get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
+        self.get_inner().try_get_bytes(dst)
+    }
 
     /// Flush the all the buffered results to the channel
-    fn flush_out(&mut self) -> Result<(), CommChannelError>;
+    fn flush_out(&self) -> Result<(), CommChannelError> {
+        self.get_inner().flush_out()
+    }
+}
+
+///
+/// A communication channel allows TBD
+pub struct Channel {
+    inner: Box<dyn CommChannelInner>,
+}
+
+impl Channel {
+    pub fn new(inner: Box<dyn CommChannelInner>) -> Self {
+        Self {
+            inner,
+        }
+    }
+}
+
+impl CommChannel for Channel {
+    fn get_inner(&self) -> &Box<dyn CommChannelInner> {
+        &self.inner
+    }
+}
+
+/// communication interface
+pub trait CommChannelInner: CommChannelInnerIO + Send + Sync {
+    fn flush_out(&self) -> Result<(), CommChannelError>;
+}
+
+pub trait CommChannelInnerIO {
+    fn put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError>;
+
+    fn try_put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError>;
+
+    fn get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
+
+    fn try_get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
 }
 
 ///

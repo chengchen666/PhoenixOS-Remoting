@@ -1,15 +1,12 @@
 #[allow(non_snake_case)]
-
 extern crate network;
 
-use std::net::SocketAddr;
-use std::boxed::Box;
 use network::{
-    ringbufferchannel::{RDMAChannelBufferManager, RingBuffer},
-    CommChannel, RawMemory, RawMemoryMut,
+    ringbufferchannel::RDMAChannel, Channel, CommChannel, RawMemory, RawMemoryMut,
 };
+use std::net::SocketAddr;
 
-const BUF_SIZE: usize = 1024 + network::ringbufferchannel::channel::META_AREA;
+const BUF_SIZE: usize = 1024 + network::ringbufferchannel::META_AREA;
 const PORT: u8 = 1;
 
 #[test]
@@ -23,34 +20,36 @@ fn rdma_channel_buffer_manager() {
     // The client side will use the server name (s_sender_name) to get its
     // remote info like raddr and rkey.
 
-    let s_handler = std::thread::spawn(move || {
-        match RDMAChannelBufferManager::new_server(name, BUF_SIZE, addr) {
-            Ok(server) => {
-                println!("Server created successfully");
-                server
-            }
-            Err(e) => {
-                panic!("Server creation failed");
-            }
-        }
-    });
+    let s_handler =
+        std::thread::spawn(
+            move || match RDMAChannel::new_server(name, BUF_SIZE, addr) {
+                Ok(server) => {
+                    println!("Server created successfully");
+                    server
+                }
+                Err(_) => {
+                    panic!("Server creation failed");
+                }
+            },
+        );
 
-    let c_handler = std::thread::spawn(move || {
-        match RDMAChannelBufferManager::new_client(name, BUF_SIZE, addr, PORT) {
-            Ok(client) => {
-                println!("Client created successfully");
-                client
-            }
-            Err(e) => {
-                panic!("Server creation failed");
-            }
-        }
-    });
+    let c_handler =
+        std::thread::spawn(
+            move || match RDMAChannel::new_client(name, BUF_SIZE, addr, PORT) {
+                Ok(client) => {
+                    println!("Client created successfully");
+                    client
+                }
+                Err(_) => {
+                    panic!("Server creation failed");
+                }
+            },
+        );
 
-    let s = s_handler.join().unwrap();
-    let c = c_handler.join().unwrap();
-    let mut recver = RingBuffer::new(Box::new(s));
-    let mut sender = RingBuffer::new(Box::new(c));
+    let r = s_handler.join().unwrap();
+    let s = c_handler.join().unwrap();
+    let recver = Channel::new(Box::new(r));
+    let sender = Channel::new(Box::new(s));
 
     const SZ: usize = 256;
     let data = [48 as u8; SZ];
@@ -73,7 +72,7 @@ fn rdma_channel_buffer_manager() {
             for i in SZ..size {
                 assert_eq!(buffer[i], 97);
             }
-        },
-        Err(_) => todo!()
+        }
+        Err(_) => todo!(),
     }
 }
