@@ -12,14 +12,12 @@ use cudasys::{
 };
 use dispatcher::dispatch;
 
+use network::ringbufferchannel::EmulatorBuffer;
 #[allow(unused_imports)]
 use network::{
-    ringbufferchannel::{
-        RingBuffer, SHMChannelBufferManager, RDMAChannelBufferManager,
-    },
+    ringbufferchannel::{RDMAChannelBufferManager, RingBuffer, SHMChannelBufferManager},
     type_impl::MemPtr,
-    CommChannel, CommChannelError, Transportable,
-    CONFIG,
+    CommChannel, CommChannelError, Transportable, CONFIG,
 };
 
 #[allow(unused_imports)]
@@ -27,9 +25,9 @@ use log::{debug, error, info, log_enabled, Level};
 
 extern crate lazy_static;
 use lazy_static::lazy_static;
+use std::boxed::Box;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use std::boxed::Box;
 
 lazy_static! {
     // client_address -> module
@@ -64,34 +62,65 @@ fn get_variable(host_var: MemPtr) -> Option<CUdeviceptr> {
     VARIABLES.lock().unwrap().get(&host_var).cloned()
 }
 
-fn create_buffer() -> (
-    RingBuffer,
-    RingBuffer,
-) {
-    // Use features when compiling to decide what arm(s) will be supported.
-    // In the server side, the sender's name is stoc_channel_name,
-    // receiver's name is ctos_channel_name.
-    match CONFIG.comm_type.as_str() {
-        #[cfg(feature = "shm")]
-        "shm" => {
-            let sender = SHMChannelBufferManager::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap();
-            let receiver = SHMChannelBufferManager::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap();
-            (
-                RingBuffer::new(Box::new(sender)),
-                RingBuffer::new(Box::new(receiver)),
-            )
+#[cfg(not(feature = "emulator"))]
+fn create_buffer() -> (RingBuffer, RingBuffer) {
+    #[cfg(not(feature = "emulator"))]
+    {
+        // Use features when compiling to decide what arm(s) will be supported.
+        // In the server side, the sender's name is stoc_channel_name,
+        // receiver's name is ctos_channel_name.
+        match CONFIG.comm_type.as_str() {
+            #[cfg(feature = "shm")]
+            "shm" => {
+                let sender =
+                    SHMChannelBufferManager::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size)
+                        .unwrap();
+                let receiver: SHMChannelBufferManager;
+                info!("not emulator");
+                receiver =
+                    SHMChannelBufferManager::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size)
+                        .unwrap();
+                (
+                    RingBuffer::new(Box::new(sender)),
+                    RingBuffer::new(Box::new(receiver)),
+                )
+            }
+            #[cfg(feature = "rdma")]
+            "rdma" => {
+                let sender = RDMAChannelBufferManager::new_server(
+                    &CONFIG.stoc_channel_name,
+                    CONFIG.buf_size,
+                    CONFIG.sender_socket.parse().unwrap(),
+                )
+                .unwrap();
+                let receiver = RDMAChannelBufferManager::new_server(
+                    &CONFIG.ctos_channel_name,
+                    CONFIG.buf_size,
+                    CONFIG.receiver_socket.parse().unwrap(),
+                )
+                .unwrap();
+                (
+                    RingBuffer::new(Box::new(sender)),
+                    RingBuffer::new(Box::new(receiver)),
+                )
+            }
+            &_ => panic!("Unsupported communication type in config"),
         }
-        #[cfg(feature = "rdma")]
-        "rdma" => {
-            let sender = RDMAChannelBufferManager::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size, CONFIG.sender_socket.parse().unwrap()).unwrap();
-            let receiver = RDMAChannelBufferManager::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size, CONFIG.receiver_socket.parse().unwrap()).unwrap();
-            (
-                RingBuffer::new(Box::new(sender)),
-                RingBuffer::new(Box::new(receiver)),
-            )
-        }
-        &_ => panic!("Unsupported communication type in config"),
     }
+}
+
+#[cfg(feature = "emulator")]
+fn create_buffer() -> (EmulatorBuffer, EmulatorBuffer) {
+    let sender =
+        SHMChannelBufferManager::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap();
+    let receiver: SHMChannelBufferManager;
+    info!("not emulator");
+    receiver =
+        SHMChannelBufferManager::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap();
+    (
+        EmulatorBuffer::new(Box::new(sender)),
+        EmulatorBuffer::new(Box::new(receiver)),
+    )
 }
 
 fn receive_request<T: CommChannel>(channel_receiver: &mut T) -> Result<i32, CommChannelError> {
@@ -105,7 +134,12 @@ fn receive_request<T: CommChannel>(channel_receiver: &mut T) -> Result<i32, Comm
 
 pub fn launch_server() {
     let (mut channel_sender, mut channel_receiver) = create_buffer();
-    info!("[{}:{}] {} buffer created", std::file!(), std::line!(), CONFIG.comm_type);
+    info!(
+        "[{}:{}] {} buffer created",
+        std::file!(),
+        std::line!(),
+        CONFIG.comm_type
+    );
     let mut max_devices = 0;
     if let cudaError_t::cudaSuccess =
         unsafe { cudaGetDeviceCount(&mut max_devices as *mut ::std::os::raw::c_int) }

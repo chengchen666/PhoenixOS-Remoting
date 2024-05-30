@@ -10,10 +10,17 @@ codegen = { path = "../codegen" }
 libc = "*"
 log = "0.4.0"
 errno = "0.2.7" 
+chrono = "0.4.0"
 toml = "0.5"
 serde = "1.0"
+serde_derive = "1.0"
 lazy_static = "1.4.0"
 KRdmaKit = { git = "https://github.com/SJTU-IPADS/krcore-artifacts.git", branch = "develop", features = ["user", "OFED_5_4"] }
 
 [dev-dependencies]
 cudasys = { path = "../cudasys" }
+
+[features]
+# default = []
+default = ["emulator"]
+emulator = []

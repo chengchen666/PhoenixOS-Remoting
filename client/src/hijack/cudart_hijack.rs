@@ -50,6 +50,13 @@ gen_hijack!(
     "*mut cudaPointerAttributes", 
     "MemPtr"
 );
+gen_hijack!(
+    14,
+    "cudaFuncGetAttributes", 
+    "cudaError_t", 
+    "*mut cudaFuncAttributes", 
+    "MemPtr"
+);
 // gen_hijack!(
 //     100,
 //     "__cudaRegisterFatBinary",

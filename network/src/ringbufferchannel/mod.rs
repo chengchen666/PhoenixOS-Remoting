@@ -15,6 +15,11 @@ pub use rdma::RDMAChannelBufferManager;
 
 pub mod utils;
 
+pub mod emulator;
+pub use emulator::EmulatorBuffer;
+pub mod types;
+pub use types::*;
+
 pub const CACHE_LINE_SZ: usize = 64;
 
 /// A ring buffer can use arbitrary memory for its channel

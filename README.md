@@ -56,13 +56,19 @@ Then we can build the project using cargo:
 cd /path/to/xpuremoting && cargo build
 ```
 
-You should specify `default` feature in both `client/server`'s Cargo.toml to decide which communication methods will be compiled. For example, if you want rdma communication method to be compiled, you should add `"rdma"` into the `default` feature in `client/Cargo.toml` and `server/Cargo.toml`.
+You should specify `default` feature in both `client/server`'s Cargo.toml to decide which communication methods will be compiled. For example, if you want to use RDMA communication method, you should add `"rdma"` into the `default` feature in `client/Cargo.toml` and `server/Cargo.toml`. 
+
+The default configuration using shared memory communication method and using emulator to simulate network communication. 
 
 ## Config
 
 You can use `config.toml` file to config communication type, buffer size, RDMA server listener socket and so on.
 
 Due to `cargo` will use cwd as running root folder, use absolute path for config file. The default path will be `/workspace/xpuremoting/config.toml`. If you want a specific path, you can use environment variable `NETWORK_CONFIG` customize it. For example: `NETWORK_CONFG="/path/to/my/config cargo run`.
+
+### Emulator
+
+By default, the network emulator is enabled, and this feature is only available when using shared memory. To disable the emulator, you can simply remove the `emulator` field from the default features in the `client/Cargo.toml`, `server/Cargo.toml`, and `network/Cargo.toml` files.
 
 ## Test
 

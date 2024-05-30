@@ -37,6 +37,10 @@ pub extern "C" fn cublasCreate_v2(
         Ok(()) => {}
         Err(e) => error!("Error receiving result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }
 
@@ -112,10 +116,15 @@ pub extern "C" fn cublasSgemm_v2(
     if let Err(e) = ldc.send(channel_sender) {
         error!("Error sending ldc: {:?}", e)
     }
+    channel_sender.flush_out().unwrap();
 
     if let Err(e) = result.recv(channel_receiver) {
         error!("Error receiving result: {:?}", e)
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -211,5 +220,9 @@ pub extern "C" fn cublasSgemmStridedBatched(
     if let Err(e) = result.recv(channel_receiver) {
         error!("Error receiving result: {:?}", e)
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
