@@ -72,6 +72,10 @@ pub extern "C" fn cudaMemcpy(
         Ok(()) => {}
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     return result;
 }
 
@@ -165,6 +169,10 @@ pub extern "C" fn cudaLaunchKernel(
         Ok(()) => {}
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     return result;
 }
 
@@ -196,6 +204,7 @@ pub extern "C" fn cudaMallocManaged(
         Ok(()) => {}
         Err(e) => panic!("failed to send flags: {:?}", e),
     }
+    channel_sender.flush_out().unwrap();
     let mut devPtr_: MemPtr = Default::default();
     match devPtr_.recv(channel_receiver) {
         Ok(()) => {
@@ -207,6 +216,10 @@ pub extern "C" fn cudaMallocManaged(
         Ok(()) => {}
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -237,6 +250,7 @@ pub extern "C" fn cudaHostAlloc(
         Ok(()) => {}
         Err(e) => panic!("failed to send flags: {:?}", e),
     }
+    channel_sender.flush_out().unwrap();
     let mut pHost_: MemPtr = Default::default();
     match pHost_.recv(channel_receiver) {
         Ok(()) => {
@@ -248,5 +262,9 @@ pub extern "C" fn cudaHostAlloc(
         Ok(()) => {}
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }

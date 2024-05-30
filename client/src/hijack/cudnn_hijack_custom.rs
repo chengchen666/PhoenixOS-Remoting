@@ -39,6 +39,10 @@ pub extern "C" fn cudnnCreate(
             error!("failed to receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreate: {:?}", result);
     }
@@ -80,6 +84,10 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
             error!("failed to receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreateTensorDescriptor: {:?}", result);
     }
@@ -125,6 +133,10 @@ pub extern "C" fn cudnnCreateActivationDescriptor(
             error!("failed to receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreateActivationDescriptor: {:?}", result);
     }
@@ -217,6 +229,10 @@ pub extern "C" fn cudnnActivationForward(
             error!("Error receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -292,6 +308,10 @@ pub extern "C" fn cudnnSetTensorNdDescriptor(
             error!("Error receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -335,6 +355,10 @@ pub extern "C" fn cudnnCreateFilterDescriptor(
             error!("failed to receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreateFilterDescriptor: {:?}", result);
     }
@@ -409,6 +433,10 @@ pub extern "C" fn cudnnSetFilterNdDescriptor(
             error!("Error receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -452,6 +480,10 @@ pub extern "C" fn cudnnCreateConvolutionDescriptor(
             error!("failed to receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreateConvolutionDescriptor: {:?}", result);
     }
@@ -548,6 +580,10 @@ pub extern "C" fn cudnnSetConvolutionNdDescriptor(
             error!("Error receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -647,6 +683,10 @@ pub extern "C" fn cudnnGetConvolutionForwardAlgorithm_v7(
             error!("Error receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -749,6 +789,10 @@ pub extern "C" fn cudnnConvolutionForward(
         Ok(()) => {}
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -831,6 +875,10 @@ pub extern "C" fn cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
             error!("failed to receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result 
 }
 
@@ -898,6 +946,10 @@ pub extern "C" fn cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
             error!("failed to receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -1059,6 +1111,10 @@ pub extern "C" fn cudnnBatchNormalizationForwardTrainingEx(
         Ok(()) => {}
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -1131,6 +1187,10 @@ pub extern "C" fn cudnnGetBatchNormalizationBackwardExWorkspaceSize(
     if let Err(e) = result.recv(channel_receiver) {
         error!("failed to receiving result: {:?}", e);
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -1289,6 +1349,10 @@ pub extern "C" fn cudnnBatchNormalizationBackwardEx(
     if let Err(e) = result.recv(channel_receiver) {
         error!("failed to receive result: {:?}", e);
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -1388,6 +1452,10 @@ pub extern "C" fn cudnnGetConvolutionBackwardDataAlgorithm_v7(
             error!("Error receiving result: {:?}", e);
         }
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -1474,6 +1542,10 @@ pub extern "C" fn cudnnConvolutionBackwardData(
     if let Err(e) = result.recv(channel_receiver) {
         panic!("failed to receive result: {:?}", e);
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -1542,6 +1614,10 @@ pub extern "C" fn cudnnGetConvolutionBackwardFilterAlgorithm_v7(
     if let Err(e) = result.recv(channel_receiver) {
         error!("Error receiving result: {:?}", e);
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -1628,6 +1704,10 @@ pub extern "C" fn cudnnConvolutionBackwardFilter(
     if let Err(e) = result.recv(channel_receiver) {
         panic!("failed to receive result: {:?}", e);
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }
 
@@ -1718,5 +1798,9 @@ pub extern "C" fn cudnnBatchNormalizationForwardInference(
     if let Err(e) = result.recv(channel_receiver) {
         panic!("failed to receive result: {:?}", e);
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     result
 }

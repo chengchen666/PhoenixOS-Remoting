@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use super::*;
 use cudasys::types::cuda::*;
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 
 #[no_mangle]
 pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_void) -> MemPtr {
@@ -58,6 +58,10 @@ pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_voi
     if CUresult::CUDA_SUCCESS != result {
         panic!("error registering fatbin: {:?}", result);
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     return client_address;
 }
 
@@ -92,6 +96,10 @@ pub extern "C" fn __cudaUnregisterFatBinary(fatCubinHandle: MemPtr) {
         Ok(()) => {}
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     if CUresult::CUDA_SUCCESS != result {
         panic!("error unregistering fatbin: {:?}", result);
     }
@@ -165,6 +173,10 @@ pub extern "C" fn __cudaRegisterFunction(
         Ok(()) => {}
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     if CUresult::CUDA_SUCCESS != result {
         let c_str = unsafe{ CStr::from_ptr(_deviceFun) };
         match c_str.to_str() {
@@ -227,6 +239,10 @@ pub extern "C" fn __cudaRegisterVar(
         Ok(()) => {}
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     if CUresult::CUDA_SUCCESS != result {
         panic!("error registering var: {:?}", result);
     }
@@ -283,6 +299,10 @@ pub extern "C" fn cuGetProcAddress(
         Ok(()) => {}
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     if CUresult::CUDA_SUCCESS != result {
         panic!("error getting function address: {:?}", result);
     }
@@ -325,6 +345,10 @@ pub extern "C" fn cuGetExportTable(
         Ok(()) => {}
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
     if CUresult::CUDA_SUCCESS != result {
         panic!("error getting export table: {:?}", result);
     }

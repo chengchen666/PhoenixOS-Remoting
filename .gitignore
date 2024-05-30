@@ -10,3 +10,6 @@ tests/apps/infer/STABLEDIFFUSION-v1-4/stable-diffusion-v1-4
 tests/apps/infer/BERT-base-uncased/bert-base-uncased
 tests/apps/checkpoint
 tests/apps/dataset
+
+core-*
+*.log

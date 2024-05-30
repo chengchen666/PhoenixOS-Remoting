@@ -1,67 +1,73 @@
-use log::info;
+use chrono::Utc;
 
-use super::{ChannelBufferManager, MsTimestamp, CACHE_LINE_SZ};
-use crate::{set_status, CommChannel, CommChannelError, RawMemory, RawMemoryMut};
-use std::{boxed::Box, env};
+use crate::{CommChannel, Transportable, CONFIG};
 
-/// we reserve the first 128B for the header and tailer
-/// 128 = cacheline size * 2
-/// FIXME: should be hardware dependent
-///
-pub const HEAD_OFF: usize = 0;
-pub const TAIL_OFF: usize = CACHE_LINE_SZ;
-pub const META_AREA: usize = CACHE_LINE_SZ * 2;
+use super::{types::*, ChannelBufferManager, CACHE_LINE_SZ};
 
-/// A ring buffer where the buffer can be shared between different processes/threads
-/// It uses the head 4B + 4B to store the head and tail
-///
-/// # Example
-///
-/// ```no_compile
-/// use ringbufferchannel::{LocalChannelBufferManager, RingBuffer};
-/// use crate::CommChannel;
-/// use std::boxed::Box;
-///
-/// let mut buffer: RingBuffer = RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + 8)));
-/// let data_to_send = [1, 2, 3, 4, 5];
-/// let mut receive_buffer = [0u8; 5];
-///
-/// buffer.send(&data_to_send).unwrap();
-/// buffer.recv(&mut receive_buffer).unwrap();
-///
-/// assert_eq!(receive_buffer, data_to_send);
-///
-/// ```
-///
-pub struct RingBuffer {
+const HEAD_OFF: usize = 0;
+const TAIL_OFF: usize = CACHE_LINE_SZ;
+const META_AREA: usize = CACHE_LINE_SZ * 2;
+pub struct EmulatorBuffer {
     manager: Box<dyn ChannelBufferManager>,
-    capacity: usize, // Capacity of the buffer excluding head and tail.
+    capacity: usize,
+    byte_cnt: usize,
+    last_timestamp: MsTimestamp,
+    rtt: f64,
+    bandwidth: f64,
 }
 
-unsafe impl Send for RingBuffer {}
-unsafe impl Sync for RingBuffer {}
+unsafe impl Send for EmulatorBuffer {}
+unsafe impl Sync for EmulatorBuffer {}
 
-impl RingBuffer {
-    pub fn new(manager: Box<dyn ChannelBufferManager>) -> RingBuffer {
+impl EmulatorBuffer {
+    pub fn new(manager: Box<dyn ChannelBufferManager>) -> EmulatorBuffer {
         let (_ptr, len) = manager.get_managed_memory();
         assert!(len > META_AREA, "Buffer size is too small");
-        // assert!(
-        //     super::utils::is_cache_line_aligned(ptr),
-        //     "Buffer is not cache line aligned"
-        // );
 
         let capacity = len - META_AREA;
-        let mut res = RingBuffer { manager, capacity };
+        let mut res = EmulatorBuffer {
+            manager,
+            capacity,
+            byte_cnt: 0,
+            last_timestamp: MsTimestamp::new(),
+            rtt: CONFIG.rtt,
+            bandwidth: CONFIG.bandwidth,
+        };
         res.write_head_volatile(0);
         res.write_tail_volatile(0);
         res
     }
+    fn calculate_latency(&self, current_bytes: usize) -> f64 {
+        let data_size =
+            current_bytes + std::mem::size_of::<MsTimestamp>() + std::mem::size_of::<i32>();
+        self.rtt / 2.0 + (data_size as f64 / self.bandwidth) * 1000.0 * 8.0
+    }
+    pub fn calculate_ts(&self, current_bytes: usize) -> MsTimestamp {
+        let latency = self.calculate_latency(current_bytes);
+        let now = Utc::now();
+        let now_timestamp = MsTimestamp {
+            sec_timestamp: now.timestamp(),
+            ms_timestamp: now.timestamp_subsec_millis(),
+        };
+        let base_timestamp = match now_timestamp > self.last_timestamp {
+            true => now_timestamp,
+            false => self.last_timestamp.clone(),
+        };
+        let sec = base_timestamp.sec_timestamp
+            + (base_timestamp.ms_timestamp as i64 + latency as i64) / 1000;
+        let ms = (base_timestamp.ms_timestamp + latency as u32) % 1000;
+        MsTimestamp {
+            sec_timestamp: sec,
+            ms_timestamp: ms,
+        }
+    }
 }
 
-impl CommChannel for RingBuffer {
-    fn put_bytes(&mut self, src: &RawMemory) -> Result<usize, CommChannelError> {
+impl CommChannel for EmulatorBuffer {
+    fn put_bytes(&mut self, src: &crate::RawMemory) -> Result<usize, crate::CommChannelError> {
         let mut len = src.len;
         let mut offset = 0;
+        self.byte_cnt += len;
 
         while len > 0 {
             // current head and tail
@@ -87,11 +93,17 @@ impl CommChannel for RingBuffer {
             offset += current;
             len -= current;
         }
-
         Ok(offset)
     }
 
-    fn get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
+    fn try_put_bytes(&mut self, _src: &crate::RawMemory) -> Result<usize, crate::CommChannelError> {
+        unimplemented!();
+    }
+
+    fn get_bytes(
+        &mut self,
+        dst: &mut crate::RawMemoryMut,
+    ) -> Result<usize, crate::CommChannelError> {
         let mut cur_recv = 0;
         while cur_recv != dst.len {
             let mut new_dst = dst.add_offset(cur_recv);
@@ -101,11 +113,10 @@ impl CommChannel for RingBuffer {
         Ok(cur_recv)
     }
 
-    fn try_put_bytes(&mut self, _src: &RawMemory) -> Result<usize, CommChannelError> {
-        unimplemented!()
-    }
-
-    fn try_get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
+    fn try_get_bytes(
+        &mut self,
+        dst: &mut crate::RawMemoryMut,
+    ) -> Result<usize, crate::CommChannelError> {
         let mut len = dst.len;
         let mut offset = 0;
 
@@ -139,7 +150,10 @@ impl CommChannel for RingBuffer {
         Ok(offset)
     }
 
-    fn safe_try_get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
+    fn safe_try_get_bytes(
+        &mut self,
+        dst: &mut crate::RawMemoryMut,
+    ) -> Result<usize, crate::CommChannelError> {
         if self.num_bytes_stored() < dst.len {
             return Ok(0);
         } else {
@@ -147,20 +161,28 @@ impl CommChannel for RingBuffer {
         }
     }
 
-    fn flush_out(&mut self) -> Result<(), CommChannelError> {
+    fn flush_out(&mut self) -> Result<(), crate::CommChannelError> {
         while self.num_bytes_stored() == self.capacity {
+            // Busy-waiting
+        }
+        let ts = self.calculate_ts(self.byte_cnt);
+        ts.send(self)?;
+        self.last_timestamp = ts;
+        self.byte_cnt = 0;
+        Ok(())
+    }
+
+    fn recv_ts(&mut self) -> Result<(), crate::CommChannelError> {
+        let mut timestamp: MsTimestamp = Default::default();
+        let _ = timestamp.recv(self);
+        while MsTimestamp::from_datetime(Utc::now()) < timestamp {
             // Busy-waiting
         }
         Ok(())
     }
-    
-    fn recv_ts(&mut self) -> Result<(), CommChannelError> {
-        // info!("recv ts");
-        Ok(())
-    }
 }
 
-impl RingBuffer {
+impl EmulatorBuffer {
     /// The space that has not been consumed by the consumer
     #[inline]
     pub fn num_bytes_free(&self) -> usize {
@@ -187,7 +209,7 @@ impl RingBuffer {
     }
 }
 
-impl RingBuffer {
+impl EmulatorBuffer {
     // WARNING: May need volatile in the future
     fn read_head_volatile(&self) -> u32 {
         let mut head: u32 = 0;
