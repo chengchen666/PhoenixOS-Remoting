@@ -10,6 +10,7 @@ codegen = { path = "../codegen" }
 libc = "*"
 log = "0.4.0"
 errno = "0.2.7" 
+chrono = "0.4.0"
 toml = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
@@ -18,3 +19,8 @@ KRdmaKit = { git = "https://github.com/Gahow/krcore-artifacts.git", branch = "fe
 
 [dev-dependencies]
 cudasys = { path = "../cudasys" }
+
+[features]
+# default = []
+default = ["emulator"]
+emulator = []

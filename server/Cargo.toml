@@ -18,6 +18,13 @@ lazy_static = "1.4.0"
 glob = "0.3"
 
 [features]
-default = ["shm"]
+# default = ["rdma"]
+default = ["shm", "emulator"]
+# default = ["shm"]
 shm = []
 rdma = []
+emulator = []
+
+[[bin]]
+name = "server"
+path = "src/main.rs"

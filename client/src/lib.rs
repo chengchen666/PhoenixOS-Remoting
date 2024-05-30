@@ -10,9 +10,9 @@ use log::{debug, error, info, log_enabled, Level};
 
 #[allow(unused_imports)]
 use network::{
-    ringbufferchannel::{RDMAChannel, SHMChannel},
+    ringbufferchannel::{EmulatorChannel, RDMAChannel, SHMChannel},
     type_impl::MemPtr,
-    Channel, CommChannel, Transportable, CONFIG,
+    Channel, CommChannel, CommChannelInner, Transportable, CONFIG,
 };
 
 extern crate codegen;
@@ -30,42 +30,50 @@ pub mod dl;
 pub use dl::*;
 
 use std::boxed::Box;
-use std::sync::Mutex;
+use std::{
+    sync::Mutex,
+};
 
 lazy_static! {
     // Use features when compiling to decide what arm(s) will be supported.
     // In the client side, the sender's name is ctos_channel_name,
     // receiver's name is stoc_channel_name.
     static ref CHANNEL_SENDER: Mutex<Channel> = {
-        match CONFIG.comm_type.as_str() {
+        let c: Box<dyn CommChannelInner> = match CONFIG.comm_type.as_str() {
             #[cfg(feature = "shm")]
             "shm" => {
-                let c = SHMChannel::new_client(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap();
-                Mutex::new(Channel::new(Box::new(c)))
+                Box::new(SHMChannel::new_client(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap())
             },
             #[cfg(feature = "rdma")]
             "rdma" => {
                 // client side sender should connect to server's receiver socket.
-                let c = RDMAChannel::new_client(&CONFIG.ctos_channel_name, CONFIG.buf_size, CONFIG.receiver_socket.parse().unwrap(), 1).unwrap();
-                Mutex::new(Channel::new(Box::new(c)))
+                Box::new(RDMAChannel::new_client(&CONFIG.ctos_channel_name, CONFIG.buf_size, CONFIG.receiver_socket.parse().unwrap(), 1).unwrap())
             }
             &_ => panic!("Unsupported communication type in config"),
+        };
+        if cfg!(feature = "emulator") {
+            Mutex::new(Channel::new(Box::new(EmulatorChannel::new(c))))
+        } else {
+            Mutex::new(Channel::new(c))
         }
     };
     static ref CHANNEL_RECEIVER: Mutex<Channel> = {
-        match CONFIG.comm_type.as_str() {
+        let c: Box<dyn CommChannelInner> = match CONFIG.comm_type.as_str() {
             #[cfg(feature = "shm")]
             "shm" => {
-                let c = SHMChannel::new_client(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap();
-                Mutex::new(Channel::new(Box::new(c)))
+                Box::new(SHMChannel::new_client(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap())
             }
             #[cfg(feature = "rdma")]
             "rdma" => {
                 // client side receiver should connect to server's sender socket.
-                let c = RDMAChannel::new_client(&CONFIG.stoc_channel_name, CONFIG.buf_size, CONFIG.sender_socket.parse().unwrap(), 1).unwrap();
-                Mutex::new(Channel::new(Box::new(c)))
+                Box::new(RDMAChannel::new_client(&CONFIG.stoc_channel_name, CONFIG.buf_size, CONFIG.sender_socket.parse().unwrap(), 1).unwrap())
             }
             &_ => panic!("Unsupported communication type in config"),
+        };
+        if cfg!(feature = "emulator") {
+            Mutex::new(Channel::new(Box::new(EmulatorChannel::new(c))))
+        } else {
+            Mutex::new(Channel::new(c))
         }
     };
 

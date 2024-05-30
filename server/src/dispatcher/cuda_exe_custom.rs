@@ -17,6 +17,10 @@ pub fn __cudaRegisterFatBinaryExe<T: CommChannel>(
     fatbin.recv(channel_receiver).unwrap();
     let mut client_address: MemPtr = Default::default();
     client_address.recv(channel_receiver).unwrap();
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
 
     let mut module: CUmodule = Default::default();
     let result =
@@ -39,6 +43,10 @@ pub fn __cudaUnregisterFatBinaryExe<T: CommChannel>(
     );
     let mut client_address: MemPtr = Default::default();
     client_address.recv(channel_receiver).unwrap();
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
 
     let module = get_module(client_address).unwrap();
     let result = unsafe { cuModuleUnload(module) };
@@ -55,6 +63,10 @@ pub fn __cudaRegisterFunctionExe<T: CommChannel>(channel_sender: &mut T, channel
     hostFun.recv(channel_receiver).unwrap();
     let mut deviceName: Vec<u8> = Default::default();
     deviceName.recv(channel_receiver).unwrap();
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
 
     let mut device_func: CUfunction = Default::default();
 
@@ -80,6 +92,10 @@ pub fn __cudaRegisterVarExe<T: CommChannel>(channel_sender: &mut T, channel_rece
     hostVar.recv(channel_receiver).unwrap();
     let mut deviceName: Vec<u8> = Default::default();
     deviceName.recv(channel_receiver).unwrap();
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
 
     let mut dptr: CUdeviceptr = Default::default();
     let mut size: size_t = Default::default();
@@ -99,7 +115,6 @@ pub fn __cudaRegisterVarExe<T: CommChannel>(channel_sender: &mut T, channel_rece
     channel_sender.flush_out().unwrap();
 }
 
-
 pub fn cuGetProcAddressExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
     info!("[{}:{}] cuGetProcAddress", std::file!(), std::line!());
     let mut symbol: Vec<u8> = Default::default();
@@ -108,12 +123,16 @@ pub fn cuGetProcAddressExe<T: CommChannel>(channel_sender: &mut T, channel_recei
     cudaVersion.recv(channel_receiver).unwrap();
     let mut flags: cuuint64_t = Default::default();
     flags.recv(channel_receiver).unwrap();
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
 
     let mut host_pfn: *mut ::std::os::raw::c_void = null_mut();
     let result: CUresult = unsafe {
         cuGetProcAddress(
             symbol.as_ptr() as *const std::os::raw::c_char,
-            &mut host_pfn, 
+            &mut host_pfn,
             cudaVersion,
             flags,
         )
@@ -124,22 +143,17 @@ pub fn cuGetProcAddressExe<T: CommChannel>(channel_sender: &mut T, channel_recei
     channel_sender.flush_out().unwrap();
 }
 
-
 pub fn cuGetExportTableExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!(
-        "[{}:{}] cuGetExportTable",
-        std::file!(),
-        std::line!()
-    );
+    info!("[{}:{}] cuGetExportTable", std::file!(), std::line!());
     let mut pExportTableId_: CUuuid = Default::default();
     pExportTableId_.recv(channel_receiver).unwrap();
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     let mut ppExportTable_: *const ::std::os::raw::c_void = std::ptr::null();
-    let result: CUresult = unsafe {
-        cuGetExportTable(
-            &mut ppExportTable_, 
-            &pExportTableId_ as *const CUuuid,
-        )
-    }; 
+    let result: CUresult =
+        unsafe { cuGetExportTable(&mut ppExportTable_, &pExportTableId_ as *const CUuuid) };
     (ppExportTable_ as MemPtr).send(channel_sender).unwrap();
     result.send(channel_sender).unwrap();
     channel_sender.flush_out().unwrap();

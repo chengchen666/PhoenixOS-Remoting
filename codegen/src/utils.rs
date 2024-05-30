@@ -1,4 +1,3 @@
-extern crate proc_macro2;
 use quote::{format_ident, quote};
 use syn::{
     parse::{Parse, ParseStream},
@@ -27,6 +26,15 @@ impl Clone for ElementType {
         match self {
             ElementType::Void => ElementType::Void,
             ElementType::Type(ty) => ElementType::Type(ty.clone()),
+        }
+    }
+}
+
+impl ElementType {
+    pub fn get_bytes(&self) -> usize {
+        match self {
+            ElementType::Void => 0,
+            ElementType::Type(_) => std::mem::size_of::<Type>(),
         }
     }
 }

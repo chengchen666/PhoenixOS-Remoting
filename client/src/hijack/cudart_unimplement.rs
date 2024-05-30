@@ -78,7 +78,6 @@ gen_unimplement!("cudaLaunchCooperativeKernel", "cudaError_t", "*const ::std::os
 gen_unimplement!("cudaLaunchCooperativeKernelMultiDevice", "cudaError_t", "*mut cudaLaunchParams", "::std::os::raw::c_uint", "::std::os::raw::c_uint");
 gen_unimplement!("cudaFuncSetCacheConfig", "cudaError_t", "*const ::std::os::raw::c_void", "cudaFuncCache");
 gen_unimplement!("cudaFuncSetSharedMemConfig", "cudaError_t", "*const ::std::os::raw::c_void", "cudaSharedMemConfig");
-gen_unimplement!("cudaFuncGetAttributes", "cudaError_t", "*mut cudaFuncAttributes", "*const ::std::os::raw::c_void");
 gen_unimplement!("cudaFuncSetAttribute", "cudaError_t", "*const ::std::os::raw::c_void", "cudaFuncAttribute", "::std::os::raw::c_int");
 gen_unimplement!("cudaSetDoubleForDevice", "cudaError_t", "*mut f64");
 gen_unimplement!("cudaSetDoubleForHost", "cudaError_t", "*mut f64");

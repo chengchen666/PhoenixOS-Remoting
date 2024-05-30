@@ -1,13 +1,25 @@
+use log::info;
 use crate::{CommChannel, CommChannelError, RawMemory, RawMemoryMut, Transportable};
 
 macro_rules! impl_transportable {
     ($($t:ty),*) => {
         $(
             impl Transportable for $t {
+                fn emulate_send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
+                    let memory = RawMemory::new(self, std::mem::size_of::<Self>());
+                    match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
+                        true => {
+                            Ok(())},
+                        false => Err(CommChannelError::IoError),
+                    }
+                }
+
                 fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
                     let memory = RawMemory::new(self, std::mem::size_of::<Self>());
                     match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
-                        true => Ok(()),
+                        true => {
+                            crate::increment(std::mem::size_of::<Self>());
+                            Ok(())},
                         false => Err(CommChannelError::IoError),
                     }
                 }
@@ -15,8 +27,19 @@ macro_rules! impl_transportable {
                 fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
                     let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
                     match channel.get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
-                        true => Ok(()),
+                        true => {Ok(())},
                         false => Err(CommChannelError::IoError),
+                    }
+                }
+
+                fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
+                    let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
+                    let length = channel.safe_try_get_bytes(&mut memory)?;
+                    match length == std::mem::size_of::<Self>() {
+                        true => Ok(()),
+                        false => {
+                            if length != 0 {info!("[{}:{}] Actual reading bytes {}",std::file!(), std::line!(), length);}
+                        Err(CommChannelError::BlockOperation)},
                     }
                 }
             }
@@ -29,11 +52,19 @@ impl_transportable!(
 );
 
 impl Transportable for () {
+    fn emulate_send<T: CommChannel>(&self, _channel: &mut T) -> Result<(), CommChannelError> {
+        Ok(())
+    }
+
     fn send<T: CommChannel>(&self, _channel: &mut T) -> Result<(), CommChannelError> {
         Ok(())
     }
 
     fn recv<T: CommChannel>(&mut self, _channel: &mut T) -> Result<(), CommChannelError> {
+        Ok(())
+    }
+
+    fn try_recv<T: CommChannel>(&mut self, _channel: &mut T) -> Result<(), CommChannelError> {
         Ok(())
     }
 }
@@ -45,11 +76,21 @@ impl Transportable for () {
 pub type MemPtr = usize;
 
 impl<S> Transportable for [S] {
-    fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
+    fn emulate_send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
         let len = self.len() * std::mem::size_of::<S>();
         let memory = RawMemory::from_ptr(self.as_ptr() as *const u8, len);
         match channel.put_bytes(&memory)? == len {
             true => Ok(()),
+            false => Err(CommChannelError::IoError),
+        }
+    }
+    fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
+        let len = self.len() * std::mem::size_of::<S>();
+        let memory = RawMemory::from_ptr(self.as_ptr() as *const u8, len);
+        match channel.put_bytes(&memory)? == len {
+            true => {
+                Ok(())
+            }
             false => Err(CommChannelError::IoError),
         }
     }
@@ -62,12 +103,29 @@ impl<S> Transportable for [S] {
             false => Err(CommChannelError::IoError),
         }
     }
+
+    fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
+        let len = self.len() * std::mem::size_of::<S>();
+        let mut memory = RawMemoryMut::from_ptr(self.as_mut_ptr() as *mut u8, len);
+        let length = channel.safe_try_get_bytes(&mut memory)?;
+        match length == len {
+            true => Ok(()),
+            false => {
+                Err(CommChannelError::BlockOperation)
+            }
+        }
+    }
 }
 
 impl<S> Transportable for Vec<S>
 where
     S: Default + Clone,
 {
+    fn emulate_send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
+        let len: usize = self.len();
+        len.emulate_send(channel)?;
+        self.as_slice().emulate_send(channel)
+    }
     fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
         let len: usize = self.len();
         len.send(channel)?;
@@ -79,6 +137,13 @@ where
         len.recv(channel)?;
         self.resize(len, S::default());
         self.as_mut_slice().recv(channel)
+    }
+
+    fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
+        let mut len: usize = 0;
+        len.try_recv(channel)?;
+        self.resize(len, S::default());
+        self.as_mut_slice().try_recv(channel)
     }
 }
 

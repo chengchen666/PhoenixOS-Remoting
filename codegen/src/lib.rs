@@ -55,10 +55,20 @@ pub fn transportable_derive(input: TokenStream) -> TokenStream {
 
     let gen = quote! {
         impl Transportable for #name {
-            fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
+            fn emulate_send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
                 let memory = RawMemory::new(self, std::mem::size_of::<Self>());
                 match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
                     true => Ok(()),
+                    false => Err(CommChannelError::IoError),
+                }
+            }
+
+            fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
+                let memory = RawMemory::new(self, std::mem::size_of::<Self>());
+                match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
+                    true => {
+                        network::increment(std::mem::size_of::<Self>());
+                        Ok(())},
                     false => Err(CommChannelError::IoError),
                 }
             }
@@ -70,6 +80,14 @@ pub fn transportable_derive(input: TokenStream) -> TokenStream {
                     false => Err(CommChannelError::IoError),
                 }
             }
+
+            fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
+               let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
+                match channel.safe_try_get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
+                    true => Ok(()),
+                    false => Err(CommChannelError::IoError),
+                }
+            }
         }
     };
 
@@ -77,10 +95,10 @@ pub fn transportable_derive(input: TokenStream) -> TokenStream {
 }
 
 /// The derive procedural macro to defaultly zero a type variable.
-/// 
+///
 /// ### Example
 /// To use this macro, annotate a struct or enum with `#[derive(ZeroDefault)]`.
-/// 
+///
 /// ```ignore
 /// #[derive(ZeroDefault)]
 /// pub struct MyStruct {
@@ -259,7 +277,7 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
             let proc_id = #proc_id;
             #( #def_statements )*
             let mut #result_name: #result_ty = Default::default();
-
+            
             match proc_id.send(channel_sender) {
                 Ok(()) => {}
                 Err(e) => panic!("failed to send proc_id: {:?}", e),
@@ -275,6 +293,10 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
             match #result_name.recv(channel_receiver) {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive #result_name: {:?}", e),
+            }
+            match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
             }
             return #result_name;
         }
@@ -372,6 +394,10 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             #( #def_statements )*
             #( #recv_statements )*
+            match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e)
+            }
             #exec_statement
             #( #send_statements )*
             #result_name.send(channel_sender).unwrap();

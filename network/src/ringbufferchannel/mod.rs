@@ -1,5 +1,8 @@
 // pub mod channel;
-use crate::{CommChannelInner, CommChannelError, CommChannelInnerIO, RawMemory, RawMemoryMut};
+use crate::{
+    CommChannelInner, CommChannelError, CommChannelInnerIO,
+    RawMemory, RawMemoryMut
+};
 use std::ptr::{self, NonNull};
 
 pub mod test;
@@ -14,6 +17,11 @@ pub mod rdma;
 pub use rdma::RDMAChannel;
 
 pub mod utils;
+
+pub mod emulator;
+pub use emulator::EmulatorChannel;
+pub mod types;
+pub use types::*;
 
 pub const CACHE_LINE_SZ: usize = 64;
 
@@ -205,6 +213,14 @@ impl<T: RingBufferChannel + CommChannelInner> CommChannelInnerIO for T {
         }
 
         Ok(offset)
+    }
+
+    fn safe_try_get_bytes(&self, dst: &mut crate::RawMemoryMut) -> Result<usize, CommChannelError> {
+        if self.num_bytes_stored() < dst.len {
+            return Ok(0);
+        } else {
+            self.try_get_bytes(dst)
+        }
     }
 }
 

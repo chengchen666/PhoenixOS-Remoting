@@ -3,6 +3,7 @@
 use serde::Deserialize;
 use std::error::Error;
 use std::boxed::Box;
+use std::sync::Mutex;
 use std::fmt;
 
 #[macro_use]
@@ -23,7 +24,45 @@ pub struct NetworkConfig {
     pub receiver_socket: String,
     pub stoc_channel_name: String,
     pub ctos_channel_name: String,
+    pub stos_channel_name: String,
+    pub ctoc_channel_name: String,
+    pub clocal_channel_name: String,
     pub buf_size: usize,
+    pub rtt: f64,
+    pub bandwidth: f64,
+}
+
+
+// #[cfg(feature = "emulator")]
+lazy_static! {
+    pub static ref CURRENT_BYTES: Mutex<usize> = Mutex::new(0);
+    pub static ref CAN_READ: Mutex<bool> = Mutex::new(false);
+}
+
+pub fn increment(size: usize) {
+    while *CAN_READ.lock().unwrap() == true {
+        // wait
+    }
+    let mut num = CURRENT_BYTES.lock().unwrap();
+    *num += size;
+}
+
+pub fn set_status(status: bool) {
+    let mut can_read = CAN_READ.lock().unwrap();
+    *can_read = status;
+    if status == false {
+        let mut num = CURRENT_BYTES.lock().unwrap();
+        assert!(*num != 0);
+        *num = 0;
+    }
+}
+
+pub fn get_bytes() -> Option<usize> {
+    if *CAN_READ.lock().unwrap() == true {
+        let num = CURRENT_BYTES.lock().unwrap();
+        return Some(*num);
+    }
+    None
 }
 
 lazy_static! {
@@ -101,6 +140,7 @@ pub enum CommChannelError {
     IoError,
     Timeout,
     NoLeftSpace,
+    BlockOperation,
     // Add other relevant errors
 }
 
@@ -140,9 +180,21 @@ pub trait CommChannel {
         self.get_inner().try_get_bytes(dst)
     }
 
+    /// Non-block versoin
+    /// Return immediately if there's not enough bytes in channel
+    fn safe_try_get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
+        self.get_inner().safe_try_get_bytes(dst)
+    }
+
     /// Flush the all the buffered results to the channel
     fn flush_out(&self) -> Result<(), CommChannelError> {
         self.get_inner().flush_out()
+    }
+
+    /// Only for emulator channel
+    /// Will recv timestamp and busy waiting until it's time to receive
+    fn recv_ts(&self) -> Result<(), CommChannelError> {
+        self.get_inner().recv_ts()
     }
 }
 
@@ -169,6 +221,10 @@ impl CommChannel for Channel {
 /// communication interface
 pub trait CommChannelInner: CommChannelInnerIO + Send + Sync {
     fn flush_out(&self) -> Result<(), CommChannelError>;
+
+    fn recv_ts(&self) -> Result<(), CommChannelError> {
+        Ok(())
+    }
 }
 
 pub trait CommChannelInnerIO {
@@ -179,6 +235,8 @@ pub trait CommChannelInnerIO {
     fn get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
 
     fn try_get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
+
+    fn safe_try_get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
 }
 
 ///
@@ -186,7 +244,11 @@ pub trait CommChannelInnerIO {
 ///
 /// Every type wanted to be transfered should implement this trait.
 pub trait Transportable {
+    fn emulate_send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError>;
+
     fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError>;
 
     fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError>;
+
+    fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError>;
 }

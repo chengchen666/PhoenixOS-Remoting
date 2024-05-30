@@ -12,6 +12,7 @@ use cudasys::{
 };
 use dispatcher::dispatch;
 
+use network::ringbufferchannel::EmulatorChannel;
 #[allow(unused_imports)]
 use network::{
     ringbufferchannel::{RDMAChannel, SHMChannel},
@@ -61,6 +62,7 @@ fn get_variable(host_var: MemPtr) -> Option<CUdeviceptr> {
     VARIABLES.lock().unwrap().get(&host_var).cloned()
 }
 
+#[cfg(not(feature = "emulator"))]
 fn create_buffer() -> (Channel, Channel) {
     // Use features when compiling to decide what arm(s) will be supported.
     // In the server side, the sender's name is stoc_channel_name,
@@ -91,6 +93,16 @@ fn create_buffer() -> (Channel, Channel) {
     }
 }
 
+#[cfg(feature = "emulator")]
+fn create_buffer() -> (Channel, Channel) {
+    let sender = SHMChannel::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap();
+    let receiver = SHMChannel::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap();
+    (
+        Channel::new(Box::new(EmulatorChannel::new(Box::new(sender)))),
+        Channel::new(Box::new(EmulatorChannel::new(Box::new(receiver)))),
+    )
+}
+
 fn receive_request<T: CommChannel>(channel_receiver: &mut T) -> Result<i32, CommChannelError> {
     let mut proc_id = 0;
     if let Ok(()) = proc_id.recv(channel_receiver) {
@@ -102,7 +114,12 @@ fn receive_request<T: CommChannel>(channel_receiver: &mut T) -> Result<i32, Comm
 
 pub fn launch_server() {
     let (mut channel_sender, mut channel_receiver) = create_buffer();
-    info!("[{}:{}] {} buffer created", std::file!(), std::line!(), CONFIG.comm_type);
+    info!(
+        "[{}:{}] {} buffer created",
+        std::file!(),
+        std::line!(),
+        CONFIG.comm_type
+    );
     let mut max_devices = 0;
     if let cudaError_t::cudaSuccess =
         unsafe { cudaGetDeviceCount(&mut max_devices as *mut ::std::os::raw::c_int) }
