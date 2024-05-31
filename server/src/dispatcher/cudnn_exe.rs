@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
 use super::*;
 use cudasys::cudnn::*;
-use ::std::os::raw::*;
 
 gen_exe!(
     "cudnnSetTensor4dDescriptor", 

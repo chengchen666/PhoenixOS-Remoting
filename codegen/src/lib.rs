@@ -67,7 +67,6 @@ pub fn transportable_derive(input: TokenStream) -> TokenStream {
                 let memory = RawMemory::new(self, std::mem::size_of::<Self>());
                 match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
                     true => {
-                        network::increment(std::mem::size_of::<Self>());
                         Ok(())},
                     false => Err(CommChannelError::IoError),
                 }
@@ -76,14 +75,6 @@ pub fn transportable_derive(input: TokenStream) -> TokenStream {
             fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
                 let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
                 match channel.get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
-                    true => Ok(()),
-                    false => Err(CommChannelError::IoError),
-                }
-            }
-
-            fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
-               let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
-                match channel.safe_try_get_bytes(&mut memory)? == std::mem::size_of::<Self>() {
                     true => Ok(()),
                     false => Err(CommChannelError::IoError),
                 }

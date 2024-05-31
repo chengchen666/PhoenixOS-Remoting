@@ -40,12 +40,6 @@ impl Transportable for Request {
         self.proc_id.recv(channel)?;
         self.data.recv(channel)
     }
-
-    fn try_recv<T: crate::CommChannel>(&mut self, channel: &mut T) -> Result<(), crate::CommChannelError> {
-        self.timestamp.try_recv(channel)?;
-        self.proc_id.recv(channel)?;
-        self.data.recv(channel)
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -112,11 +106,6 @@ impl Transportable for MsTimestamp {
         channel: &mut T,
     ) -> Result<(), crate::CommChannelError> {
         self.sec_timestamp.recv(channel)?;
-        self.ms_timestamp.recv(channel)
-    }
-
-    fn try_recv<T: crate::CommChannel>(&mut self, channel: &mut T) -> Result<(), crate::CommChannelError> {
-        self.sec_timestamp.try_recv(channel)?;
         self.ms_timestamp.recv(channel)
     }
 }

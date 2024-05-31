@@ -18,7 +18,6 @@ macro_rules! impl_transportable {
                     let memory = RawMemory::new(self, std::mem::size_of::<Self>());
                     match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
                         true => {
-                            crate::increment(std::mem::size_of::<Self>());
                             Ok(())},
                         false => Err(CommChannelError::IoError),
                     }
@@ -32,16 +31,6 @@ macro_rules! impl_transportable {
                     }
                 }
 
-                fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
-                    let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
-                    let length = channel.safe_try_get_bytes(&mut memory)?;
-                    match length == std::mem::size_of::<Self>() {
-                        true => Ok(()),
-                        false => {
-                            if length != 0 {info!("[{}:{}] Actual reading bytes {}",std::file!(), std::line!(), length);}
-                        Err(CommChannelError::BlockOperation)},
-                    }
-                }
             }
         )*
     };
@@ -61,10 +50,6 @@ impl Transportable for () {
     }
 
     fn recv<T: CommChannel>(&mut self, _channel: &mut T) -> Result<(), CommChannelError> {
-        Ok(())
-    }
-
-    fn try_recv<T: CommChannel>(&mut self, _channel: &mut T) -> Result<(), CommChannelError> {
         Ok(())
     }
 }
@@ -104,17 +89,6 @@ impl<S> Transportable for [S] {
         }
     }
 
-    fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
-        let len = self.len() * std::mem::size_of::<S>();
-        let mut memory = RawMemoryMut::from_ptr(self.as_mut_ptr() as *mut u8, len);
-        let length = channel.safe_try_get_bytes(&mut memory)?;
-        match length == len {
-            true => Ok(()),
-            false => {
-                Err(CommChannelError::BlockOperation)
-            }
-        }
-    }
 }
 
 impl<S> Transportable for Vec<S>
@@ -139,12 +113,6 @@ where
         self.as_mut_slice().recv(channel)
     }
 
-    fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
-        let mut len: usize = 0;
-        len.try_recv(channel)?;
-        self.resize(len, S::default());
-        self.as_mut_slice().try_recv(channel)
-    }
 }
 
 #[cfg(test)]

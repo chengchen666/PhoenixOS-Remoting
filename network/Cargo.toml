@@ -19,8 +19,3 @@ KRdmaKit = { git = "https://github.com/Gahow/krcore-artifacts.git", branch = "fe
 
 [dev-dependencies]
 cudasys = { path = "../cudasys" }
-
-[features]
-# default = []
-default = ["emulator"]
-emulator = []

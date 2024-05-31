@@ -9,9 +9,6 @@ receiver_socket = "127.0.0.1:8002"
 # channel name for server and client to find each other, the name strings are not matter
 stoc_channel_name = "/stoc"
 ctos_channel_name = "/ctos"
-stos_channel_name = "/stos"
-ctoc_channel_name = "/ctoc"
-clocal_channel_name = "/clocal"
 
 # buffer size
 buf_size = 4000000000

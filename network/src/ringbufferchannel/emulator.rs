@@ -5,7 +5,7 @@ use crate::{
     CONFIG, CommChannelInner, CommChannelInnerIO, CommChannelError,
     RawMemory, RawMemoryMut,
 };
-use super::{types::*};
+use super::types::*;
 
 pub struct EmulatorChannel {
     manager: Box<dyn CommChannelInner>,
@@ -37,11 +37,7 @@ impl EmulatorChannel {
 
     pub fn calculate_ts(&self, current_bytes: usize) -> MsTimestamp {
         let latency = self.calculate_latency(current_bytes);
-        let now = Utc::now();
-        let now_timestamp = MsTimestamp {
-            sec_timestamp: now.timestamp(),
-            ms_timestamp: now.timestamp_subsec_millis(),
-        };
+        let now_timestamp = MsTimestamp::from_datetime(Utc::now());
         let base_timestamp = match now_timestamp > self.get_last_timestamp() {
             true => now_timestamp,
             false => self.get_last_timestamp().clone(),
@@ -59,7 +55,6 @@ impl EmulatorChannel {
         let memory = RawMemory::new(&src, std::mem::size_of::<T>());
         match self.manager.put_bytes(&memory)? == std::mem::size_of::<T>() {
             true => {
-                crate::increment(std::mem::size_of::<T>());
                 Ok(())},
             false => Err(CommChannelError::IoError),
         }
