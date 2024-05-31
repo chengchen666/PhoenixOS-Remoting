@@ -96,6 +96,7 @@ impl EmulatorChannel {
 
 impl CommChannelInnerIO for EmulatorChannel {
     fn put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
+        self.set_byte_cnt(self.get_byte_cnt() + src.len);
         self.manager.put_bytes(src)
     }
 
