@@ -1,5 +1,4 @@
-use log::info;
-use crate::{Channel, CommChannel, CommChannelError, RawMemory, RawMemoryMut, Transportable};
+use crate::{CommChannel, CommChannelError, RawMemory, RawMemoryMut, Transportable};
 
 macro_rules! impl_transportable {
     ($($t:ty),*) => {
@@ -118,7 +117,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ringbufferchannel::{LocalChannel, META_AREA};
+    use crate::{
+        ringbufferchannel::{LocalChannel, META_AREA},
+        Channel,
+    };
 
     /// Test bool Transportable impl
     #[test]

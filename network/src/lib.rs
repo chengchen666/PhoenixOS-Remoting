@@ -3,7 +3,6 @@
 use serde::Deserialize;
 use std::error::Error;
 use std::boxed::Box;
-use std::sync::Mutex;
 use std::fmt;
 
 #[macro_use]
