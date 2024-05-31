@@ -15,5 +15,5 @@ buf_size = 4000000000
 
 # network configuration
 # bandwidth is in bps, rtt is in ms 
-rtt = 0.1
-bandwidth = 1073741824
+rtt = 0.0034
+bandwidth = 107374182400
