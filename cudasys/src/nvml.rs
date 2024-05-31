@@ -6,9 +6,9 @@ include!("bindings/funcs/nvml.rs");
 mod tests{
     use super::*;
     use crate::FromPrimitive;
-    use network::ringbufferchannel::{
-        channel::META_AREA,
-        LocalChannelBufferManager, RingBuffer
+    use network::{
+        ringbufferchannel::{META_AREA, LocalChannel},
+        Channel,
     };
 
     #[test]
@@ -23,8 +23,8 @@ mod tests{
 
     #[test]
     fn test_nvmlReturn_t_io() {
-        let mut buffer: RingBuffer =
-            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
+        let mut buffer: Channel =
+            Channel::new(Box::new(LocalChannel::new(10 + META_AREA)));
         let a = nvmlReturn_t::NVML_ERROR_UNINITIALIZED;
         let mut b = nvmlReturn_t::NVML_SUCCESS;
         a.send(&mut buffer).unwrap();

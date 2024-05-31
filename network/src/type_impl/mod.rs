@@ -1,5 +1,5 @@
 use log::info;
-use crate::{CommChannel, CommChannelError, RawMemory, RawMemoryMut, Transportable};
+use crate::{Channel, CommChannel, CommChannelError, RawMemory, RawMemoryMut, Transportable};
 
 macro_rules! impl_transportable {
     ($($t:ty),*) => {

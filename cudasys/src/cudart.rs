@@ -10,9 +10,9 @@ include!("bindings/funcs/cudart.rs");
 mod tests{
     use super::*;
     use crate::FromPrimitive;
-    use network::ringbufferchannel::{
-        channel::META_AREA,
-        LocalChannelBufferManager, RingBuffer
+    use network::{
+        ringbufferchannel::{META_AREA, LocalChannel},
+        Channel,
     };
 
     #[test]
@@ -27,8 +27,8 @@ mod tests{
 
     #[test]
     fn test_cudaError_t_io() {
-        let mut buffer: RingBuffer =
-            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
+        let mut buffer: Channel =
+            Channel::new(Box::new(LocalChannel::new(10 + META_AREA)));
         let a = cudaError_t::cudaErrorInvalidValue;
         let mut b = cudaError_t::cudaSuccess;
         a.send(&mut buffer).unwrap();
@@ -38,8 +38,8 @@ mod tests{
 
     #[test]
     fn test_cudaStream_t_io() {
-        let mut buffer: RingBuffer =
-            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
+        let mut buffer: Channel =
+            Channel::new(Box::new(LocalChannel::new(10 + META_AREA)));
         let a = 100usize as cudaStream_t;
         let mut b: cudaStream_t = 0usize as cudaStream_t;
         a.send(&mut buffer).unwrap();
