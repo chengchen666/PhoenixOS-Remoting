@@ -12,12 +12,12 @@ use cudasys::{
 };
 use dispatcher::dispatch;
 
-use network::ringbufferchannel::EmulatorBuffer;
+use network::ringbufferchannel::EmulatorChannel;
 #[allow(unused_imports)]
 use network::{
-    ringbufferchannel::{RDMAChannelBufferManager, RingBuffer, SHMChannelBufferManager},
+    ringbufferchannel::{RDMAChannel, SHMChannel},
     type_impl::MemPtr,
-    CommChannel, CommChannelError, Transportable, CONFIG,
+    Channel, CommChannel, CommChannelError, Transportable, CONFIG,
 };
 
 #[allow(unused_imports)]
@@ -63,63 +63,43 @@ fn get_variable(host_var: MemPtr) -> Option<CUdeviceptr> {
 }
 
 #[cfg(not(feature = "emulator"))]
-fn create_buffer() -> (RingBuffer, RingBuffer) {
-    #[cfg(not(feature = "emulator"))]
-    {
-        // Use features when compiling to decide what arm(s) will be supported.
-        // In the server side, the sender's name is stoc_channel_name,
-        // receiver's name is ctos_channel_name.
-        match CONFIG.comm_type.as_str() {
-            #[cfg(feature = "shm")]
-            "shm" => {
-                let sender =
-                    SHMChannelBufferManager::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size)
-                        .unwrap();
-                let receiver: SHMChannelBufferManager;
-                info!("not emulator");
-                receiver =
-                    SHMChannelBufferManager::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size)
-                        .unwrap();
-                (
-                    RingBuffer::new(Box::new(sender)),
-                    RingBuffer::new(Box::new(receiver)),
-                )
-            }
-            #[cfg(feature = "rdma")]
-            "rdma" => {
-                let sender = RDMAChannelBufferManager::new_server(
-                    &CONFIG.stoc_channel_name,
-                    CONFIG.buf_size,
-                    CONFIG.sender_socket.parse().unwrap(),
-                )
-                .unwrap();
-                let receiver = RDMAChannelBufferManager::new_server(
-                    &CONFIG.ctos_channel_name,
-                    CONFIG.buf_size,
-                    CONFIG.receiver_socket.parse().unwrap(),
-                )
-                .unwrap();
-                (
-                    RingBuffer::new(Box::new(sender)),
-                    RingBuffer::new(Box::new(receiver)),
-                )
-            }
-            &_ => panic!("Unsupported communication type in config"),
+fn create_buffer() -> (Channel, Channel) {
+    // Use features when compiling to decide what arm(s) will be supported.
+    // In the server side, the sender's name is stoc_channel_name,
+    // receiver's name is ctos_channel_name.
+    match CONFIG.comm_type.as_str() {
+        #[cfg(feature = "shm")]
+        "shm" => {
+            let sender = SHMChannel::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap();
+            let receiver = SHMChannel::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap();
+            (Channel::new(Box::new(sender)), Channel::new(Box::new(receiver)))
         }
+        #[cfg(feature = "rdma")]
+        "rdma" => {
+            // Make sure to new receiver first! Client side sender will handshake with it first.
+            let receiver = RDMAChannel::new_server(
+                &CONFIG.ctos_channel_name,
+                CONFIG.buf_size,
+                CONFIG.receiver_socket.parse().unwrap(),
+            ).unwrap();
+            let sender = RDMAChannel::new_server(
+                &CONFIG.stoc_channel_name,
+                CONFIG.buf_size,
+                CONFIG.sender_socket.parse().unwrap(),
+            ).unwrap();
+            (Channel::new(Box::new(sender)), Channel::new(Box::new(receiver)))
+        }
+        &_ => panic!("Unsupported communication type in config"),
     }
 }
 
 #[cfg(feature = "emulator")]
-fn create_buffer() -> (EmulatorBuffer, EmulatorBuffer) {
-    let sender =
-        SHMChannelBufferManager::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap();
-    let receiver: SHMChannelBufferManager;
-    info!("not emulator");
-    receiver =
-        SHMChannelBufferManager::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap();
+fn create_buffer() -> (Channel, Channel) {
+    let sender = SHMChannel::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap();
+    let receiver = SHMChannel::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap();
     (
-        EmulatorBuffer::new(Box::new(sender)),
-        EmulatorBuffer::new(Box::new(receiver)),
+        Channel::new(Box::new(EmulatorChannel::new(Box::new(sender)))),
+        Channel::new(Box::new(EmulatorChannel::new(Box::new(receiver)))),
     )
 }
 

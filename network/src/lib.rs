@@ -1,9 +1,9 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
+use serde::Deserialize;
 use std::error::Error;
-use std::{fmt, sync::Mutex};
-// use serde::Deserialize;
-use serde_derive::Deserialize;
+use std::boxed::Box;
+use std::fmt;
 
 #[macro_use]
 extern crate lazy_static;
@@ -23,44 +23,11 @@ pub struct NetworkConfig {
     pub receiver_socket: String,
     pub stoc_channel_name: String,
     pub ctos_channel_name: String,
-    pub stos_channel_name: String,
-    pub ctoc_channel_name: String,
-    pub clocal_channel_name: String,
     pub buf_size: usize,
     pub rtt: f64,
     pub bandwidth: f64,
 }
 
-
-// #[cfg(feature = "emulator")]
-lazy_static! {
-    pub static ref CURRENT_BYTES: Mutex<usize> = Mutex::new(0);
-    pub static ref CAN_READ: Mutex<bool> = Mutex::new(false);
-}
-
-pub fn increment(size: usize) {
-    while *CAN_READ.lock().unwrap() == true {
-        // wait
-    }
-    let mut num = CURRENT_BYTES.lock().unwrap();
-    *num += size;
-}
-pub fn set_status(status: bool) {
-    let mut can_read = CAN_READ.lock().unwrap();
-    *can_read = status;
-    if status == false {
-        let mut num = CURRENT_BYTES.lock().unwrap();
-        assert!(*num != 0);
-        *num = 0;
-    }
-}
-pub fn get_bytes() -> Option<usize> {
-    if *CAN_READ.lock().unwrap() == true {
-        let num = CURRENT_BYTES.lock().unwrap();
-        return Some(*num);
-    }
-    None
-}
 
 lazy_static! {
     pub static ref CONFIG: NetworkConfig = {
@@ -137,8 +104,8 @@ pub enum CommChannelError {
     IoError,
     Timeout,
     NoLeftSpace,
-    // Add other relevant errors
     BlockOperation,
+    // Add other relevant errors
 }
 
 impl fmt::Display for CommChannelError {
@@ -150,35 +117,90 @@ impl fmt::Display for CommChannelError {
 
 impl Error for CommChannelError {}
 
-///
-/// A communication channel allows TBD
 pub trait CommChannel {
-    /// Only for emulator channel
-    /// Will recv timestamp and busy waiting until it's time to receive
-    fn recv_ts(&mut self) -> Result<(), CommChannelError>;
+    fn get_inner(&self) -> &Box<dyn CommChannelInner>;
 
     /// Write bytes to the channel
     /// It may flush if the channel has no left space
-    fn put_bytes(&mut self, src: &RawMemory) -> Result<usize, CommChannelError>;
+    fn put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
+        self.get_inner().put_bytes(src)
+    }
 
     /// Non-block version
     /// Immediately return if error such as no left space
-    fn try_put_bytes(&mut self, src: &RawMemory) -> Result<usize, CommChannelError>;
+    fn try_put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
+        self.get_inner().try_put_bytes(src)
+    }
 
     /// Read bytes from the channel
     /// Wait if dont receive enough bytes
-    fn get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
+    fn get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
+        self.get_inner().get_bytes(dst)
+    }
 
     /// Non-block version
     /// Immediately return after receive however long bytes (maybe =0 or <len)
-    fn try_get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
+    fn try_get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
+        self.get_inner().try_get_bytes(dst)
+    }
 
     /// Non-block versoin
     /// Return immediately if there's not enough bytes in channel
-    fn safe_try_get_bytes(&mut self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
+    fn safe_try_get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
+        self.get_inner().safe_try_get_bytes(dst)
+    }
 
     /// Flush the all the buffered results to the channel
-    fn flush_out(&mut self) -> Result<(), CommChannelError>;
+    fn flush_out(&self) -> Result<(), CommChannelError> {
+        self.get_inner().flush_out()
+    }
+
+    /// Only for emulator channel
+    /// Will recv timestamp and busy waiting until it's time to receive
+    fn recv_ts(&self) -> Result<(), CommChannelError> {
+        self.get_inner().recv_ts()
+    }
+}
+
+///
+/// A communication channel allows TBD
+pub struct Channel {
+    inner: Box<dyn CommChannelInner>,
+}
+
+impl Channel {
+    pub fn new(inner: Box<dyn CommChannelInner>) -> Self {
+        Self {
+            inner,
+        }
+    }
+}
+
+impl CommChannel for Channel {
+    fn get_inner(&self) -> &Box<dyn CommChannelInner> {
+        &self.inner
+    }
+}
+
+/// communication interface
+pub trait CommChannelInner: CommChannelInnerIO + Send + Sync {
+    fn flush_out(&self) -> Result<(), CommChannelError>;
+
+    fn recv_ts(&self) -> Result<(), CommChannelError> {
+        Ok(())
+    }
+}
+
+pub trait CommChannelInnerIO {
+    fn put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError>;
+
+    fn try_put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError>;
+
+    fn get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
+
+    fn try_get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
+
+    fn safe_try_get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError>;
 }
 
 ///
@@ -191,6 +213,4 @@ pub trait Transportable {
     fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError>;
 
     fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError>;
-
-    fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError>;
 }

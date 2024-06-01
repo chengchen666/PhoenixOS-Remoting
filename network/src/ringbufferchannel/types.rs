@@ -1,5 +1,3 @@
-use log::info;
-
 use crate::{RawMemory, Transportable};
 
 #[derive(Debug, Default, Clone)]
@@ -39,12 +37,6 @@ impl Transportable for Request {
         channel: &mut T,
     ) -> Result<(), crate::CommChannelError> {
         self.timestamp.recv(channel)?;
-        self.proc_id.recv(channel)?;
-        self.data.recv(channel)
-    }
-
-    fn try_recv<T: crate::CommChannel>(&mut self, channel: &mut T) -> Result<(), crate::CommChannelError> {
-        self.timestamp.try_recv(channel)?;
         self.proc_id.recv(channel)?;
         self.data.recv(channel)
     }
@@ -114,11 +106,6 @@ impl Transportable for MsTimestamp {
         channel: &mut T,
     ) -> Result<(), crate::CommChannelError> {
         self.sec_timestamp.recv(channel)?;
-        self.ms_timestamp.recv(channel)
-    }
-
-    fn try_recv<T: crate::CommChannel>(&mut self, channel: &mut T) -> Result<(), crate::CommChannelError> {
-        self.sec_timestamp.try_recv(channel)?;
         self.ms_timestamp.recv(channel)
     }
 }

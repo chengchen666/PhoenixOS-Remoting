@@ -10,23 +10,21 @@ extern crate network;
 
 use cudasys::cudart::cudaError_t;
 use network::{
-    ringbufferchannel::{
-        RingBuffer, SHMChannelBufferManager,
-    },
-    CommChannel, Transportable
+    ringbufferchannel::SHMChannel,
+    Channel, CommChannel, Transportable
 };
 
 use std::sync::Mutex;
 use std::boxed::Box;
 
 lazy_static! {
-    static ref CHANNEL_SENDER: Mutex<RingBuffer> = {
-        let manager = SHMChannelBufferManager::new_client("/ctos", 104857520).unwrap();
-        Mutex::new(RingBuffer::new(Box::new(manager)))
+    static ref CHANNEL_SENDER: Mutex<Channel> = {
+        let c = Box::new(SHMChannel::new_client("/ctos", 104857520).unwrap());
+        Mutex::new(Channel::new(c))
     };
-    static ref CHANNEL_RECEIVER: Mutex<RingBuffer> = {
-        let manager = SHMChannelBufferManager::new_client("/stoc", 104857520).unwrap();
-        Mutex::new(RingBuffer::new(Box::new(manager)))
+    static ref CHANNEL_RECEIVER: Mutex<Channel> = {
+        let c = Box::new(SHMChannel::new_client("/stoc", 104857520).unwrap());
+        Mutex::new(Channel::new(c))
     };
     static ref ENABLE_LOG: bool = {
         if std::env::var("RUST_LOG").is_err() {

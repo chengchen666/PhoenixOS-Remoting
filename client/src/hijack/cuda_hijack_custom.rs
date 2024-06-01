@@ -59,9 +59,9 @@ pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_voi
         panic!("error registering fatbin: {:?}", result);
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     return client_address;
 }
 

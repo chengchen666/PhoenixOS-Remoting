@@ -1,23 +1,26 @@
-use super::ChannelBufferManager;
-use log::error;
-
-use std::ffi::CString;
-use std::io::Result;
-use std::os::unix::io::RawFd;
+use crate::ringbufferchannel::{BufferManager, RingBufferChannel, RingBufferManager};
+use crate::{CommChannelInner, CommChannelError};
 
 use errno::errno;
+use log::error;
+use std::ffi::CString;
+use std::io::Result as IOResult;
+use std::os::unix::io::RawFd;
 
 /// A shared memory channel buffer manager
-pub struct SHMChannelBufferManager {
+pub struct SHMChannel {
     shm_name: String,
-    shm_ptr: *mut libc::c_void,
+    shm_ptr: *mut u8,
     shm_len: usize,
 }
 
-impl SHMChannelBufferManager {
+unsafe impl Send for SHMChannel {}
+unsafe impl Sync for SHMChannel {}
+
+impl SHMChannel {
     /// Create a new shared memory channel buffer manager for the server
     /// The name server is more consistent with the remoting library
-    pub fn new_server(shm_name: &str, shm_len: usize) -> Result<Self> {
+    pub fn new_server(shm_name: &str, shm_len: usize) -> IOResult<Self> {
         Self::new_inner(
             shm_name,
             shm_len,
@@ -26,7 +29,7 @@ impl SHMChannelBufferManager {
         )
     }
 
-    pub fn new_client(shm_name: &str, shm_len: usize) -> Result<Self> {
+    pub fn new_client(shm_name: &str, shm_len: usize) -> IOResult<Self> {
         Self::new_inner(
             shm_name,
             shm_len,
@@ -34,10 +37,9 @@ impl SHMChannelBufferManager {
             (libc::S_IRUSR | libc::S_IWUSR) as _,
         )
     }
-    fn new_inner(shm_name: &str, shm_len: usize, oflag: i32, sflag: i32) -> Result<Self> {
+    fn new_inner(shm_name: &str, shm_len: usize, oflag: i32, sflag: i32) -> IOResult<Self> {
         let shm_name_c_str = CString::new(shm_name).unwrap();
-        let fd: RawFd =
-            unsafe { libc::shm_open(shm_name_c_str.as_ptr(), oflag, sflag as _) };
+        let fd: RawFd = unsafe { libc::shm_open(shm_name_c_str.as_ptr(), oflag, sflag as _) };
 
         if fd == -1 {
             error!("Error on shm_open for new_host");
@@ -71,38 +73,41 @@ impl SHMChannelBufferManager {
         Ok(Self {
             shm_name: String::from(shm_name),
             shm_len,
-            shm_ptr: shm_ptr,
+            shm_ptr: shm_ptr as *mut u8,
         })
     }
 }
 
-impl Drop for SHMChannelBufferManager {
+impl Drop for SHMChannel {
     fn drop(&mut self) {
         unsafe {
-            libc::munmap(self.shm_ptr, self.shm_len);
+            libc::munmap(self.shm_ptr as *mut libc::c_void, self.shm_len);
             let shm_name_ = CString::new(self.shm_name.clone()).unwrap();
             libc::shm_unlink(shm_name_.as_ptr());
         }
     }
 }
 
-impl ChannelBufferManager for SHMChannelBufferManager {
-    fn get_managed_memory(&self) -> (*mut u8, usize) {
-        (self.shm_ptr as *mut u8, self.shm_len)
+impl BufferManager for SHMChannel {
+    fn get_ptr(&self) -> *mut u8 {
+        self.shm_ptr
     }
 
-    fn read_at(&self, offset: usize, dst: *mut u8, count: usize) -> usize {
-        unsafe {
-            std::ptr::copy_nonoverlapping(self.shm_ptr.add(offset) as _, dst, count);
-        }
-        count
+    fn get_len(&self) -> usize {
+        self.shm_len
     }
+}
 
-    fn write_at(&self, offset: usize, src: *const u8, count: usize) -> usize {
-        unsafe {
-            std::ptr::copy_nonoverlapping(src, self.shm_ptr.add(offset) as _, count);
+impl RingBufferManager for SHMChannel {}
+
+impl RingBufferChannel for SHMChannel {}
+
+impl CommChannelInner for SHMChannel {
+    fn flush_out(&self) -> Result<(), CommChannelError> {
+        while self.is_full() {
+            // Busy-waiting
         }
-        count
+        Ok(())
     }
 }
 
@@ -114,7 +119,7 @@ mod tests {
     fn shm_channel_buffer_manager() {
         let shm_name = "/stoc";
         let shm_len = 64;
-        let manager = SHMChannelBufferManager::new_server(shm_name, shm_len).unwrap();
+        let manager = SHMChannel::new_server(shm_name, shm_len).unwrap();
         assert_eq!(manager.shm_len, shm_len);
     }
 }

@@ -1,5 +1,5 @@
 use crate::{CommChannel, CommChannelError, RawMemory, RawMemoryMut, Transportable};
-use log::info;
+
 macro_rules! impl_transportable {
     ($($t:ty),*) => {
         $(
@@ -12,15 +12,14 @@ macro_rules! impl_transportable {
                         false => Err(CommChannelError::IoError),
                     }
                 }
+
                 fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError> {
                     let memory = RawMemory::new(self, std::mem::size_of::<Self>());
                     match channel.put_bytes(&memory)? == std::mem::size_of::<Self>() {
                         true => {
-                            crate::increment(std::mem::size_of::<Self>());
                             Ok(())},
                         false => Err(CommChannelError::IoError),
                     }
-
                 }
 
                 fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
@@ -31,16 +30,6 @@ macro_rules! impl_transportable {
                     }
                 }
 
-                fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
-                    let mut memory = RawMemoryMut::new(self, std::mem::size_of::<Self>());
-                    let length = channel.safe_try_get_bytes(&mut memory)?;
-                    match length == std::mem::size_of::<Self>() {
-                        true => Ok(()),
-                        false => {
-                            if length != 0 {info!("[{}:{}] Actual reading bytes {}",std::file!(), std::line!(), length);}
-                        Err(CommChannelError::BlockOperation)},
-                    }
-                }
             }
         )*
     };
@@ -60,10 +49,6 @@ impl Transportable for () {
     }
 
     fn recv<T: CommChannel>(&mut self, _channel: &mut T) -> Result<(), CommChannelError> {
-        Ok(())
-    }
-
-    fn try_recv<T: CommChannel>(&mut self, _channel: &mut T) -> Result<(), CommChannelError> {
         Ok(())
     }
 }
@@ -103,17 +88,6 @@ impl<S> Transportable for [S] {
         }
     }
 
-    fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
-        let len = self.len() * std::mem::size_of::<S>();
-        let mut memory = RawMemoryMut::from_ptr(self.as_mut_ptr() as *mut u8, len);
-        let length = channel.safe_try_get_bytes(&mut memory)?;
-        match length == len {
-            true => Ok(()),
-            false => {
-                Err(CommChannelError::BlockOperation)
-            }
-        }
-    }
 }
 
 impl<S> Transportable for Vec<S>
@@ -138,77 +112,68 @@ where
         self.as_mut_slice().recv(channel)
     }
 
-    fn try_recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError> {
-        let mut len: usize = 0;
-        len.try_recv(channel)?;
-        self.resize(len, S::default());
-        self.as_mut_slice().try_recv(channel)
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ringbufferchannel::{channel::META_AREA, LocalChannelBufferManager, RingBuffer};
-    use std::boxed::Box;
+    use crate::{
+        ringbufferchannel::{LocalChannel, META_AREA},
+        Channel,
+    };
 
     /// Test bool Transportable impl
     #[test]
     fn test_bool_io() {
-        let mut buffer: RingBuffer =
-            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
+        let mut channel = Channel::new(Box::new(LocalChannel::new(10 + META_AREA)));
         let a = true;
         let mut b = false;
-        a.send(&mut buffer).unwrap();
-        b.recv(&mut buffer).unwrap();
+        a.send(&mut channel).unwrap();
+        b.recv(&mut channel).unwrap();
         assert_eq!(a, b);
     }
 
     /// Test i32 Transportable impl
     #[test]
     fn test_i32_io() {
-        let mut buffer: RingBuffer =
-            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
+        let mut channel = Channel::new(Box::new(LocalChannel::new(10 + META_AREA)));
         let a = 123;
         let mut b = 0;
-        a.send(&mut buffer).unwrap();
-        b.recv(&mut buffer).unwrap();
+        a.send(&mut channel).unwrap();
+        b.recv(&mut channel).unwrap();
         assert_eq!(a, b);
     }
 
     /// Test [u8] Transportable impl
     #[test]
     fn test_u8_array_io() {
-        let mut buffer: RingBuffer =
-            RingBuffer::new(Box::new(LocalChannelBufferManager::new(10 + META_AREA)));
+        let mut channel = Channel::new(Box::new(LocalChannel::new(10 + META_AREA)));
         let a = [1u8, 2, 3, 4, 5];
         let mut b = [0u8; 5];
-        a.send(&mut buffer).unwrap();
-        b.recv(&mut buffer).unwrap();
+        a.send(&mut channel).unwrap();
+        b.recv(&mut channel).unwrap();
         assert_eq!(a, b);
     }
 
     /// Test [i32] Transportable impl
     #[test]
     fn test_i32_array_io() {
-        let mut buffer: RingBuffer =
-            RingBuffer::new(Box::new(LocalChannelBufferManager::new(50 + META_AREA)));
+        let mut channel = Channel::new(Box::new(LocalChannel::new(50 + META_AREA)));
         let a = [1i32, 2, 3, 4, 5];
         let mut b = [0i32; 5];
-        a.send(&mut buffer).unwrap();
-        b.recv(&mut buffer).unwrap();
+        a.send(&mut channel).unwrap();
+        b.recv(&mut channel).unwrap();
         assert_eq!(a, b);
     }
 
     /// Test Vec<i32> Transportable impl
     #[test]
     fn test_vec_io() {
-        let mut buffer: RingBuffer =
-            RingBuffer::new(Box::new(LocalChannelBufferManager::new(50 + META_AREA)));
+        let mut channel = Channel::new(Box::new(LocalChannel::new(50 + META_AREA)));
         let a = vec![1, 2, 3, 4, 5];
         let mut b = vec![0; 5];
-        a.send(&mut buffer).unwrap();
-        b.recv(&mut buffer).unwrap();
+        a.send(&mut channel).unwrap();
+        b.recv(&mut channel).unwrap();
         assert_eq!(a, b);
     }
 }

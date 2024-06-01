@@ -1,69 +1,110 @@
-use super::ChannelBufferManager;
+use crate::ringbufferchannel::{
+    BufferManager, RingBufferChannel, RingBufferManager, HEAD_OFF, META_AREA, TAIL_OFF,
+};
+use crate::{CommChannelInner, CommChannelError};
 
 use log::info;
+use std::io::Result as IOResult;
 use std::net::SocketAddr;
-use std::sync::{Mutex, Arc};
-use std::io::Result;
-use std::thread::JoinHandle;
+use std::sync::{Arc, Mutex};
 
-use KRdmaKit::services_user::{ConnectionManagerServer, DefaultConnectionManagerHandler, MRInfo};
-use KRdmaKit::context::{Context};
-use KRdmaKit::{MemoryRegion, QueuePairBuilder, QueuePairStatus, UDriver, QueuePair};
+use KRdmaKit::context::Context;
+use KRdmaKit::services_user::{
+    ConnectionManagerServer, DefaultConnectionManagerHandler, MRInfo, MRWrapper,
+};
+use KRdmaKit::{
+    ControlpathError::CreationError, MemoryRegion, QueuePair, QueuePairBuilder, QueuePairStatus,
+    UDriver,
+};
 
-struct Server {
-    cm: Arc<ConnectionManagerServer<DefaultConnectionManagerHandler>>,
-    listener: Arc<Mutex<JoinHandle<std::io::Result<()>>>>,
-}
+const BATCH_SIZE: usize = 16;
 
-struct Client {
+pub struct RDMAChannel {
+    mr_ptr: *mut u8,
+    buf_len: usize,
     mr: Arc<MemoryRegion>,
     qp: Arc<QueuePair>,
     rinfo: MRInfo,
+    pending_num: Arc<Mutex<usize>>,
+    last_tail: Arc<Mutex<usize>>,
 }
 
-// connnection type
-enum Conn {
-    Server(Server),
-    Client(Client),
-}
+unsafe impl Send for RDMAChannel {}
+unsafe impl Sync for RDMAChannel {}
 
-pub struct RDMAChannelBufferManager {
-    _name: String,
-    ptr: *mut u8,
-    buf_len: usize,
-    conn: Conn,
-}
-
-unsafe impl Send for RDMAChannelBufferManager {}
-
-impl RDMAChannelBufferManager {
-    pub fn new_server(name: &str, buf_len: usize, addr: SocketAddr) -> Result<Self> {
-        let (ctx, mr, ptr) = Self::allocate_mr(buf_len);
+impl RDMAChannel {
+    pub fn new_server(name: &str, buf_len: usize, addr: SocketAddr) -> IOResult<Self> {
+        let (ctx, mr, mr_ptr) = Self::allocate_mr(buf_len);
         let mut handler = DefaultConnectionManagerHandler::new(&ctx, 1);
         handler.register_mr(vec![(name.to_string(), mr)]);
         let cm = ConnectionManagerServer::new(handler);
         let listener = cm.spawn_listener(addr);
 
-        Ok(Self {
-            _name: name.to_string(),
-            ptr,
-            buf_len,
-            conn: Conn::Server(Server {
-                cm: cm,
-                listener: Arc::new(Mutex::new(listener))
-            })
-        })
+        // Wait client side connection, then get qp.
+        let qp = loop {
+            if let Some(qp) = cm.handler().exp_get_qps().get(0) {
+                break qp.clone();
+            }
+        };
+        // Wait to get client side mr info.
+        let rinfo = loop {
+            if let Some(value) = cm
+                .handler()
+                .exp_get_remote_mrs()
+                .lock()
+                .unwrap()
+                .inner()
+                .get(name)
+            {
+                break value.clone();
+            }
+        };
+
+        cm.stop_listening();
+        let _ = listener.join();
+
+        let mut handler = Arc::try_unwrap(cm)
+            .unwrap_or_else(|_| panic!("Failed to unwrap cm"))
+            .into_handler();
+        let Some(mr) = handler.registered_mr.inner.remove(name) else {
+            panic!()
+        };
+
+        Ok(Self::new(mr_ptr, buf_len, mr.into(), qp, rinfo))
     }
 
-    pub fn new_client(name: &str, buf_len: usize, addr: SocketAddr, client_port: u8) -> Result<Self> {
-        let (ctx, mr, ptr) = Self::allocate_mr(buf_len);
+    pub fn new_client(
+        name: &str,
+        buf_len: usize,
+        addr: SocketAddr,
+        client_port: u8,
+    ) -> IOResult<Self> {
+        let (ctx, mr, mr_ptr) = Self::allocate_mr(buf_len);
         let mut builder = QueuePairBuilder::new(&ctx);
         builder
             .allow_remote_rw()
             .allow_remote_atomic()
             .set_port_num(client_port);
-        let qp = builder.build_rc().expect("failed to create the client QP");
-        let qp = qp.handshake(addr).expect("Handshake failed!");
+        let qp = loop {
+            let qp = builder
+                .clone()
+                .build_rc()
+                .expect("failed to create the client QP");
+            match qp.handshake(addr) {
+                Ok(res) => {
+                    break res;
+                }
+                Err(e) => {
+                    if let CreationError(msg, _) = &e {
+                        if *msg == "Failed to connect server" {
+                            std::thread::sleep(std::time::Duration::from_millis(10));
+                            continue;
+                        }
+                    }
+                    panic!("Handshake failed!");
+                }
+            }
+        };
         match qp.status().expect("Query status failed!") {
             QueuePairStatus::ReadyToSend => info!("QP bring up succeeded"),
             _ => eprintln!("Error : Bring up failed"),
@@ -72,16 +113,18 @@ impl RDMAChannelBufferManager {
         let mr_infos = qp.query_mr_info().expect("Failed to query MR info");
         let rinfo = *(mr_infos.inner().get(name).expect("Unregistered MR"));
 
-        Ok(Self {
-            _name: name.to_string(),
-            ptr,
-            buf_len,
-            conn: Conn::Client(Client {
-                mr: mr.into(),
-                qp,
-                rinfo
-            })
-        })
+        // Send client side mr info to server.
+        let mrs = vec![(name.to_string(), mr)];
+        let mut mr_wrapper: MRWrapper = Default::default();
+        mr_wrapper.insert(mrs);
+        let mr_info = mr_wrapper.to_mrinfos();
+        let _ = qp.send_mr_info(mr_info).unwrap();
+
+        let Some(mr) = mr_wrapper.inner.remove(name) else {
+            panic!()
+        };
+
+        Ok(Self::new(mr_ptr, buf_len, mr.into(), qp, rinfo))
     }
 
     /// A simple loop queue pair poll to poll completion queue synchronously.
@@ -99,6 +142,40 @@ impl RDMAChannelBufferManager {
         return 0;
     }
 
+    pub fn poll_batch(qp: &Arc<QueuePair>) -> i32 {
+        let mut completions = [Default::default(); BATCH_SIZE];
+        loop {
+            if let Ok(ret) = qp.poll_send_cq(&mut completions) {
+                if ret.len() > 0 {
+                    break;
+                }
+            } else {
+                return -1;
+            }
+        }
+        return 0;
+    }
+
+    #[inline]
+    pub fn get_pending_num(&self) -> usize {
+        *self.pending_num.lock().unwrap()
+    }
+
+    #[inline]
+    pub fn set_pending_num(&self, pending_num: usize) {
+        *self.pending_num.lock().unwrap() = pending_num;
+    }
+
+    #[inline]
+    pub fn get_last_tail(&self) -> usize {
+        *self.last_tail.lock().unwrap()
+    }
+
+    #[inline]
+    pub fn set_last_tail(&self, last_tail: usize) {
+        *self.last_tail.lock().unwrap() = last_tail;
+    }
+
     fn allocate_mr(buf_len: usize) -> (Arc<Context>, MemoryRegion, *mut u8) {
         let ctx = UDriver::create()
             .expect("failed to query device")
@@ -109,56 +186,105 @@ impl RDMAChannelBufferManager {
             .open_context()
             .expect("failed to create RDMA context");
         let mr = MemoryRegion::new(ctx.clone(), buf_len).expect("Failed to allocate MR");
-        let ptr = mr.get_virt_addr() as *mut u8;
-        (ctx, mr, ptr)
+        let mr_ptr = mr.get_virt_addr() as *mut u8;
+        (ctx, mr, mr_ptr)
+    }
+
+    fn new(
+        mr_ptr: *mut u8,
+        buf_len: usize,
+        mr: Arc<MemoryRegion>,
+        qp: Arc<QueuePair>,
+        rinfo: MRInfo,
+    ) -> Self {
+        Self {
+            mr_ptr,
+            buf_len,
+            mr,
+            qp,
+            rinfo,
+            pending_num: Arc::new(Mutex::new(0)),
+            last_tail: Arc::new(Mutex::new(0)),
+        }
     }
 }
 
-impl Drop for RDMAChannelBufferManager {
-    fn drop(&mut self) {
-        // Just need to handle server side listener specifically.
-        // The MemoryRegion with Arc wrapped with be drop automatically.
-        if let Conn::Server(server) = &self.conn {
-            server.cm.stop_listening();
-            match Arc::try_unwrap(server.listener.clone()) {
-                Ok(mutex) => {
-                    let join_handle = mutex.into_inner().unwrap();
-                    let _ = join_handle.join();
-                }
-                Err(_) => {}
-            };
+impl RDMAChannel {
+    fn get_req_id(&self) -> u64 {
+        lazy_static! {
+            static ref REQ_ID: Mutex<u64> = Mutex::new(0);
         }
+        *REQ_ID.lock().unwrap() += 1;
+        *REQ_ID.lock().unwrap()
+    }
+
+    fn read_remote(&self, offset: usize, len: usize) -> usize {
+        let l: u64 = offset as u64;
+        let r: u64 = l + len as u64;
+        let _ = self.qp.post_send_read(
+            &self.mr,
+            l..r,
+            true,
+            self.rinfo.addr + l,
+            self.rinfo.rkey,
+            self.get_req_id(),
+        );
+        Self::poll_till_completion(&self.qp);
+        len
+    }
+
+    fn write_remote(&self, offset: usize, len: usize) -> usize {
+        let l: u64 = offset as u64;
+        let r: u64 = l + len as u64;
+        let _ = self.qp.post_send_write(
+            &self.mr,
+            l..r,
+            true,
+            self.rinfo.addr + l,
+            self.rinfo.rkey,
+            self.get_req_id(),
+        );
+
+        self.set_pending_num(self.get_pending_num() + 1);
+        if self.get_pending_num() == BATCH_SIZE {
+            Self::poll_batch(&self.qp);
+            self.set_pending_num(0);
+        }
+        len
     }
 }
 
-impl ChannelBufferManager for RDMAChannelBufferManager {
-    fn get_managed_memory(&self) -> (*mut u8, usize) {
-        (self.ptr, self.buf_len)
+impl BufferManager for RDMAChannel {
+    fn get_ptr(&self) -> *mut u8 {
+        self.mr_ptr
     }
 
-    fn read_at(&self, offset: usize, dst: *mut u8, count: usize) -> usize {
-        if let Conn::Client(client) = &self.conn {
-            let l: u64 = offset as u64;
-            let r: u64 = l + (count * std::mem::size_of::<u8>()) as u64;
-            let _ = client.qp.post_send_read(&client.mr, l..r, true, client.rinfo.addr + l, client.rinfo.rkey, l);
-            Self::poll_till_completion(&client.qp);
-        }
-        unsafe {
-            std::ptr::copy_nonoverlapping(self.ptr.add(offset) as _, dst, count);
-        }
-        count
+    fn get_len(&self) -> usize {
+        self.buf_len
     }
+}
 
-    fn write_at(&self, offset: usize, src: *const u8, count: usize) -> usize {
-        unsafe {
-            std::ptr::copy_nonoverlapping(src, self.ptr.add(offset) as _, count);
+impl RingBufferManager for RDMAChannel {}
+
+impl RingBufferChannel for RDMAChannel {}
+
+impl CommChannelInner for RDMAChannel {
+    fn flush_out(&self) -> Result<(), CommChannelError> {
+        let cur_tail = self.read_tail_volatile();
+        let last_tail = self.get_last_tail();
+        if last_tail < cur_tail {
+            self.write_remote(META_AREA + last_tail, cur_tail - last_tail);
         }
-        if let Conn::Client(client) = &self.conn {
-            let l: u64 = offset as u64;
-            let r: u64 = l + (count * std::mem::size_of::<u8>()) as u64;
-            let _ = client.qp.post_send_write(&client.mr, l..r, true, client.rinfo.addr + l, client.rinfo.rkey, l + self.buf_len as u64);
-            Self::poll_till_completion(&client.qp);
+        if cur_tail < last_tail {
+            self.write_remote(META_AREA + last_tail, self.capacity() - last_tail);
+            self.write_remote(META_AREA, cur_tail);
         }
-        count
+
+        self.read_remote(HEAD_OFF, std::mem::size_of::<usize>());
+
+        self.set_last_tail(cur_tail);
+        self.write_tail_volatile(cur_tail);
+        self.write_remote(TAIL_OFF, std::mem::size_of::<usize>());
+        Ok(())
     }
 }
