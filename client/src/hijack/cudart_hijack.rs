@@ -2,6 +2,14 @@
 use super::*;
 use cudasys::types::cudart::*;
 
+#[cfg(feature = "local")]
+gen_hijack_local!(
+    0,
+    "cudaGetDevice",
+    "cudaError_t",
+    "*mut ::std::os::raw::c_int"
+);
+#[cfg(not(feature = "local"))]
 gen_hijack!(
     0,
     "cudaGetDevice",
@@ -28,6 +36,9 @@ gen_hijack!(6, "cudaMalloc", "cudaError_t", "*mut MemPtr", "size_t");
 //     "size_t",
 //     "cudaMemcpyKind"
 // );
+#[cfg(feature = "async_api")]
+gen_hijack_async!(8, "cudaFree", "cudaError_t", "MemPtr");
+#[cfg(not(feature = "async_api"))]
 gen_hijack!(8, "cudaFree", "cudaError_t", "MemPtr");
 gen_hijack!(
     9,

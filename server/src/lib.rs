@@ -5,7 +5,7 @@ extern crate codegen;
 extern crate cudasys;
 extern crate network;
 
-use codegen::gen_exe;
+use codegen::{gen_exe, gen_exe_async};
 use cudasys::{
     cuda::{CUdeviceptr, CUfunction, CUmodule},
     cudart::{cudaDeviceSynchronize, cudaError_t, cudaGetDeviceCount, cudaSetDevice},
@@ -29,6 +29,13 @@ use std::boxed::Box;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+use cudasys::cudnn::cudnnTensorDescriptor_t;
+
+#[derive(Clone)]
+enum ResourceType {
+    TensorDescriptor(cudnnTensorDescriptor_t),
+}
+
 lazy_static! {
     // client_address -> module
     static ref MODULES: Mutex<HashMap<MemPtr, CUmodule>> = Mutex::new(HashMap::new());
@@ -36,6 +43,8 @@ lazy_static! {
     static ref FUNCTIONS: Mutex<HashMap<MemPtr, CUfunction>> = Mutex::new(HashMap::new());
     // host_var -> device_var
     static ref VARIABLES: Mutex<HashMap<MemPtr, CUdeviceptr>> = Mutex::new(HashMap::new());
+
+    static ref RESOURCES: Mutex<HashMap<usize, usize>> = Mutex::new(HashMap::new());
 }
 
 fn add_module(client_address: MemPtr, module: CUmodule) {
@@ -60,6 +69,18 @@ fn add_variable(host_var: MemPtr, device_var: CUdeviceptr) {
 
 fn get_variable(host_var: MemPtr) -> Option<CUdeviceptr> {
     VARIABLES.lock().unwrap().get(&host_var).cloned()
+}
+
+fn add_resource(id: usize, res: usize) {
+    RESOURCES.lock().unwrap().insert(id, res);
+}
+
+fn get_resource(id: usize) -> usize {
+    RESOURCES.lock().unwrap().get(&id).cloned().unwrap()
+}
+
+fn remove_resource(id: usize) -> usize {
+    RESOURCES.lock().unwrap().remove(&id).unwrap()
 }
 
 #[cfg(not(feature = "emulator"))]

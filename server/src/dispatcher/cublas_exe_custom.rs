@@ -100,10 +100,13 @@ pub fn cublasSgemm_v2Exe<T: CommChannel>(channel_sender: &mut T, channel_receive
             ldc,
         )
     };
-    if let Err(e) = result.send(channel_sender) {
-        error!("Error sending result: {:?}", e);
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.send(channel_sender) {
+            error!("Error sending result: {:?}", e);
+        }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cublasSgemmStridedBatchedExe<T: CommChannel>(

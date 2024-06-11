@@ -75,3 +75,33 @@ cublasSetMathMode = { default = true }
 cublasSetStream_v2 = { default = true }
 cublasSgemm_v2 = { default = false }
 cublasSgemmStridedBatched = { default = false }
+
+[opt]
+async_api = [
+    "cudaMemsetAsync", # it's unimplemented
+    "cudaLaunchKernel",
+    "cudaFree",
+    "cudaMemcpyAsync",
+    
+    "cudnnSetStream",
+    "cudnnSetFilterNdDescriptor",
+    "cudnnDestroyFilterDescriptor",
+    "cudnnSetConvolutionGroupCount",
+    "cudnnSetConvolutionNdDescriptor",
+    "cudnnSetConvolutionMathType",
+    "cudnnDestroyConvolutionDescriptor",
+    "cudnnSetTensorNdDescriptor",
+    "cudnnDestroyTensorDescriptor",
+    "cudnnConvolutionForward",
+    "cudnnBatchNormalizationForwardInference",
+    
+    "cublasSetStream_v2",
+    "cublasSetMathMode",
+    "cublasSgemm_v2",
+]
+
+shadow_desc = [
+    "cudnnCreateTensorDescriptor",
+    "cudnnCreateFilterDescriptor",
+    "cudnnCreateConvolutionDescriptor",
+]

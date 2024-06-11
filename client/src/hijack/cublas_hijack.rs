@@ -9,6 +9,15 @@ gen_hijack!(
     "cublasHandle_t"
 );
 
+#[cfg(feature = "async_api")]
+gen_hijack_async!(
+    2002,
+    "cublasSetStream_v2", 
+    "cublasStatus_t", 
+    "cublasHandle_t", 
+    "cudaStream_t"
+);
+#[cfg(not(feature = "async_api"))]
 gen_hijack!(
     2002,
     "cublasSetStream_v2", 
@@ -17,6 +26,15 @@ gen_hijack!(
     "cudaStream_t"
 );
 
+#[cfg(feature = "async_api")]
+gen_hijack_async!(
+    2003,
+    "cublasSetMathMode", 
+    "cublasStatus_t", 
+    "cublasHandle_t", 
+    "cublasMath_t"
+);
+#[cfg(not(feature = "async_api"))]
 gen_hijack!(
     2003,
     "cublasSetMathMode", 
