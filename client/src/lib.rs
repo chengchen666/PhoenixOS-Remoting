@@ -35,6 +35,8 @@ use std::{
     sync::Mutex,
 };
 
+extern crate tick_counter;
+
 lazy_static! {
     // Use features when compiling to decide what arm(s) will be supported.
     // In the client side, the sender's name is ctos_channel_name,

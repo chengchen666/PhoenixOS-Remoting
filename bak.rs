@@ -70,10 +70,6 @@ pub extern "C" fn cudaMemcpy(
 
     #[cfg(feature = "async_api")]
     {
-        match channel_receiver.recv_ts() {
-            Ok(()) => {}
-            Err(e) => panic!("failed to receive timestamp: {:?}", e),
-        }
         return cudaError_t::cudaSuccess;
     }
     #[cfg(not(feature = "async_api"))]
@@ -104,17 +100,16 @@ pub extern "C" fn cudaMemcpyAsync(
     cudaMemcpy(dst, src, count, kind)
 }
 
-// use std::arch::x86_64::__rdtscp;
-// use tick_counter;
 use std::arch::asm;
-#[feature(inline_asm)]
+#[feature(asm)]
+#[inline]
 fn rdtscp() -> u64 {
-    let lo: u32;
-    let hi: u32;
     unsafe {
+        let lo: u32;
+        let hi: u32;
         asm!("rdtscp", out("rax") lo, out("rdx") hi, options(nomem, nostack));
+        ((hi as u64) << 32) | (lo as u64)
     }
-    ((hi as u64) << 32) | (lo as u64)
 }
 fn clock2ns(clock: u64) -> f64 {
     clock as f64 / 2.5
@@ -137,8 +132,8 @@ pub extern "C" fn cudaLaunchKernel(
     let proc_id = 200;
     let mut result: cudaError_t = Default::default();
 
-    // let total_start = rdtscp();
-    // let serialize_start = rdtscp();
+    let total_start = rdtscp();
+    let serialize_start = rdtscp();
     let info: *mut kernel_info_t =
         ELF_CONTROLLER.find_kernel_host_func(func as *mut ::std::os::raw::c_void);
     if info.is_null() {
@@ -189,26 +184,26 @@ pub extern "C" fn cudaLaunchKernel(
         Ok(()) => {}
         Err(e) => panic!("failed to send stream: {:?}", e),
     }
-    // let serialize_end =rdtscp();
-    // let send_start = rdtscp();
+    let serialize_end = rdtscp();
+    let send_start = rdtscp();
     match channel_sender.flush_out() {
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    let send_end = tick_counter::stop();
+    let send_end = rdtscp();
 
     #[cfg(feature = "async_api")]
     {
-        // let total_end =rdtscp();
-        // println!("{}, {}, {}",
-        //     clock2ns(total_end - total_start),
-        //     clock2ns(serialize_end - serialize_start),
-        //     clock2ns(send_end - send_start));
+        let total_end = rdtscp();
+        println!("total_time: {}\nserialize_time: {}\nsend_time: {}\n",
+            clock2ns(total_end - total_start),
+            clock2ns(serialize_end - serialize_start),
+            clock2ns(send_end - send_start));
         return cudaError_t::cudaSuccess;
     }
     #[cfg(not(feature = "async_api"))]
     {
-        // let recv_start = rdtscp();
+        let recv_start = rdtscp();
         match result.recv(channel_receiver) {
             Ok(()) => {}
             Err(e) => panic!("failed to receive result: {:?}", e),
@@ -217,18 +212,13 @@ pub extern "C" fn cudaLaunchKernel(
             Ok(()) => {}
             Err(e) => panic!("failed to receive timestamp: {:?}", e),
         }
-        // let recv_end =rdtscp();
-        // let total_end =rdtscp();
-        // println!("{}, {}, {}, {}, {}, {}, {}, {}",
-        //     total_end, total_start,
-        //     serialize_end, serialize_start,
-        //     send_end, send_start,
-        //     recv_end, recv_start);
-        // println!("{}, {}, {}, {}",
-        //     clock2ns(total_end - total_start),
-        //     clock2ns(serialize_end - serialize_start),
-        //     clock2ns(send_end - send_start),
-        //     clock2ns(recv_end - recv_start));
+        let recv_end = rdtscp();
+        let total_end = rdtscp();
+        println!("total_time: {}\nserialize_time: {}\nsend_time: {}\nrecv_time: {}\n",
+            clock2ns(total_end - total_start),
+            clock2ns(serialize_end - serialize_start),
+            clock2ns(send_end - send_start),
+            clock2ns(recv_end - recv_start));
         return result;
     }
 }

@@ -103,6 +103,28 @@ pub fn cudaFreeExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mu
     }
 }
 
+// use tick_counter;
+use std::arch::asm;
+// extern crate core;
+// use core::arch::x86::__rdtscp;
+#[feature(inline_asm)]
+fn rdtscp() -> u64 {
+    let lo: u32;
+    let hi: u32;
+    unsafe {
+        asm!("rdtscp", out("rax") lo, out("rdx") hi, options(nomem, nostack));
+    }
+    ((hi as u64) << 32) | (lo as u64)
+}
+// #[inline]
+// fn rdtscp() -> u64 {
+//     let mut aux = 0;
+//     __rdtscp(&aux)
+// }
+fn clock2ns(clock: u64) -> f64 {
+    clock as f64 / 2.5
+}
+
 pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
     info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
     let mut func: MemPtr = Default::default();
@@ -133,6 +155,8 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
     }
 
     let device_func = get_function(func).unwrap();
+    // let raw_start = unsafe {__rdtscp(std::ptr::null_mut())};
+    // let raw_start = rdtscp();
     let result = unsafe {
         cudasys::cuda::cuLaunchKernel(
             device_func,
@@ -148,6 +172,9 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
             std::ptr::null_mut(),
         )
     };
+    // let raw_end = unsafe {__rdtscp(std::ptr::null_mut())};
+    // let raw_end =rdtscp();
+    // println!("{}, {}, {}", raw_start, raw_end, clock2ns(raw_end - raw_start));
 
     #[cfg(not(feature = "async_api"))]
     {

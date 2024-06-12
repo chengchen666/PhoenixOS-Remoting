@@ -14,17 +14,19 @@ log = "0.4.0"
 env_logger = "0.9"
 lazy_static = "1.4.0"
 ctor = "0.1"
+tick_counter = "0.4.5"
 
 [build-dependencies]
 network = { path = "../network" }
+tick_counter = "0.4.5"
 
 [lib]
 crate-type = ["cdylib"]
 
 [features]
 # default = ["rdma"]
-# default = ["shm", "emulator"]
-default = ["shm"]
+default = ["shm", "emulator"]
+# default = ["shm"]
 shm = []
 rdma = []
 emulator = []

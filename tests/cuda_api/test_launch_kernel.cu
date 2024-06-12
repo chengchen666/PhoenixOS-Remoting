@@ -3,34 +3,38 @@
 #include <chrono>
 #include <iostream>
 
-__global__ void addKernel(int *c, const int *a, const int *b, int size)
+__global__ void addKernel(unsigned int *c, const unsigned int *a, const unsigned int *b, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
         c[i] = a[i] + b[i];
     }
+    clock_t start_clock = clock();
+    while (clock() - start_clock < 10000000)
+    {
+    }
 }
 
 int main(int argc, char **argv)
 {
-    const int size = 10;
-    const int iterations = 1;
-    int *a = new int[size];
-    int *dev_a = nullptr;
+    const int size = 100;
+    const int iterations = 10;
+    unsigned int *a = new unsigned int[size];
+    unsigned int *dev_a = nullptr;
 
     for (int i = 0; i < size; i++) {
         a[i] = i;
     }
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < 10; i++) {
         std::cout << a[i] << " ";
     }
     std::cout << std::endl;
 
     // Allocate GPU buffers for three vectors (two input, one output)
-    cudaMalloc((void **)&dev_a, size * sizeof(int));
+    cudaMalloc((void **)&dev_a, size * sizeof(unsigned int));
 
     // Copy input vectors from host memory to GPU buffers.
-    cudaMemcpy(dev_a, a, size * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_a, a, size * sizeof(unsigned int), cudaMemcpyHostToDevice);
 
     // remove initial overhead
     for (int i = 0; i < 10; i++) {
@@ -42,21 +46,24 @@ int main(int argc, char **argv)
     for (int i = 0; i < iterations; i++) {
         addKernel<<<2, (size + 1) / 2>>>(dev_a, dev_a, dev_a, size);
     }
+    // cudaDeviceSynchronize();
     auto end = std::chrono::high_resolution_clock::now();
     // Calculate the elapsed time in milliseconds
     std::chrono::duration<double, std::milli> elapsed = end - start;
+
     double totalElapsedTime = elapsed.count();
 
     //  Calculate the average elapsed time
     double averageElapsedTime = totalElapsedTime / iterations;
 
+    std::cout << "Total elapsed time: " << totalElapsedTime << " ms" << std::endl;
     std::cout << "Average elapsed time: " << averageElapsedTime << " ms" << std::endl;
 
     // Copy output vector from GPU buffer to host memory.
     cudaMemcpy(a, dev_a, size * sizeof(int), cudaMemcpyDeviceToHost);
     cudaFree(dev_a);
 
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < 10; i++) {
         std::cout << a[i] << " ";
     }
     std::cout << std::endl;
