@@ -120,6 +120,10 @@ pub extern "C" fn cublasSgemm_v2(
 
     #[cfg(feature = "async_api")]
     {
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
         return cublasStatus_t::CUBLAS_STATUS_SUCCESS;
     }
     #[cfg(not(feature = "async_api"))]

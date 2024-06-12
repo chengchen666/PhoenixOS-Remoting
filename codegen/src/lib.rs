@@ -394,8 +394,10 @@ pub fn gen_hijack_async(input: TokenStream) -> TokenStream {
                 Err(e) => panic!("failed to flush_out: {:?}", e),
             }
 
-            #( #recv_statements )*
-            #( #assign_statements )*
+            match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
             return #result;
         }
     };
@@ -597,12 +599,6 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
         });
 
     let func_name = quote!{#func}.to_string();
-    // let parts: Vec<_> = func_name.split("Destroy").collect();
-    // let is_destroy = false;
-    // if parts.len() == 2 {
-    //     let resource = parts[1];
-    //     is_destroy = true;
-    // }
     let parts: Vec<_> = func_name.split("Destroy").collect();
     let (is_destroy, resource_str) = if parts.len() == 2 {
         (true, parts[1])
@@ -610,11 +606,6 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
         (false, "")
     };
 
-    // let (is_destroy, resource_str) = if let Ok(parts) = func_name.split("Destroy").collect::<Vec<_>>().split_at(1) {
-    //     (true, parts[1].join(""))
-    // } else {
-    //     (false, String::new())
-    // };
     // get resource when SR
     #[cfg(feature = "shadow_desc")]
     let get_resource_statements = params
@@ -634,18 +625,6 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
                 quote! { let mut #name = get_resource(#name as usize); }
             }
         });
-    // #[cfg(feature = "shadow_desc")]
-    // let remove_resource_statements = params
-    //     .iter()
-    //     .filter(|param| {
-    //         let ty = &param.ty;
-    //         let ty_str = quote!{#ty}.to_string();
-    //         is_destroy && SHADOW_DESC_TYPES.contains(&ty_str) && ty_str.contains(resource_str)
-    //     })
-    //     .map(|param| {
-    //         let name = &param.name;
-    //         quote! { let mut #name = remove_resource(#name as usize); }
-    //     });
 
     // execution statement
     let result_name = &result.name;
@@ -730,6 +709,34 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
             quote! { #name.recv(channel_receiver).unwrap(); }
         });
 
+    let func_name = quote!{#func}.to_string();
+    let parts: Vec<_> = func_name.split("Destroy").collect();
+    let (is_destroy, resource_str) = if parts.len() == 2 {
+        (true, parts[1])
+    } else {
+        (false, "")
+    };
+
+    // get resource when SR
+    #[cfg(feature = "shadow_desc")]
+    let get_resource_statements = params
+        .iter()
+        .filter(|param| {
+            let ty = &param.ty;
+            let ty_str = quote!{#ty}.to_string();
+            SHADOW_DESC_TYPES.contains(&ty_str)
+        })
+        .map(|param| {
+            let name = &param.name;
+            let ty = &param.ty;
+            let ty_str = quote!{#ty}.to_string();
+            if is_destroy && ty_str.contains(resource_str) {
+                quote! { let mut #name = remove_resource(#name as usize); }
+            } else {
+                quote! { let mut #name = get_resource(#name as usize); }
+            }
+        });
+
     // execution statement
     let result_name = &result.name;
     let exec_statement = {
@@ -750,11 +757,13 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
                 info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
                 #( #def_statements )*
                 #( #recv_statements )*
+                #( #get_resource_statements )*
                 match channel_receiver.recv_ts() {
                     Ok(()) => {}
                     Err(e) => panic!("failed to receive timestamp: {:?}", e)
                 }
                 #exec_statement
+                channel_sender.flush_out().unwrap();
             }
         };
         return gen_fn.into();
@@ -774,13 +783,12 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             #( #def_statements )*
             #( #recv_statements )*
+            #( #get_resource_statements )*
             match channel_receiver.recv_ts() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive timestamp: {:?}", e)
             }
             #exec_statement
-            #( #send_statements )*
-            channel_sender.flush_out().unwrap();
         }
     };
 

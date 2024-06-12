@@ -99,8 +99,8 @@ pub fn cudaFreeExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mu
     #[cfg(not(feature = "async_api"))]
     {
         result.send(channel_sender).unwrap();
-        channel_sender.flush_out().unwrap();
     }
+    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
@@ -152,8 +152,8 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
     #[cfg(not(feature = "async_api"))]
     {
         result.send(channel_sender).unwrap();
-        channel_sender.flush_out().unwrap();
     }
+    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudaMallocManagedExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
