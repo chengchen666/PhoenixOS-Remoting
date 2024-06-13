@@ -9,16 +9,12 @@ __global__ void addKernel(unsigned int *c, const unsigned int *a, const unsigned
     if (i < size) {
         c[i] = a[i] + b[i];
     }
-    clock_t start_clock = clock();
-    while (clock() - start_clock < 10000000)
-    {
-    }
 }
 
 int main(int argc, char **argv)
 {
     const int size = 100;
-    const int iterations = 10;
+    const int iterations = 10000;
     unsigned int *a = new unsigned int[size];
     unsigned int *dev_a = nullptr;
 

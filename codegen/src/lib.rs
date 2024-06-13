@@ -11,6 +11,9 @@ use utils::{
     get_success_status
 };
 
+extern crate measure;
+use measure::*;
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The derive macros for auto trait impl.
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -273,15 +276,37 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
             #( #def_statements )*
             let mut #result_name: #result_ty = Default::default();
             
+            // #[cfg(feature = "timer")]
+            // let mut timer = Timer::new();
+
+            // #[cfg(feature = "timer")]
+            // {
+            //     timer.start(MEASURE_TOTAL);
+            //     timer.start(MEASURE_CSER);
+            // }
+
             match proc_id.send(channel_sender) {
                 Ok(()) => {}
                 Err(e) => panic!("failed to send proc_id: {:?}", e),
             }
             #( #send_statements )*
+
+            // #[cfg(feature = "timer")]
+            // {
+            //     timer.stop(MEASURE_CSER);
+            //     timer.start(MEASURE_CSEND);
+            // }
+
             match channel_sender.flush_out() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to flush_out: {:?}", e),
             }
+
+            // #[cfg(feature = "timer")]
+            // {
+            //     timer.stop(MEASURE_CSEND);
+            //     timer.start(MEASURE_CRECV);
+            // }
 
             #( #recv_statements )*
             #( #assign_statements )*
@@ -293,6 +318,11 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive timestamp: {:?}", e),
             }
+            // #[cfg(feature = "timer")]
+            // {
+            //     timer.stop(MEASURE_CRECV);
+            //     timer.stop(MEASURE_TOTAL);
+            // }
             return #result_name;
         }
     };

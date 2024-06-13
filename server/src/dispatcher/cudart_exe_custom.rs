@@ -102,30 +102,13 @@ pub fn cudaFreeExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mu
     }
 }
 
-// use tick_counter;
-use std::arch::asm;
-// extern crate core;
-// use core::arch::x86::__rdtscp;
-#[feature(inline_asm)]
-fn rdtscp() -> u64 {
-    let lo: u32;
-    let hi: u32;
-    unsafe {
-        asm!("rdtscp", out("rax") lo, out("rdx") hi, options(nomem, nostack));
-    }
-    ((hi as u64) << 32) | (lo as u64)
-}
-// #[inline]
-// fn rdtscp() -> u64 {
-//     let mut aux = 0;
-//     __rdtscp(&aux)
-// }
-fn clock2ns(clock: u64) -> f64 {
-    clock as f64 / 2.2
-}
-
 pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
     info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
+    #[cfg(feature = "timer")]
+    let timer = &mut (*STIMER.lock().unwrap());
+
+    #[cfg(feature = "timer")]
+    timer.start(MEASURE_SRECV);
     let mut func: MemPtr = Default::default();
     func.recv(channel_receiver).unwrap();
     let mut gridDim: dim3 = Default::default();
@@ -152,9 +135,12 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+    #[cfg(feature = "timer")]
+    timer.stop(MEASURE_SRECV);
 
     let device_func = get_function(func).unwrap();
-    let raw_start = rdtscp();
+    #[cfg(feature = "timer")]
+    timer.start(MEASURE_RAW);
     let result = unsafe {
         cudasys::cuda::cuLaunchKernel(
             device_func,
@@ -170,13 +156,25 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
             std::ptr::null_mut(),
         )
     };
-    let raw_end =rdtscp();
-    println!("{}, {}, {}", raw_start, raw_end, clock2ns(raw_end - raw_start));
+    #[cfg(feature = "timer")]
+    timer.stop(MEASURE_RAW);
 
     #[cfg(not(feature = "async_api"))]
     {
+        #[cfg(feature = "timer")]
+        timer.start(MEASURE_SSER);
         result.send(channel_sender).unwrap();
+        #[cfg(feature = "timer")]
+        timer.stop(MEASURE_SSER);
+
+        #[cfg(feature = "timer")]
+        timer.start(MEASURE_SSEND);
         channel_sender.flush_out().unwrap();
+        #[cfg(feature = "timer")]
+        timer.stop(MEASURE_SSEND);
+
+        #[cfg(feature = "timer")]
+        timer.plus_cnt();
     }
 }
 

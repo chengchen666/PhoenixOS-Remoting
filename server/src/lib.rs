@@ -29,7 +29,8 @@ use std::boxed::Box;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-extern crate tick_counter;
+extern crate measure;
+use measure::*;
 
 use cudasys::cudnn::cudnnTensorDescriptor_t;
 

@@ -19,6 +19,9 @@ extern crate codegen;
 use codegen::{gen_hijack, gen_hijack_async, gen_hijack_local};
 use codegen::gen_unimplement;
 
+extern crate measure;
+use measure::*;
+
 pub mod hijack;
 pub use hijack::*;
 
@@ -34,8 +37,6 @@ use std::collections::HashMap;
 use std::{
     sync::Mutex,
 };
-
-extern crate tick_counter;
 
 lazy_static! {
     // Use features when compiling to decide what arm(s) will be supported.
