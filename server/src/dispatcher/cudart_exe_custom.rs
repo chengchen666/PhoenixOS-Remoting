@@ -60,9 +60,8 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
     #[cfg(not(feature = "async_api"))]
     {
         result.send(channel_sender).unwrap();
+        channel_sender.flush_out().unwrap();
     }
-
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudaMallocExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {

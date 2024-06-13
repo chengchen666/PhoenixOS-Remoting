@@ -43,6 +43,7 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
     let mut tensorDesc: cudnnTensorDescriptor_t = Default::default();
     unsafe { cudnnCreateTensorDescriptor(&mut tensorDesc) };
     add_resource(resource_idx, tensorDesc as usize);
+    channel_sender.flush_out().unwrap();
 }
 #[cfg(not(feature = "shadow_desc"))]
 pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
@@ -261,6 +262,7 @@ pub fn cudnnCreateFilterDescriptorExe<T: CommChannel>(
     let mut filterDesc: cudnnFilterDescriptor_t = Default::default();
     unsafe { cudnnCreateFilterDescriptor(&mut filterDesc) };
     add_resource(resource_idx, filterDesc as usize);
+    channel_sender.flush_out().unwrap();
 }
 #[cfg(not(feature = "shadow_desc"))]
 pub fn cudnnCreateFilterDescriptorExe<T: CommChannel>(
@@ -378,6 +380,7 @@ pub fn cudnnCreateConvolutionDescriptorExe<T: CommChannel>(
     let mut convDesc: cudnnConvolutionDescriptor_t = Default::default();
     unsafe { cudnnCreateConvolutionDescriptor(&mut convDesc) };
     add_resource(resource_idx, convDesc as usize);
+    channel_sender.flush_out().unwrap();
 }
 #[cfg(not(feature = "shadow_desc"))]
 pub fn cudnnCreateConvolutionDescriptorExe<T: CommChannel>(
