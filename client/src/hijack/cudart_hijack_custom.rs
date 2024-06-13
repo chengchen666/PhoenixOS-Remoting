@@ -70,10 +70,6 @@ pub extern "C" fn cudaMemcpy(
 
     #[cfg(feature = "async_api")]
     {
-        match channel_receiver.recv_ts() {
-            Ok(()) => {}
-            Err(e) => panic!("failed to receive timestamp: {:?}", e),
-        }
         return cudaError_t::cudaSuccess;
     }
     #[cfg(not(feature = "async_api"))]
@@ -178,10 +174,6 @@ pub extern "C" fn cudaLaunchKernel(
 
     #[cfg(feature = "async_api")]
     {
-        match channel_receiver.recv_ts() {
-            Ok(()) => {}
-            Err(e) => panic!("failed to receive timestamp: {:?}", e),
-        }
         return cudaError_t::cudaSuccess;
     }
     #[cfg(not(feature = "async_api"))]

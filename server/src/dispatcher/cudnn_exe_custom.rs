@@ -234,8 +234,8 @@ pub fn cudnnSetTensorNdDescriptorExe<T: CommChannel>(
     #[cfg(not(feature = "async_api"))]
     {
         result.send(channel_sender).unwrap();
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 #[cfg(feature = "shadow_desc")]
@@ -352,8 +352,8 @@ pub fn cudnnSetFilterNdDescriptorExe<T: CommChannel>(
                 error!("Error sending result: {:?}", e);
             }
         }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 #[cfg(feature = "shadow_desc")]
@@ -486,8 +486,8 @@ pub fn cudnnSetConvolutionNdDescriptorExe<T: CommChannel>(
                 error!("Error sending result: {:?}", e);
             }
         }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnGetConvolutionForwardAlgorithm_v7Exe<T: CommChannel>(
@@ -728,8 +728,8 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
                 error!("Error sending result: {:?}", e);
             }
         }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnGetBatchNormalizationForwardTrainingExWorkspaceSizeExe<T: CommChannel>(
@@ -1814,6 +1814,6 @@ pub fn cudnnBatchNormalizationForwardInferenceExe<T: CommChannel>(
         if let Err(e) = result.send(channel_sender) {
             error!("Error sending result: {:?}", e);
         }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }

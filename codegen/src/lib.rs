@@ -394,10 +394,6 @@ pub fn gen_hijack_async(input: TokenStream) -> TokenStream {
                 Err(e) => panic!("failed to flush_out: {:?}", e),
             }
 
-            match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
             return #result;
         }
     };
@@ -736,6 +732,8 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
                 quote! { let mut #name = get_resource(#name as usize); }
             }
         });
+    #[cfg(not(feature = "shadow_desc"))]
+    let get_resource_statements = params.iter().filter(|_| false).map(|_| quote! {;});
 
     // execution statement
     let result_name = &result.name;
@@ -763,7 +761,6 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
                     Err(e) => panic!("failed to receive timestamp: {:?}", e)
                 }
                 #exec_statement
-                channel_sender.flush_out().unwrap();
             }
         };
         return gen_fn.into();

@@ -105,8 +105,8 @@ pub fn cublasSgemm_v2Exe<T: CommChannel>(channel_sender: &mut T, channel_receive
         if let Err(e) = result.send(channel_sender) {
             error!("Error sending result: {:?}", e);
         }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cublasSgemmStridedBatchedExe<T: CommChannel>(
