@@ -122,7 +122,7 @@ fn rdtscp() -> u64 {
 //     __rdtscp(&aux)
 // }
 fn clock2ns(clock: u64) -> f64 {
-    clock as f64 / 2.5
+    clock as f64 / 2.2
 }
 
 pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
@@ -155,8 +155,7 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
     }
 
     let device_func = get_function(func).unwrap();
-    // let raw_start = unsafe {__rdtscp(std::ptr::null_mut())};
-    // let raw_start = rdtscp();
+    let raw_start = rdtscp();
     let result = unsafe {
         cudasys::cuda::cuLaunchKernel(
             device_func,
@@ -172,9 +171,8 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
             std::ptr::null_mut(),
         )
     };
-    // let raw_end = unsafe {__rdtscp(std::ptr::null_mut())};
-    // let raw_end =rdtscp();
-    // println!("{}, {}, {}", raw_start, raw_end, clock2ns(raw_end - raw_start));
+    let raw_end =rdtscp();
+    println!("{}, {}, {}", raw_start, raw_end, clock2ns(raw_end - raw_start));
 
     #[cfg(not(feature = "async_api"))]
     {

@@ -112,7 +112,7 @@ fn rdtscp() -> u64 {
     }
 }
 fn clock2ns(clock: u64) -> f64 {
-    clock as f64 / 2.5
+    clock as f64 / 2.2
 }
 
 #[no_mangle]
