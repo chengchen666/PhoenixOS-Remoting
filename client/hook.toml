@@ -27,6 +27,7 @@ cudaLaunchKernel = { default = false, client_hook = "todo", server_hook = "todo"
 cudaMallocManaged = { default = false, client_hook = "todo", server_hook = "todo" }
 cudaHostAlloc = { default = false, client_hook = "todo", server_hook = "todo" }
 cudaPointerGetAttributes = { default = true }
+cudaFuncGetAttributes = { default = false }
 
 [nvml]
 nvmlInit_v2 = { default = true }
@@ -66,7 +67,7 @@ cudnnConvolutionBackwardData = { default = false }
 cudnnGetConvolutionBackwardFilterAlgorithm_v7 = { default = false }
 cudnnConvolutionBackwardFilter = { default = false }
 cudnnBatchNormalizationForwardInference = { default = false }
-
+cudnnSetFilter4dDescriptor = { default = true }
 
 [cublas]
 cublasCreate_v2 = { default = false }
