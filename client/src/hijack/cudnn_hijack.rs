@@ -150,3 +150,16 @@ gen_hijack!(
     "cudnnConvolutionDescriptor_t", 
     "cudnnReorderType_t"
 );
+
+gen_hijack!(
+    1532,
+    "cudnnSetFilter4dDescriptor",
+    "cudnnStatus_t",
+    "cudnnFilterDescriptor_t",
+    "cudnnDataType_t",
+    "cudnnTensorFormat_t",
+    "::std::os::raw::c_int",
+    "::std::os::raw::c_int",
+    "::std::os::raw::c_int",
+    "::std::os::raw::c_int"
+);

@@ -133,3 +133,15 @@ gen_exe!(
     "cudnnConvolutionDescriptor_t", 
     "cudnnReorderType_t"
 );
+
+gen_exe!(
+    "cudnnSetFilter4dDescriptor",
+    "cudnnStatus_t",
+    "cudnnFilterDescriptor_t",
+    "cudnnDataType_t",
+    "cudnnTensorFormat_t",
+    "::std::os::raw::c_int",
+    "::std::os::raw::c_int",
+    "::std::os::raw::c_int",
+    "::std::os::raw::c_int"
+);
