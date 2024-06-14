@@ -3,9 +3,13 @@
 
 int main() {
     // Number of iterations
-    const int numIterations = 1000000;
+    const int numIterations = 10000;
     
     double totalElapsedTime = 0.0;
+    for (int i = 0; i < 10; ++i) {
+        // Synchronize the default stream
+        cudaStreamSynchronize(cudaStreamLegacy);
+    }
     // Start the timer
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < numIterations; ++i) {

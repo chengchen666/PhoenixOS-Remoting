@@ -82,6 +82,7 @@ async_api = [
     "cudaLaunchKernel",
     "cudaFree",
     "cudaMemcpyAsync",
+    "cudaStreamSynchronize",
     
     "cudnnSetStream",
     "cudnnSetFilterNdDescriptor",

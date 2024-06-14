@@ -6,6 +6,9 @@ int main()
 {
     const int iterations = 10000;
     int device;
+    for (int i = 0; i < 10; ++i) {
+        cudaGetDevice(&device);
+    }
 
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < iterations; ++i) {

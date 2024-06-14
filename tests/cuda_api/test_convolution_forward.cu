@@ -203,7 +203,7 @@ int main() {
         &beta, out_desc, out_data));
   }
 
-  const int numIterations = 100000;
+  const int numIterations = 10000;
   auto start = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < numIterations; ++i) {
     CUDNN_CALL(cudnnConvolutionForward(

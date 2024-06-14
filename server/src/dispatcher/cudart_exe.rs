@@ -11,6 +11,9 @@ gen_exe!(
 );
 gen_exe!("cudaGetLastError", "cudaError_t");
 gen_exe!("cudaPeekAtLastError", "cudaError_t");
+#[cfg(feature = "async_api")]
+gen_exe_async!("cudaStreamSynchronize", "cudaError_t", "cudaStream_t");
+#[cfg(not(feature = "async_api"))]
 gen_exe!("cudaStreamSynchronize", "cudaError_t", "cudaStream_t");
 // gen_exe!("cudaMalloc", "cudaError_t", "*mut MemPtr", "size_t");
 // gen_exe!(

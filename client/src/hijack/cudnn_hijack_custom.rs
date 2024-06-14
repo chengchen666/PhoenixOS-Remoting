@@ -55,6 +55,11 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
     tensorDesc: *mut cudnnTensorDescriptor_t,
 ) -> cudnnStatus_t {
     info!("[{}:{}] cudnnCreateTensorDescriptor", std::file!(), std::line!());
+    #[cfg(feature = "timer")]
+    let timer = &mut (*CTIMER.lock().unwrap());
+
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_START);
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 1501;
@@ -77,10 +82,11 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_TOTAL);
+
+    #[cfg(feature = "timer")]
+    timer.plus_cnt();
     cudnnStatus_t::CUDNN_STATUS_SUCCESS
 }
 #[cfg(not(feature = "shadow_desc"))]
@@ -89,6 +95,12 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
     tensorDesc: *mut cudnnTensorDescriptor_t,
 ) -> cudnnStatus_t{
     info!("[{}:{}] cudnnCreateTensorDescriptor", std::file!(), std::line!());
+    #[cfg(feature = "timer")]
+    let timer = &mut (*CTIMER.lock().unwrap());
+
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_START);
+
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 1501;
@@ -98,10 +110,14 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
             error!("Error sending proc_id: {:?}", e);
         }
     }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_CSER);
     match channel_sender.flush_out() {
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_CSEND);
     let mut result: cudnnStatus_t = Default::default();
     let mut tensorDesc_: cudnnTensorDescriptor_t = Default::default();
     // receive tensorDesc from server
@@ -113,12 +129,16 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
             error!("failed to receiving tensorDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_CRECV);
     match result.recv(channel_receiver){
         Ok(()) => {}
         Err(e) => {
             error!("failed to receiving result: {:?}", e);
         }
     }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_CDSER);
     match channel_receiver.recv_ts() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive timestamp: {:?}", e),
@@ -126,6 +146,11 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreateTensorDescriptor: {:?}", result);
     }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_TOTAL);
+
+    #[cfg(feature = "timer")]
+    timer.plus_cnt();
     result
 }
 

@@ -108,7 +108,8 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
     let timer = &mut (*STIMER.lock().unwrap());
 
     #[cfg(feature = "timer")]
-    timer.start(MEASURE_SRECV);
+    timer.set(MEASURE_SRECV);
+
     let mut func: MemPtr = Default::default();
     func.recv(channel_receiver).unwrap();
     let mut gridDim: dim3 = Default::default();
@@ -135,12 +136,11 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
-    #[cfg(feature = "timer")]
-    timer.stop(MEASURE_SRECV);
 
     let device_func = get_function(func).unwrap();
     #[cfg(feature = "timer")]
-    timer.start(MEASURE_RAW);
+    timer.set(MEASURE_SDSER);
+
     let result = unsafe {
         cudasys::cuda::cuLaunchKernel(
             device_func,
@@ -157,21 +157,17 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
         )
     };
     #[cfg(feature = "timer")]
-    timer.stop(MEASURE_RAW);
+    timer.set(MEASURE_RAW);
 
     #[cfg(not(feature = "async_api"))]
     {
-        #[cfg(feature = "timer")]
-        timer.start(MEASURE_SSER);
         result.send(channel_sender).unwrap();
         #[cfg(feature = "timer")]
-        timer.stop(MEASURE_SSER);
+        timer.set(MEASURE_SSER);
 
-        #[cfg(feature = "timer")]
-        timer.start(MEASURE_SSEND);
         channel_sender.flush_out().unwrap();
         #[cfg(feature = "timer")]
-        timer.stop(MEASURE_SSEND);
+        timer.set(MEASURE_SSEND);
 
         #[cfg(feature = "timer")]
         timer.plus_cnt();

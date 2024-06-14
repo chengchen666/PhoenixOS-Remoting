@@ -29,6 +29,11 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
         std::file!(),
         std::line!()
     );
+    #[cfg(feature = "timer")]
+    let timer = &mut (*STIMER.lock().unwrap());
+
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SRECV);
     let mut resource_idx: usize = Default::default();
     match resource_idx.recv(channel_receiver) {
         Ok(()) => {}
@@ -40,10 +45,15 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SDSER);
     let mut tensorDesc: cudnnTensorDescriptor_t = Default::default();
     unsafe { cudnnCreateTensorDescriptor(&mut tensorDesc) };
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_RAW);
     add_resource(resource_idx, tensorDesc as usize);
-    channel_sender.flush_out().unwrap();
+    #[cfg(feature = "timer")]
+    timer.plus_cnt();
 }
 #[cfg(not(feature = "shadow_desc"))]
 pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
@@ -55,15 +65,32 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
         std::file!(),
         std::line!()
     );
+    #[cfg(feature = "timer")]
+    let timer = &mut (*STIMER.lock().unwrap());
+
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SRECV);
     match channel_receiver.recv_ts() {
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SDSER);
     let mut tensorDesc: cudnnTensorDescriptor_t = Default::default();
     let result: cudnnStatus_t = unsafe { cudnnCreateTensorDescriptor(&mut tensorDesc) };
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_RAW);
+
     tensorDesc.send(channel_sender).unwrap();
     result.send(channel_sender).unwrap();
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SSER);
     channel_sender.flush_out().unwrap();
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SSEND);
+
+    #[cfg(feature = "timer")]
+    timer.plus_cnt();
 }
 
 pub fn cudnnCreateActivationDescriptorExe<T: CommChannel>(

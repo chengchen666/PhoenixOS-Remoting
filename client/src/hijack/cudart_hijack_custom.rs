@@ -115,20 +115,17 @@ pub extern "C" fn cudaLaunchKernel(
 ) -> cudaError_t {
     assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
+    #[cfg(feature = "timer")]
+    let timer = &mut (*CTIMER.lock().unwrap());
+
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_START);
+
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
     let proc_id = 200;
     let mut result: cudaError_t = Default::default();
-
-    #[cfg(feature = "timer")]
-    let timer = &mut (*CTIMER.lock().unwrap());
-
-    #[cfg(feature = "timer")]
-    {
-        timer.start(MEASURE_TOTAL);
-        timer.start(MEASURE_CSER);
-    }
     let info: *mut kernel_info_t =
         ELF_CONTROLLER.find_kernel_host_func(func as *mut ::std::os::raw::c_void);
     if info.is_null() {
@@ -180,44 +177,45 @@ pub extern "C" fn cudaLaunchKernel(
         Err(e) => panic!("failed to send stream: {:?}", e),
     }
     #[cfg(feature = "timer")]
-    {
-        timer.stop(MEASURE_CSER);
-        timer.start(MEASURE_CSEND);
-    }
+    timer.set(MEASURE_CSER);
+
     match channel_sender.flush_out() {
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
     #[cfg(feature = "timer")]
-    {
-        timer.stop(MEASURE_CSEND);
-    }
+    timer.set(MEASURE_CSEND);
 
     #[cfg(feature = "async_api")]
     {
         #[cfg(feature = "timer")]
-        timer.stop(MEASURE_TOTAL);
+        {
+            timer.set(MEASURE_TOTAL);
+            timer.plus_cnt();
+        }
 
         return cudaError_t::cudaSuccess;
     }
     #[cfg(not(feature = "async_api"))]
     {
-        #[cfg(feature = "timer")]
-        timer.start(MEASURE_CRECV);
         match result.recv(channel_receiver) {
             Ok(()) => {}
             Err(e) => panic!("failed to receive result: {:?}", e),
         }
+        #[cfg(feature = "timer")]
+        timer.set(MEASURE_CRECV);
         match channel_receiver.recv_ts() {
             Ok(()) => {}
             Err(e) => panic!("failed to receive timestamp: {:?}", e),
         }
         #[cfg(feature = "timer")]
-        {
-            timer.stop(MEASURE_CRECV);
-            timer.stop(MEASURE_TOTAL);
-            timer.plus_cnt();
-        }
+        timer.set(MEASURE_CDSER);
+
+        #[cfg(feature = "timer")]
+        timer.set(MEASURE_TOTAL);
+
+        #[cfg(feature = "timer")]
+        timer.plus_cnt();
         return result;
     }
 }
