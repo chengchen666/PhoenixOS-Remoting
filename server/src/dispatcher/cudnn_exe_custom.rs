@@ -43,7 +43,6 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
     let mut tensorDesc: cudnnTensorDescriptor_t = Default::default();
     unsafe { cudnnCreateTensorDescriptor(&mut tensorDesc) };
     add_resource(resource_idx, tensorDesc as usize);
-    channel_sender.flush_out().unwrap();
 }
 #[cfg(not(feature = "shadow_desc"))]
 pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
