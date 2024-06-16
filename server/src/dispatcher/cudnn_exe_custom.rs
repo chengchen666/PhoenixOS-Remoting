@@ -1816,3 +1816,56 @@ pub fn cudnnBatchNormalizationForwardInferenceExe<T: CommChannel>(
         channel_sender.flush_out().unwrap();
     }
 }
+
+
+
+pub fn cudnnGetConvolutionNdForwardOutputDimExe<T: CommChannel> (
+    channel_sender: &mut T,
+    channel_receiver: &mut T,
+) {
+    info!("[{}:{}] cudnnGetConvolutionNdForwardOutputDim", std::file!(), std::line!());
+    let mut convDesc: cudnnConvolutionDescriptor_t = Default::default();
+    let mut inputTensorDesc: cudnnTensorDescriptor_t = Default::default();
+    let mut filterDesc: cudnnFilterDescriptor_t = Default::default();
+    let mut nbDims: c_int = Default::default();
+
+    if let Err(e) = convDesc.recv(channel_receiver) {
+        error!("Error receiving convDesc: {:?}", e);
+    }
+    #[cfg(feature = "shadow_desc")]
+    let convDesc = get_resource(convDesc as usize);
+    if let Err(e) = inputTensorDesc.recv(channel_receiver) {
+        error!("Error receiving xDesc: {:?}", e);
+    }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
+    if let Err(e) = filterDesc.recv(channel_receiver) {
+        error!("Error receiving wDesc: {:?}", e);
+    }
+    #[cfg(feature = "shadow_desc")]
+    let wDesc = get_resource(wDesc as usize);
+    if let Err(e) = nbDims.recv(channel_receiver) {
+        error!("Error receiving n: {:?}", e);
+    }
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
+    let mut tensorOutputDim_ = vec![0; nbDims as usize];
+    let result = unsafe {
+        cudnnGetConvolutionNdForwardOutputDim(
+            convDesc,
+            inputTensorDesc,
+            filterDesc,
+            nbDims,
+            tensorOutputDim_.as_mut_ptr() as *mut c_int,
+        )
+    };
+    if let Err(e) = tensorOutputDim_.send(channel_sender) {
+        error!("Error sending tensorDimA: {:?}", e);
+    }
+    if let Err(e) = result.send(channel_sender) {
+        error!("Error sending result: {:?}", e);
+    }
+    channel_sender.flush_out().unwrap();
+}

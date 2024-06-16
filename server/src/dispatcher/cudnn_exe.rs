@@ -147,11 +147,13 @@ gen_exe!(
 );
 
 gen_exe!(
-    "cudnnGetConvolutionNdForwardOutputDim",
-    "cudnnStatus_t",
-    "cudnnConvolutionDescriptor_t",
-    "cudnnTensorDescriptor_t",
-    "cudnnFilterDescriptor_t",
-    "::std::os::raw::c_int",
-    "*mut ::std::os::raw::c_int"
+    "cudnnGetConvolutionForwardWorkspaceSize", 
+    "cudnnStatus_t", 
+    "cudnnHandle_t", 
+    "cudnnTensorDescriptor_t", 
+    "cudnnFilterDescriptor_t", 
+    "cudnnConvolutionDescriptor_t", 
+    "cudnnTensorDescriptor_t", 
+    "cudnnConvolutionFwdAlgo_t", 
+    "*mut size_t"
 );
