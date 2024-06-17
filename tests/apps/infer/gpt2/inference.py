@@ -55,4 +55,4 @@ for i in range(num_iter):
     
 T2 = time.time()
 print('time used: ', T2-T1)
-print(generated_texts)
+# print(generated_texts)
