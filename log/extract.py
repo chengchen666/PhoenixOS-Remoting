@@ -15,7 +15,7 @@ with open(input_filename, 'r') as file:
 
 # 定义正则表达式模式
 pattern = re.compile(
-    r'\[.*?\] (\d+), \[.*?\] (\w+)\n\[.*?\] , (\d+)'
+    r'\[.*?\] \[.*?\] (\w+)\n\[.*?\] , (\d+)'
 )
 
 # 在数据中查找匹配项
@@ -24,4 +24,6 @@ matches = pattern.findall(log_data)
 # 打开输出文件写入结果
 with open(output_filename, 'w') as outfile:
     for match in matches:
-        outfile.write(f"{match[0]}, {match[1]}, {match[2]}\n")
+        if match[0][0] == "_":
+            continue
+        outfile.write(f"{match[0]}, {match[1]}\n")

@@ -266,7 +266,7 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
         #[no_mangle]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             assert_eq!(true, *ENABLE_LOG);
-            info!("1, [{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
             let proc_id = #proc_id;
@@ -378,7 +378,7 @@ pub fn gen_hijack_async(input: TokenStream) -> TokenStream {
         #[no_mangle]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             assert_eq!(true, *ENABLE_LOG);
-            info!("1, [{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
             let proc_id = #proc_id;
@@ -496,7 +496,7 @@ pub fn gen_hijack_local(input: TokenStream) -> TokenStream {
         #[no_mangle]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             assert_eq!(true, *ENABLE_LOG);
-            info!("1, [{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
             let proc_id = #proc_id;
@@ -648,7 +648,7 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
     #[cfg(feature = "shadow_desc")]
     let gen_fn = quote! {
         pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-            info!("2, [{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             #( #def_statements )*
             #( #recv_statements )*
             #( #get_resource_statements )*
@@ -665,7 +665,7 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
     #[cfg(not(feature = "shadow_desc"))]
     let gen_fn = quote! {
         pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-            info!("2, [{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             #( #def_statements )*
             #( #recv_statements )*
             match channel_receiver.recv_ts() {
@@ -752,7 +752,7 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
     if params.iter().filter(|param| param.mode == ElementMode::Output).count() == 0 {
         let gen_fn = quote! {
             pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-                info!("2, [{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+                info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
                 #( #def_statements )*
                 #( #recv_statements )*
                 #( #get_resource_statements )*
@@ -777,7 +777,7 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
 
     let gen_fn = quote! {
         pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-            info!("2, [{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             #( #def_statements )*
             #( #recv_statements )*
             #( #get_resource_statements )*

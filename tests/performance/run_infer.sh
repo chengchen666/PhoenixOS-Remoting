@@ -22,7 +22,7 @@ cd /workspace || {
   exit 1
 }
 # 0.04 0.035 0.03 0.025 0.02 0.015 0.01 0.005 0
-rtt_values=(0.021)
+rtt_values=(0.02)
 bandwidth_values=(214748364800)
 batch_size=64
 # rtt_values=(0.0034)

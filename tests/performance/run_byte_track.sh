@@ -37,43 +37,35 @@ model_params["STABLEDIFFUSION-v1-4"]="1 ${batch_size} /workspace/tests/apps/infe
 model_params["gpt2"]="1 ${batch_size} /workspace/tests/apps/infer/gpt2/gpt2"
 cargo build --release ${OPT_FLAG}
 
-for rtt in "${rtt_values[@]}"; do
-    for bandwidth in "${bandwidth_values[@]}"; do
-        echo "Setting RTT to $rtt and Bandwidth to $bandwidth in config.toml"
+echo "Setting RTT to $rtt and Bandwidth to $bandwidth in config.toml"
 
-        sed -i "s/^rtt = .*/rtt = $rtt/" xpuremoting/config.toml
-        sed -i "s/^bandwidth = .*/bandwidth = $bandwidth/" xpuremoting/config.toml
-        for model in "${models[@]}"; do
-            params=${model_params[$model]}
-            server_file="server_${model}_${batch_size}_${rtt}_${bandwidth}.log"
-            client_file="client_${model}_${batch_size}_${rtt}_${bandwidth}.log"
+for model in "${models[@]}"; do
+    params=${model_params[$model]}
+    server_file="server_${model}_${batch_size}_${rtt}_${bandwidth}.log"
+    client_file="client_${model}_${batch_size}_${rtt}_${bandwidth}.log"
 
-            echo "Stopping old server instance if any..."
-            pkill server || true
+    echo "Stopping old server instance if any..."
+    pkill server || true
 
-            echo "Running server"
-            cargo run --release ${OPT_FLAG} server > "/workspace/log/${server_file}" 2>&1 &
+    echo "Running server"
+    cargo run --release ${OPT_FLAG} server >"/workspace/log/${server_file}" 2>&1 &
 
-            sleep 3
+    sleep 3
 
-            echo "Running: run.sh infer/${model}/inference.py ${params}"
-            cd tests/apps || {
-                echo "Failed to change directory to tests/apps"
-                exit 1
-            }
-            ./run.sh infer/${model}/inference.py ${params} > "/workspace/log/${client_file}" 2>&1
-            cd ../..
+    echo "Running: run.sh infer/${model}/inference.py ${params}"
+    cd tests/apps || {
+        echo "Failed to change directory to tests/apps"
+        exit 1
+    }
+    ./run.sh infer/${model}/inference.py ${params} >"/workspace/log/${client_file}" 2>&1
+    cd ../..
 
-            echo "extract"
-            
-            python3 /workspace/log/extract.py "/workspace/log/${server_file}" "/workspace/log/out_${server_file}"
-            python3 /workspace/log/extract.py "/workspace/log/${client_file}" "/workspace/log/out_${client_file}.log"
+    echo "extract"
 
-            echo "done---"
+    python3 /workspace/log/extract.py "/workspace/log/${server_file}" "/workspace/log/out_${server_file}"
+    python3 /workspace/log/extract.py "/workspace/log/${client_file}" "/workspace/log/out_${client_file}"
+    echo "done---"
 
-        done
-
-    done
 done
 
 echo "All operations completed."

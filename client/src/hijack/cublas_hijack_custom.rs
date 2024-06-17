@@ -10,7 +10,7 @@ use ::std::os::raw::*;
 pub extern "C" fn cublasCreate_v2(
     handle: *mut cublasHandle_t,
 ) -> cublasStatus_t {
-    info!("1, [{}:{}] cublasCreate_v2", std::file!(), std::line!());
+    info!("[{}:{}] cublasCreate_v2", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 2000;
@@ -61,7 +61,7 @@ pub extern "C" fn cublasSgemm_v2(
     C: MemPtr,
     ldc: c_int,
 ) -> cublasStatus_t {
-    info!("1, [{}:{}] cublasSgemm_v2", std::file!(), std::line!());
+    info!("[{}:{}] cublasSgemm_v2", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 2004;
@@ -156,7 +156,7 @@ pub extern "C" fn cublasSgemmStridedBatched(
     strideC: c_longlong,
     batchCount: c_int,
 ) -> cublasStatus_t {
-    info!("1, [{}:{}] cublasSgemmStridedBatched", std::file!(), std::line!());
+    info!("[{}:{}] cublasSgemmStridedBatched", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 2005;

@@ -6,7 +6,7 @@ use cudasys::cudnn::*;
 use std::os::raw::*;
 
 pub fn cudnnCreateExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("2, [{}:{}] cudnnCreate", std::file!(), std::line!());
+    info!("[{}:{}] cudnnCreate", std::file!(), std::line!());
     let mut cuda_handle: cudnnHandle_t = Default::default();
     match channel_receiver.recv_ts() {
         Ok(()) => {}
@@ -25,7 +25,7 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnCreateTensorDescriptor",
+        "[{}:{}] cudnnCreateTensorDescriptor",
         std::file!(),
         std::line!()
     );
@@ -50,7 +50,7 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnCreateTensorDescriptor",
+        "[{}:{}] cudnnCreateTensorDescriptor",
         std::file!(),
         std::line!()
     );
@@ -70,7 +70,7 @@ pub fn cudnnCreateActivationDescriptorExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnCreateActivationDescriptor",
+        "[{}:{}] cudnnCreateActivationDescriptor",
         std::file!(),
         std::line!()
     );
@@ -87,7 +87,7 @@ pub fn cudnnCreateActivationDescriptorExe<T: CommChannel>(
 }
 
 pub fn cudnnActivationForwardExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("2, [{}:{}] cudnnActivationForward", std::file!(), std::line!());
+    info!("[{}:{}] cudnnActivationForward", std::file!(), std::line!());
     let mut handle: cudnnHandle_t = Default::default();
     let mut activationDesc: cudnnActivationDescriptor_t = Default::default();
     let mut alpha: MemPtr = Default::default();
@@ -174,7 +174,7 @@ pub fn cudnnSetTensorNdDescriptorExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnSetTensorNdDescriptor",
+        "[{}:{}] cudnnSetTensorNdDescriptor",
         std::file!(),
         std::line!()
     );
@@ -243,7 +243,7 @@ pub fn cudnnCreateFilterDescriptorExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnCreateFilterDescriptor",
+        "[{}:{}] cudnnCreateFilterDescriptor",
         std::file!(),
         std::line!()
     );
@@ -269,7 +269,7 @@ pub fn cudnnCreateFilterDescriptorExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnCreateFilterDescriptor",
+        "[{}:{}] cudnnCreateFilterDescriptor",
         std::file!(),
         std::line!()
     );
@@ -289,7 +289,7 @@ pub fn cudnnSetFilterNdDescriptorExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnSetFilterNdDescriptor",
+        "[{}:{}] cudnnSetFilterNdDescriptor",
         std::file!(),
         std::line!()
     );
@@ -361,7 +361,7 @@ pub fn cudnnCreateConvolutionDescriptorExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnCreateConvolutionDescriptor",
+        "[{}:{}] cudnnCreateConvolutionDescriptor",
         std::file!(),
         std::line!()
     );
@@ -387,7 +387,7 @@ pub fn cudnnCreateConvolutionDescriptorExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnCreateConvolutionDescriptor",
+        "[{}:{}] cudnnCreateConvolutionDescriptor",
         std::file!(),
         std::line!()
     );
@@ -407,7 +407,7 @@ pub fn cudnnSetConvolutionNdDescriptorExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnSetConvolutionNdDescriptor",
+        "[{}:{}] cudnnSetConvolutionNdDescriptor",
         std::file!(),
         std::line!()
     );
@@ -494,7 +494,7 @@ pub fn cudnnGetConvolutionForwardAlgorithm_v7Exe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnGetConvolutionForwardAlgorithm_v7",
+        "[{}:{}] cudnnGetConvolutionForwardAlgorithm_v7",
         std::file!(),
         std::line!()
     );
@@ -593,7 +593,7 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnConvolutionForward",
+        "[{}:{}] cudnnConvolutionForward",
         std::file!(),
         std::line!()
     );
@@ -736,7 +736,7 @@ pub fn cudnnGetBatchNormalizationForwardTrainingExWorkspaceSizeExe<T: CommChanne
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize",
+        "[{}:{}] cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize",
         std::file!(),
         std::line!()
     );
@@ -824,7 +824,7 @@ pub fn cudnnGetBatchNormalizationTrainingExReserveSpaceSizeExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnGetBatchNormalizationTrainingExReserveSpaceSize",
+        "[{}:{}] cudnnGetBatchNormalizationTrainingExReserveSpaceSize",
         std::file!(),
         std::line!()
     );
@@ -886,7 +886,7 @@ pub fn cudnnBatchNormalizationForwardTrainingExExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnBatchNormalizationForwardTrainingExEx",
+        "[{}:{}] cudnnBatchNormalizationForwardTrainingExEx",
         std::file!(),
         std::line!()
     );
@@ -1070,7 +1070,7 @@ pub fn cudnnGetBatchNormalizationBackwardExWorkspaceSizeExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnGetBatchNormalizationBackwardExWorkspaceSize",
+        "[{}:{}] cudnnGetBatchNormalizationBackwardExWorkspaceSize",
         std::file!(),
         std::line!()
     );
@@ -1160,7 +1160,7 @@ pub fn cudnnBatchNormalizationBackwardExExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnBatchNormalizationBackwardEx",
+        "[{}:{}] cudnnBatchNormalizationBackwardEx",
         std::file!(),
         std::line!()
     );
@@ -1349,7 +1349,7 @@ pub fn cudnnGetConvolutionBackwardDataAlgorithm_v7Exe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnGetConvolutionBackwardDataAlgorithm_v7",
+        "[{}:{}] cudnnGetConvolutionBackwardDataAlgorithm_v7",
         std::file!(),
         std::line!()
     );
@@ -1448,7 +1448,7 @@ pub fn cudnnConvolutionBackwardDataExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnConvolutionBackwardData",
+        "[{}:{}] cudnnConvolutionBackwardData",
         std::file!(),
         std::line!()
     );
@@ -1547,7 +1547,7 @@ pub fn cudnnGetConvolutionBackwardFilterAlgorithm_v7Exe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnGetConvolutionBackwardFilterAlgorithm_v7",
+        "[{}:{}] cudnnGetConvolutionBackwardFilterAlgorithm_v7",
         std::file!(),
         std::line!()
     );
@@ -1620,7 +1620,7 @@ pub fn cudnnConvolutionBackwardFilterExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnConvolutionBackwardFilter",
+        "[{}:{}] cudnnConvolutionBackwardFilter",
         std::file!(),
         std::line!()
     );
@@ -1718,7 +1718,7 @@ pub fn cudnnBatchNormalizationForwardInferenceExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cudnnBatchNormalizationForwardInference",
+        "[{}:{}] cudnnBatchNormalizationForwardInference",
         std::file!(),
         std::line!()
     );
@@ -1823,7 +1823,7 @@ pub fn cudnnGetConvolutionNdForwardOutputDimExe<T: CommChannel> (
     channel_sender: &mut T,
     channel_receiver: &mut T,
 ) {
-    info!("2, [{}:{}] cudnnGetConvolutionNdForwardOutputDim", std::file!(), std::line!());
+    info!("[{}:{}] cudnnGetConvolutionNdForwardOutputDim", std::file!(), std::line!());
     let mut convDesc: cudnnConvolutionDescriptor_t = Default::default();
     let mut inputTensorDesc: cudnnTensorDescriptor_t = Default::default();
     let mut filterDesc: cudnnFilterDescriptor_t = Default::default();

@@ -8,7 +8,7 @@ use ::std::os::raw::*;
 pub extern "C" fn cudnnCreate(
     handle: *mut cudnnHandle_t,
 ) -> cudnnStatus_t{
-    info!("1, [{}:{}] cudnnCreate", std::file!(), std::line!());
+    info!("[{}:{}] cudnnCreate", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 1500;
@@ -54,7 +54,7 @@ pub extern "C" fn cudnnCreate(
 pub extern "C" fn cudnnCreateTensorDescriptor(
     tensorDesc: *mut cudnnTensorDescriptor_t,
 ) -> cudnnStatus_t {
-    info!("1, [{}:{}] cudnnCreateTensorDescriptor", std::file!(), std::line!());
+    info!("[{}:{}] cudnnCreateTensorDescriptor", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 1501;
@@ -84,7 +84,7 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
 pub extern "C" fn cudnnCreateTensorDescriptor(
     tensorDesc: *mut cudnnTensorDescriptor_t,
 ) -> cudnnStatus_t{
-    info!("1, [{}:{}] cudnnCreateTensorDescriptor", std::file!(), std::line!());
+    info!("[{}:{}] cudnnCreateTensorDescriptor", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 1501;
@@ -130,7 +130,7 @@ pub extern "C" fn cudnnCreateActivationDescriptor(
     activationDesc: *mut cudnnPoolingDescriptor_t
 ) -> cudnnStatus_t{
     info!(
-        "1, [{}:{}] cudnnCreateActivationDescriptor",
+        "[{}:{}] cudnnCreateActivationDescriptor",
         std::file!(),
         std::line!()
     );
@@ -187,7 +187,7 @@ pub extern "C" fn cudnnActivationForward(
     y: MemPtr, // *mut c_void
 ) -> cudnnStatus_t{
     info!(
-        "1, [{}:{}] cudnnActivationForward",
+        "[{}:{}] cudnnActivationForward",
         std::file!(),
         std::line!()
     );
@@ -276,7 +276,7 @@ pub extern "C" fn cudnnSetTensorNdDescriptor(
     strideA: *const c_int// strideA stored on cpu
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnSetTensorNdDescriptor",
+        "[{}:{}] cudnnSetTensorNdDescriptor",
         std::file!(),
         std::line!()
     );
@@ -360,7 +360,7 @@ pub extern "C" fn cudnnCreateFilterDescriptor(
     filterDesc: *mut cudnnFilterDescriptor_t
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnCreateFilterDescriptor",
+        "[{}:{}] cudnnCreateFilterDescriptor",
         std::file!(),
         std::line!()
     );
@@ -398,7 +398,7 @@ pub extern "C" fn cudnnCreateFilterDescriptor(
     filterDesc: *mut cudnnFilterDescriptor_t
 ) -> cudnnStatus_t{
     info!(
-        "1, [{}:{}] cudnnCreateFilterDescriptor",
+        "[{}:{}] cudnnCreateFilterDescriptor",
         std::file!(),
         std::line!()
     );
@@ -451,7 +451,7 @@ pub extern "C" fn cudnnSetFilterNdDescriptor(
     filterDimA: *const c_int
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnSetFilterNdDescriptor",
+        "[{}:{}] cudnnSetFilterNdDescriptor",
         std::file!(),
         std::line!()
     );
@@ -531,7 +531,7 @@ pub extern "C" fn cudnnCreateConvolutionDescriptor(
     convDesc: *mut cudnnConvolutionDescriptor_t
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnCreateConvolutionDescriptor",
+        "[{}:{}] cudnnCreateConvolutionDescriptor",
         std::file!(),
         std::line!()
     );
@@ -569,7 +569,7 @@ pub extern "C" fn cudnnCreateConvolutionDescriptor(
     convDesc: *mut cudnnConvolutionDescriptor_t
 ) -> cudnnStatus_t{
     info!(
-        "1, [{}:{}] cudnnCreateConvolutionDescriptor",
+        "[{}:{}] cudnnCreateConvolutionDescriptor",
         std::file!(),
         std::line!()
     );
@@ -624,7 +624,7 @@ pub extern "C" fn cudnnSetConvolutionNdDescriptor(
     computeType: cudnnDataType_t
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnSetConvolutionNdDescriptor",
+        "[{}:{}] cudnnSetConvolutionNdDescriptor",
         std::file!(),
         std::line!()
     );
@@ -729,7 +729,7 @@ pub extern "C" fn cudnnGetConvolutionForwardAlgorithm_v7(
     perfResults: *mut cudnnConvolutionFwdAlgoPerf_t 
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnGetConvolutionForwardAlgorithm_v7",
+        "[{}:{}] cudnnGetConvolutionForwardAlgorithm_v7",
         std::file!(),
         std::line!()
     );
@@ -838,7 +838,7 @@ pub extern "C" fn cudnnConvolutionForward(
     y: MemPtr,
 ) -> cudnnStatus_t {
     assert_eq!(true, *ENABLE_LOG);
-    info!("1, [{}:{}] cudnnConvolutionForward", std::file!(), std::line!());
+    info!("[{}:{}] cudnnConvolutionForward", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -946,7 +946,7 @@ pub extern "C" fn cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
     sizeInBytes: *mut size_t
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize",
+        "[{}:{}] cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize",
         std::file!(),
         std::line!()
     );
@@ -1029,7 +1029,7 @@ pub extern "C" fn cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
     sizeInBytes: *mut size_t
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnGetBatchNormalizationTrainingExReserveSpaceSize",
+        "[{}:{}] cudnnGetBatchNormalizationTrainingExReserveSpaceSize",
         std::file!(),
         std::line!()
     );
@@ -1119,7 +1119,7 @@ pub extern "C" fn cudnnBatchNormalizationForwardTrainingEx(
     reserveSpaceSizeInBytes: size_t
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnBatchNormalizationForwardTrainingEx",
+        "[{}:{}] cudnnBatchNormalizationForwardTrainingEx",
         std::file!(),
         std::line!()
     );
@@ -1270,7 +1270,7 @@ pub extern "C" fn cudnnGetBatchNormalizationBackwardExWorkspaceSize(
     sizeInBytes: *mut size_t
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnGetBatchNormalizationBackwardExWorkspaceSize",
+        "[{}:{}] cudnnGetBatchNormalizationBackwardExWorkspaceSize",
         std::file!(),
         std::line!()
     );
@@ -1364,7 +1364,7 @@ pub extern "C" fn cudnnBatchNormalizationBackwardEx(
     reserveSpace: MemPtr,
     reserveSpaceSizeInBytes: size_t,
 ) -> cudnnStatus_t {
-    info!("1, [{}:{}] cudnnBatchNormalizationBackwardEx", std::file!(), std::line!());
+    info!("[{}:{}] cudnnBatchNormalizationBackwardEx", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 1526;
@@ -1505,7 +1505,7 @@ pub extern "C" fn cudnnGetConvolutionBackwardDataAlgorithm_v7(
     perfResults: *mut cudnnConvolutionBwdDataAlgoPerf_t 
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnGetConvolutionBackwardDataAlgorithm_v7",
+        "[{}:{}] cudnnGetConvolutionBackwardDataAlgorithm_v7",
         std::file!(),
         std::line!()
     );
@@ -1613,7 +1613,7 @@ pub extern "C" fn cudnnConvolutionBackwardData(
     dx: MemPtr,
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnConvolutionBackwardData",
+        "[{}:{}] cudnnConvolutionBackwardData",
         std::file!(),
         std::line!()
     );
@@ -1698,7 +1698,7 @@ pub extern "C" fn cudnnGetConvolutionBackwardFilterAlgorithm_v7(
     perfResults: *mut cudnnConvolutionBwdFilterAlgoPerf_t
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnGetConvolutionBackwardFilterAlgorithm_v7",
+        "[{}:{}] cudnnGetConvolutionBackwardFilterAlgorithm_v7",
         std::file!(),
         std::line!()
     );
@@ -1775,7 +1775,7 @@ pub extern "C" fn cudnnConvolutionBackwardFilter(
     dw: MemPtr,
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnConvolutionBackwardFilter",
+        "[{}:{}] cudnnConvolutionBackwardFilter",
         std::file!(),
         std::line!()
     );
@@ -1866,7 +1866,7 @@ pub extern "C" fn cudnnBatchNormalizationForwardInference(
     epsilon: f64,
 ) -> cudnnStatus_t {
     info!(
-        "1, [{}:{}] cudnnBatchNormalizationForwardInference",
+        "[{}:{}] cudnnBatchNormalizationForwardInference",
         std::file!(),
         std::line!()
     );
@@ -1958,7 +1958,7 @@ pub extern "C" fn cudnnGetConvolutionNdForwardOutputDim(
     tensorOuputDimA: *mut c_int,
 ) -> cudnnStatus_t{
     info!(
-        "1, [{}:{}] cudnnGetConvolutionNdForwardOutputDim",
+        "[{}:{}] cudnnGetConvolutionNdForwardOutputDim",
         std::file!(),
         std::line!()
     );

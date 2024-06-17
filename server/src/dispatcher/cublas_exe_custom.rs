@@ -7,7 +7,7 @@ use cudasys::cublas::*;
 use std::os::raw::*;
 
 pub fn cublasCreate_v2Exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("2, [{}:{}] cublasCreate_v2", std::file!(), std::line!());
+    info!("[{}:{}] cublasCreate_v2", std::file!(), std::line!());
     match channel_receiver.recv_ts() {
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
@@ -21,7 +21,7 @@ pub fn cublasCreate_v2Exe<T: CommChannel>(channel_sender: &mut T, channel_receiv
 }
 
 pub fn cublasSgemm_v2Exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("2, [{}:{}] cublasSgemm_v2Exe", std::file!(), std::line!());
+    info!("[{}:{}] cublasSgemm_v2Exe", std::file!(), std::line!());
     let mut handle: cublasHandle_t = Default::default();
     let mut transa: cublasOperation_t = Default::default();
     let mut transb: cublasOperation_t = Default::default();
@@ -114,7 +114,7 @@ pub fn cublasSgemmStridedBatchedExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "2, [{}:{}] cublasSgemmStridedBatched",
+        "[{}:{}] cublasSgemmStridedBatched",
         std::file!(),
         std::line!()
     );
