@@ -116,7 +116,7 @@ pub fn __cudaRegisterVarExe<T: CommChannel>(channel_sender: &mut T, channel_rece
 }
 
 pub fn cuGetProcAddressExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cuGetProcAddress", std::file!(), std::line!());
+    info!("2, [{}:{}] cuGetProcAddress", std::file!(), std::line!());
     let mut symbol: Vec<u8> = Default::default();
     symbol.recv(channel_receiver).unwrap();
     let mut cudaVersion: ::std::os::raw::c_int = Default::default();
@@ -144,7 +144,7 @@ pub fn cuGetProcAddressExe<T: CommChannel>(channel_sender: &mut T, channel_recei
 }
 
 pub fn cuGetExportTableExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cuGetExportTable", std::file!(), std::line!());
+    info!("2, [{}:{}] cuGetExportTable", std::file!(), std::line!());
     let mut pExportTableId_: CUuuid = Default::default();
     pExportTableId_.recv(channel_receiver).unwrap();
     match channel_receiver.recv_ts() {

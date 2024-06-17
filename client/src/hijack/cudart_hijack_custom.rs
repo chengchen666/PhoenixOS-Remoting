@@ -11,7 +11,7 @@ pub extern "C" fn cudaMemcpy(
     kind: cudaMemcpyKind,
 ) -> cudaError_t {
     assert_eq!(true, *ENABLE_LOG);
-    info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
+    info!("1, [{}:{}] cudaMemcpy", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -101,7 +101,7 @@ pub extern "C" fn cudaMemcpyAsync(
     _stream: cudaStream_t,
 ) -> cudaError_t {
     assert_eq!(true, *ENABLE_LOG);
-    info!("[{}:{}] cudaMemcpyAsync", std::file!(), std::line!());
+    // info!("[{}:{}] cudaMemcpyAsync", std::file!(), std::line!());
     cudaMemcpy(dst, src, count, kind)
 }
 
@@ -115,7 +115,7 @@ pub extern "C" fn cudaLaunchKernel(
     stream: cudaStream_t,
 ) -> cudaError_t {
     assert_eq!(true, *ENABLE_LOG);
-    info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
+    info!("1, [{}:{}] cudaLaunchKernel", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -203,7 +203,7 @@ pub extern "C" fn cudaMallocManaged(
 ) -> cudaError_t{
     // should update devPtr
     info!(
-        "[{}:{}] cudaMallocManaged",
+        "1, [{}:{}] cudaMallocManaged",
         std::file!(),
         std::line!()
     );
@@ -249,7 +249,7 @@ pub extern "C" fn cudaHostAlloc(
     flags: c_uint,
 ) -> cudaError_t {
     info!(
-        "[{}:{}] cudaHostAlloc",
+        "1, [{}:{}] cudaHostAlloc",
         std::file!(),
         std::line!()
     );

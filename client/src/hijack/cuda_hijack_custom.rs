@@ -256,7 +256,7 @@ pub extern "C" fn cuGetProcAddress(
    cudaVersion: ::std::os::raw::c_int,
    flags: cuuint64_t, 
 ){
-    info!("[{}:{}] cuGetProcAddress", std::file!(), std::line!());
+    info!("1, [{}:{}] cuGetProcAddress", std::file!(), std::line!());
     let proc_id = 500;
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
@@ -314,7 +314,7 @@ pub extern "C" fn cuGetExportTable(
     ppExportTable: MemPtr,
     pExportTableId: MemPtr,
 ) {
-    info!("[{}:{}] cuGetExportTable", std::file!(), std::line!());
+    info!("1, [{}:{}] cuGetExportTable", std::file!(), std::line!());
     let proc_id = 503; 
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());

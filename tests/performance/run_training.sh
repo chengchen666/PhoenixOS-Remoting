@@ -47,7 +47,7 @@ for rtt in "${rtt_values[@]}"; do
                 echo "Failed to change directory to tests/apps"
                 exit 1
             }
-            RUST_LOG=warn ./run.sh train/${model}/train.py 1 64 >"../../tests/pics/degradation/train/${model}_($1)_${rtt}_${bandwidth}.log" 2>&1
+            RUST_LOG=warn ./run.sh train/${model}/train.py 1 64 >"../../tests/performace/degradation/train/${model}_($1)_${rtt}_${bandwidth}.log" 2>&1
             cd ../..
 
             echo "done ---"

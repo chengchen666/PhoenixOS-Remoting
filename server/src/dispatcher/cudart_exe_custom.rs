@@ -8,7 +8,7 @@ use std::{
 };
 
 pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
+    info!("2, [{}:{}] cudaMemcpy", std::file!(), std::line!());
     let mut dst: MemPtr = Default::default();
     dst.recv(channel_receiver).unwrap();
     let mut src: MemPtr = Default::default();
@@ -67,7 +67,7 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
 }
 
 pub fn cudaMallocExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cudaMalloc", std::file!(), std::line!());
+    info!("2, [{}:{}] cudaMalloc", std::file!(), std::line!());
     let mut param1 = 0 as *mut ::std::os::raw::c_void;
     let mut param2: usize = Default::default();
     param2.recv(channel_receiver).unwrap();
@@ -88,7 +88,7 @@ pub fn cudaMallocExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
 }
 
 pub fn cudaFreeExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cudaFree", std::file!(), std::line!());
+    info!("2, [{}:{}] cudaFree", std::file!(), std::line!());
     let mut param1: MemPtr = Default::default();
     param1.recv(channel_receiver).unwrap();
     match channel_receiver.recv_ts() {
@@ -105,7 +105,7 @@ pub fn cudaFreeExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mu
 }
 
 pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
+    info!("2, [{}:{}] cudaLaunchKernel", std::file!(), std::line!());
     let mut func: MemPtr = Default::default();
     func.recv(channel_receiver).unwrap();
     let mut gridDim: dim3 = Default::default();
@@ -158,7 +158,7 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
 }
 
 pub fn cudaMallocManagedExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cudaMallocManaged", std::file!(), std::line!());
+    info!("2, [{}:{}] cudaMallocManaged", std::file!(), std::line!());
     let mut size: size_t = Default::default();
     let mut flags: c_uint = Default::default();
     match size.recv(channel_receiver) {
@@ -200,7 +200,7 @@ pub fn cudaPointerGetAttributesExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "[{}:{}] cudaPointerGetAttributes",
+        "2, [{}:{}] cudaPointerGetAttributes",
         std::file!(),
         std::line!()
     );
@@ -223,7 +223,7 @@ pub fn cudaPointerGetAttributesExe<T: CommChannel>(
 }
 
 pub fn cudaHostAllocExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cudaHostAlloc", std::file!(), std::line!());
+    info!("2, [{}:{}] cudaHostAlloc", std::file!(), std::line!());
     let mut pHost: *mut ::std::os::raw::c_void = null_mut();
     let mut size: size_t = Default::default();
     let mut flags: c_uint = Default::default();
@@ -250,7 +250,7 @@ pub fn cudaHostAllocExe<T: CommChannel>(channel_sender: &mut T, channel_receiver
 }
 
 pub fn cudaFuncGetAttributesExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cudaFuncGetAttributes", std::file!(), std::line!());
+    info!("2, [{}:{}] cudaFuncGetAttributes", std::file!(), std::line!());
     let mut attributes: cudaFuncAttributes = Default::default();
     let mut func: MemPtr = Default::default();
     func.recv(channel_receiver).unwrap();
