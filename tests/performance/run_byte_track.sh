@@ -64,6 +64,9 @@ for model in "${models[@]}"; do
 
     python3 /workspace/log/extract.py "/workspace/log/${server_file}" "/workspace/log/out_${server_file}"
     python3 /workspace/log/extract.py "/workspace/log/${client_file}" "/workspace/log/out_${client_file}"
+
+    echo "merge"
+    python3 /workspace/log/merge.py "/workspace/log/out_${client_file}" "/workspace/log/out_${server_file}" "/workspace/log/out_${model}_${batch_size}.log"
     echo "done---"
 
 done
