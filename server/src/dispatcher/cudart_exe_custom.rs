@@ -55,7 +55,6 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
     if cudaMemcpyKind::cudaMemcpyDeviceToHost == kind {
         let data = unsafe { std::slice::from_raw_parts(data_buf as *const u8, count) };
         data.send(channel_sender).unwrap();
-        unsafe { dealloc(data_buf, Layout::from_size_align(count, 1).unwrap()) };
         #[cfg(feature = "async_api")]
         channel_sender.flush_out().unwrap();
     }
@@ -63,6 +62,9 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
     {
         result.send(channel_sender).unwrap();
         channel_sender.flush_out().unwrap();
+    }
+    if cudaMemcpyKind::cudaMemcpyDeviceToHost == kind {
+        unsafe { dealloc(data_buf, Layout::from_size_align(count, 1).unwrap()) };
     }
 }
 
@@ -109,9 +111,6 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
     #[cfg(feature = "timer")]
     let timer = &mut (*STIMER.lock().unwrap());
 
-    #[cfg(feature = "timer")]
-    timer.set(MEASURE_SRECV);
-
     let mut func: MemPtr = Default::default();
     func.recv(channel_receiver).unwrap();
     let mut gridDim: dim3 = Default::default();
@@ -138,6 +137,9 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SRECV);
 
     let device_func = get_function(func).unwrap();
     #[cfg(feature = "timer")]

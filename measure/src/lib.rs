@@ -6,6 +6,8 @@ use std::io::{self, Write};
 #[macro_use]
 extern crate lazy_static;
 
+extern crate log;
+
 pub const MEASURE_START: usize = 0;
 pub const MEASURE_CSER: usize = 1;
 pub const MEASURE_CSEND: usize = 2;

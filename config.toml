@@ -1,6 +1,6 @@
 # transport method, support `shm` and `rdma` for now
-# comm_type = "rdma"
-comm_type = "shm"
+comm_type = "rdma"
+# comm_type = "shm"
 
 # listener socket for rdma handshake
 sender_socket = "127.0.0.1:8001"

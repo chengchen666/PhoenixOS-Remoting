@@ -234,34 +234,19 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
         });
 
     // receive vars
-    let recv_statements = vars.iter().enumerate().map(|(i, var)| {
+    let recv_statements = vars.iter().map(|var| {
         let name = &var.name;
-        if i == 0 {
-            quote! {
-                match #name.recv(channel_receiver) {
-                    Ok(()) => {}
-                    Err(e) => panic!("failed to receive #name: {:?}", e),
-                }
-                #[cfg(feature = "timer")]
-                timer.set(MEASURE_CRECV);
-            }
-        } else {
-            quote! {
-                match #name.recv(channel_receiver) {
-                    Ok(()) => {}
-                    Err(e) => panic!("failed to receive #name: {:?}", e),
-                }
+        quote! {
+            match #name.recv(channel_receiver) {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive #name: {:?}", e),
             }
         }
     });
 
-    let set_crecv_statement = if vars.len() == 0 {
-        quote! {
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_CRECV);
-        }
-    } else {
-        quote! { ; }
+    let set_crecv_statement = quote! {
+        #[cfg(feature = "timer")]
+        timer.set(MEASURE_CRECV);
     };
 
     // assign vars to params
@@ -325,11 +310,13 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive #result_name: {:?}", e),
             }
-            #set_crecv_statement
             match channel_receiver.recv_ts() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive timestamp: {:?}", e),
             }
+
+            #set_crecv_statement
+
             #[cfg(feature = "timer")]
             timer.set(MEASURE_CDSER);
 
@@ -740,14 +727,14 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
             #[cfg(feature = "timer")]
             let timer = &mut (*STIMER.lock().unwrap());
 
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_SRECV);
             #( #def_statements )*
             #( #recv_statements )*
             match channel_receiver.recv_ts() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive timestamp: {:?}", e)
             }
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_SRECV);
 
             #[cfg(feature = "timer")]
             timer.set(MEASURE_SDSER);

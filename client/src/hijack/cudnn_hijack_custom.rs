@@ -129,20 +129,20 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
             error!("failed to receiving tensorDesc: {:?}", e);
         }
     }
-    #[cfg(feature = "timer")]
-    timer.set(MEASURE_CRECV);
     match result.recv(channel_receiver){
         Ok(()) => {}
         Err(e) => {
             error!("failed to receiving result: {:?}", e);
         }
     }
-    #[cfg(feature = "timer")]
-    timer.set(MEASURE_CDSER);
     match channel_receiver.recv_ts() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive timestamp: {:?}", e),
             }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_CRECV);
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_CDSER);
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreateTensorDescriptor: {:?}", result);
     }
@@ -868,6 +868,11 @@ pub extern "C" fn cudnnConvolutionForward(
 ) -> cudnnStatus_t {
     assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] cudnnConvolutionForward", std::file!(), std::line!());
+    #[cfg(feature = "timer_conv")]
+    let timer = &mut (*CTIMER.lock().unwrap());
+
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_START);
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -942,12 +947,21 @@ pub extern "C" fn cudnnConvolutionForward(
         Ok(()) => {}
         Err(e) => panic!("failed to send y: {:?}", e),
     }
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_CSER);
     match channel_sender.flush_out() {
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_CSEND);
     #[cfg(feature = "async_api")]
     {
+        #[cfg(feature = "timer_conv")]
+        timer.set(MEASURE_TOTAL);
+
+        #[cfg(feature = "timer_conv")]
+        timer.plus_cnt();
         return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
     }
     #[cfg(not(feature = "async_api"))]
@@ -960,6 +974,15 @@ pub extern "C" fn cudnnConvolutionForward(
             Ok(()) => {}
             Err(e) => panic!("failed to receive timestamp: {:?}", e),
         }
+        #[cfg(feature = "timer_conv")]
+        timer.set(MEASURE_CRECV);
+        #[cfg(feature = "timer_conv")]
+        timer.set(MEASURE_CDSER);
+        #[cfg(feature = "timer_conv")]
+        timer.set(MEASURE_TOTAL);
+
+        #[cfg(feature = "timer_conv")]
+        timer.plus_cnt();
         return result;
     }
 }

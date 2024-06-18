@@ -32,8 +32,6 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
     #[cfg(feature = "timer")]
     let timer = &mut (*STIMER.lock().unwrap());
 
-    #[cfg(feature = "timer")]
-    timer.set(MEASURE_SRECV);
     let mut resource_idx: usize = Default::default();
     match resource_idx.recv(channel_receiver) {
         Ok(()) => {}
@@ -45,6 +43,9 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SRECV);
+
     #[cfg(feature = "timer")]
     timer.set(MEASURE_SDSER);
     let mut tensorDesc: cudnnTensorDescriptor_t = Default::default();
@@ -625,6 +626,9 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
         std::file!(),
         std::line!()
     );
+    #[cfg(feature = "timer_conv")]
+    let timer = &mut (*STIMER.lock().unwrap());
+
     let mut handle: cudnnHandle_t = Default::default();
     let mut alpha: f64 = Default::default(); // currently, we assume that alpha is f64
     let mut xDesc: cudnnTensorDescriptor_t = Default::default();
@@ -728,8 +732,15 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_SRECV);
     let alpha_ = &alpha as *const f64;
     let beta_ = &beta as *const f64;
+
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_SDSER);
+
     let result: cudnnStatus_t = unsafe {
         cudnnConvolutionForward(
             handle,
@@ -747,6 +758,8 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
             y as *mut c_void,
         )
     };
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_RAW);
     #[cfg(not(feature = "async_api"))]
     {
         match result.send(channel_sender) {
@@ -755,7 +768,14 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
                 error!("Error sending result: {:?}", e);
             }
         }
+        #[cfg(feature = "timer_conv")]
+        timer.set(MEASURE_SSER);
         channel_sender.flush_out().unwrap();
+        #[cfg(feature = "timer_conv")]
+        timer.set(MEASURE_SSEND);
+
+        #[cfg(feature = "timer_conv")]
+        timer.plus_cnt();
     }
 }
 

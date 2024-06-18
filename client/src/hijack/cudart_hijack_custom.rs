@@ -12,6 +12,11 @@ pub extern "C" fn cudaMemcpy(
 ) -> cudaError_t {
     assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
+    #[cfg(feature = "timer_conv")]
+    let timer = &mut (*CTIMER.lock().unwrap());
+
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_START);
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -53,11 +58,15 @@ pub extern "C" fn cudaMemcpy(
             Err(e) => panic!("failed to send data: {:?}", e),
         }
     }
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_CSER);
 
     match channel_sender.flush_out() {
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_CSEND);
 
     if cudaMemcpyKind::cudaMemcpyDeviceToHost == kind {
         // receive [dst; count] from device
@@ -203,12 +212,12 @@ pub extern "C" fn cudaLaunchKernel(
             Ok(()) => {}
             Err(e) => panic!("failed to receive result: {:?}", e),
         }
-        #[cfg(feature = "timer")]
-        timer.set(MEASURE_CRECV);
         match channel_receiver.recv_ts() {
             Ok(()) => {}
             Err(e) => panic!("failed to receive timestamp: {:?}", e),
         }
+        #[cfg(feature = "timer")]
+        timer.set(MEASURE_CRECV);
         #[cfg(feature = "timer")]
         timer.set(MEASURE_CDSER);
 
