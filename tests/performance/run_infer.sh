@@ -21,14 +21,14 @@ cd /workspace || {
   echo "Failed to change directory to /workspace"
   exit 1
 }
+# v100 tcpip rtt bandwidth is 0.025ms 25.3Gbps
 # 0.04 0.035 0.03 0.025 0.02 0.015 0.01 0.005 0
-rtt_values=(0.02)
-bandwidth_values=(214748364800)
+rtt_values=(0.025)
+bandwidth_values=(27165668147.2)
 batch_size=64
-# rtt_values=(0.0034)
-# bandwidth_values=(214748364800)
+output_dir="table-four/rdma"
 # "BERT" "gpt2" "ResNet18_Cifar10_95.46" "STABLEDIFFUSION-v1-4"
-models=("gpt2")
+models=("BERT" "gpt2" "ResNet18_Cifar10_95.46")
 
 declare -A model_params
 model_params["BERT"]="1 ${batch_size} /workspace/tests/apps/infer/BERT/bert-base-uncased"
@@ -59,7 +59,7 @@ for rtt in "${rtt_values[@]}"; do
         echo "Failed to change directory to tests/apps"
         exit 1
       }
-      RUST_LOG=warn ./run.sh infer/${model}/inference.py ${params} >"../../tests/performance/degradation/infer/${model}_($1)_${batch_size}_${rtt}_${bandwidth}.log" 2>&1
+      RUST_LOG=warn ./run.sh infer/${model}/inference.py ${params} >"../../tests/performance/${output_dir}/${model}_($1)_${batch_size}_${rtt}_${bandwidth}.log" 2>&1
       cd ../..
 
       echo "done ---"
@@ -68,5 +68,5 @@ for rtt in "${rtt_values[@]}"; do
 
   done
 done
-
+pkill server
 echo "All operations completed."
