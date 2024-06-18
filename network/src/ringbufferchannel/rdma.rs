@@ -7,6 +7,7 @@ use log::info;
 use std::io::Result as IOResult;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
+use std::ptr;
 
 use KRdmaKit::context::Context;
 use KRdmaKit::services_user::{
@@ -27,6 +28,7 @@ pub struct RDMAChannel {
     rinfo: MRInfo,
     pending_num: Arc<Mutex<usize>>,
     last_tail: Arc<Mutex<usize>>,
+    tail_pos: Arc<Mutex<usize>>,
 }
 
 unsafe impl Send for RDMAChannel {}
@@ -205,6 +207,7 @@ impl RDMAChannel {
             rinfo,
             pending_num: Arc::new(Mutex::new(0)),
             last_tail: Arc::new(Mutex::new(0)),
+            tail_pos: Arc::new(Mutex::new(1)),
         }
     }
 }
@@ -252,6 +255,32 @@ impl RDMAChannel {
         }
         len
     }
+
+    fn write_tail_remote(&self, tail: usize) {
+        let len = std::mem::size_of::<usize>();
+        let t: u64 = TAIL_OFF as u64;
+        let l = t + (*self.tail_pos.lock().unwrap() as u64 * len as u64);
+        let r: u64 = l + len as u64;
+        unsafe { ptr::write_volatile(self.get_ptr().add(l as usize) as *mut usize, tail) }
+
+        let _ = self.qp.post_send_write(
+            &self.mr,
+            l..r,
+            true,
+            self.rinfo.addr + t,
+            self.rinfo.rkey,
+            self.get_req_id(),
+        );
+        *self.tail_pos.lock().unwrap() += 1;
+        if *self.tail_pos.lock().unwrap() == 8 {
+            *self.tail_pos.lock().unwrap() = 1;
+        }
+        self.set_pending_num(self.get_pending_num() + 1);
+        if self.get_pending_num() == BATCH_SIZE {
+            Self::poll_batch(&self.qp);
+            self.set_pending_num(0);
+        }
+    }
 }
 
 impl BufferManager for RDMAChannel {
@@ -280,11 +309,13 @@ impl CommChannelInner for RDMAChannel {
             self.write_remote(META_AREA, cur_tail);
         }
 
-        self.read_remote(HEAD_OFF, std::mem::size_of::<usize>());
-
         self.set_last_tail(cur_tail);
         self.write_tail_volatile(cur_tail);
-        self.write_remote(TAIL_OFF, std::mem::size_of::<usize>());
+        self.write_tail_remote(cur_tail);
+
+        while self.is_full() {
+            self.read_remote(HEAD_OFF, std::mem::size_of::<usize>());
+        }
         Ok(())
     }
 }
