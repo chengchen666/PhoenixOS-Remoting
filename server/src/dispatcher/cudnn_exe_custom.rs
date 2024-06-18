@@ -1844,3 +1844,60 @@ pub fn cudnnBatchNormalizationForwardInferenceExe<T: CommChannel>(
         channel_sender.flush_out().unwrap();
     }
 }
+
+
+
+pub fn cudnnGetConvolutionNdForwardOutputDimExe<T: CommChannel> (
+    channel_sender: &mut T,
+    channel_receiver: &mut T,
+) {
+    info!("[{}:{}] cudnnGetConvolutionNdForwardOutputDim", std::file!(), std::line!());
+    let mut convDesc: cudnnConvolutionDescriptor_t = Default::default();
+    let mut inputTensorDesc: cudnnTensorDescriptor_t = Default::default();
+    let mut filterDesc: cudnnFilterDescriptor_t = Default::default();
+    let mut nbDims: c_int = Default::default();
+
+    if let Err(e) = convDesc.recv(channel_receiver) {
+        error!("Error receiving convDesc: {:?}", e);
+    }
+    if let Err(e) = inputTensorDesc.recv(channel_receiver) {
+        error!("Error receiving inputTensorDesc: {:?}", e);
+    }
+<<<<<<< HEAD
+    #[cfg(feature = "shadow_desc")]
+    let inputTensorDesc = get_resource(inputTensorDesc as usize);
+    if let Err(e) = filterDesc.recv(channel_receiver) {
+        error!("Error receiving wDesc: {:?}", e);
+    }
+    #[cfg(feature = "shadow_desc")]
+    let filterDesc = get_resource(filterDesc as usize);
+=======
+    if let Err(e) = filterDesc.recv(channel_receiver) {
+        error!("Error receiving wDesc: {:?}", e);
+    }
+>>>>>>> 93ce3b488d3519c69c6f71e6a92dff0e7c25658e
+    if let Err(e) = nbDims.recv(channel_receiver) {
+        error!("Error receiving n: {:?}", e);
+    }
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
+    let mut tensorOutputDim_ = vec![0; nbDims as usize];
+    let result = unsafe {
+        cudnnGetConvolutionNdForwardOutputDim(
+            convDesc,
+            inputTensorDesc,
+            filterDesc,
+            nbDims,
+            tensorOutputDim_.as_mut_ptr() as *mut c_int,
+        )
+    };
+    if let Err(e) = tensorOutputDim_.send(channel_sender) {
+        error!("Error sending tensorDimA: {:?}", e);
+    }
+    if let Err(e) = result.send(channel_sender) {
+        error!("Error sending result: {:?}", e);
+    }
+    channel_sender.flush_out().unwrap();
+}

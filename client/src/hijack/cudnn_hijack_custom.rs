@@ -1977,3 +1977,60 @@ pub extern "C" fn cudnnBatchNormalizationForwardInference(
         return result;
     }
 }
+
+#[no_mangle]
+pub extern "C" fn cudnnGetConvolutionNdForwardOutputDim(
+    convDesc: cudnnConvolutionDescriptor_t,
+    inputTensorDesc: cudnnTensorDescriptor_t,
+    filterDesc: cudnnFilterDescriptor_t,
+    nbDims: c_int,
+    tensorOuputDimA: *mut c_int,
+) -> cudnnStatus_t{
+    info!(
+        "[{}:{}] cudnnGetConvolutionNdForwardOutputDim",
+        std::file!(),
+        std::line!()
+    );
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let proc_id = 1533;
+    let mut result: cudnnStatus_t = Default::default();
+    if let Err(e) = proc_id.send(channel_sender) {
+        error!("Error sending proc_id: {:?}", e);
+    }
+    if let Err(e) = convDesc.send(channel_sender) {
+        error!("Error sending convDesc: {:?}", e);
+    }
+    if let Err(e) = inputTensorDesc.send(channel_sender) {
+        error!("Error sending inputTensorDesc: {:?}", e);
+    }
+    if let Err(e) = filterDesc.send(channel_sender) {
+        error!("Error sending filterDesc: {:?}", e);
+    }
+    if let Err(e) = nbDims.send(channel_sender) {
+        error!("Error sending nbDims: {:?}", e);
+    }
+    if let Err(e) = channel_sender.flush_out() {
+        panic!("failed to send: {:?}", e);
+    }
+    let mut tensorOuputDimAs_: Vec<c_int> = Default::default();
+    if let Err(e) = tensorOuputDimAs_.recv(channel_receiver) {
+        error!("Error receiving tensorOuputDimAs: {:?}", e);
+    };
+    unsafe{
+        std::ptr::copy_nonoverlapping(
+            tensorOuputDimAs_.as_ptr(),
+            tensorOuputDimA,
+            nbDims as usize
+        );
+    }
+    if let Err(e) = result.recv(channel_receiver) {
+        error!("Error receiving result: {:?}", e);
+    }
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
+    result
+    
+}
