@@ -1835,7 +1835,6 @@ pub fn cudnnGetConvolutionNdForwardOutputDimExe<T: CommChannel> (
     if let Err(e) = inputTensorDesc.recv(channel_receiver) {
         error!("Error receiving inputTensorDesc: {:?}", e);
     }
-<<<<<<< HEAD
     #[cfg(feature = "shadow_desc")]
     let inputTensorDesc = get_resource(inputTensorDesc as usize);
     if let Err(e) = filterDesc.recv(channel_receiver) {
@@ -1843,11 +1842,6 @@ pub fn cudnnGetConvolutionNdForwardOutputDimExe<T: CommChannel> (
     }
     #[cfg(feature = "shadow_desc")]
     let filterDesc = get_resource(filterDesc as usize);
-=======
-    if let Err(e) = filterDesc.recv(channel_receiver) {
-        error!("Error receiving wDesc: {:?}", e);
-    }
->>>>>>> 93ce3b488d3519c69c6f71e6a92dff0e7c25658e
     if let Err(e) = nbDims.recv(channel_receiver) {
         error!("Error receiving n: {:?}", e);
     }
