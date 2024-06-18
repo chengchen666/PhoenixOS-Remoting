@@ -847,11 +847,13 @@ pub extern "C" fn cudnnConvolutionForward(
     // process alpha and beta
     // assume that the datatype is double
     let alpha_ = unsafe {
-        let slice = std::slice::from_raw_parts(alpha as *const f64, 1);
+        let a: f64 = std::ptr::read_unaligned(alpha as *const f64);
+        let slice = std::slice::from_raw_parts(&a as *const f64, 1);
         slice[0]
     };
     let beta_ = unsafe {
-        let slice = std::slice::from_raw_parts(beta as *const f64, 1);
+        let b: f64 = std::ptr::read_unaligned(beta as *const f64);
+        let slice = std::slice::from_raw_parts(&b as *const f64, 1);
         slice[0]
     };
 
