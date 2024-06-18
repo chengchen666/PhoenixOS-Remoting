@@ -116,7 +116,7 @@ pub trait RingBufferManager: BufferManager {
         if cur_tail >= cur_head {
             self.capacity() - cur_tail
         } else {
-            cur_head - cur_tail - 1
+            cur_head - cur_tail
         }
     }
 }
