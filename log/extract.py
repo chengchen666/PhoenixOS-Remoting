@@ -11,6 +11,9 @@ output_filename = sys.argv[2]
 with open(input_filename, 'r') as file:
     log_data = file.read()
 
+# drop the line before: begin trace
+log_data = log_data[log_data.find("begin trace") :]
+
 pattern = re.compile(
     r'\[.*?\] \[.*?\] (\w+)\n\[.*?\] , (\d+)'
 )

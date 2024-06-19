@@ -52,6 +52,9 @@ for i in range(2):
 if path is not None:
     start_trace()
 
+print("begin trace")
+sys.stdout.flush()
+
 T1 = time.time()
 
 for i in range(num_iter):
