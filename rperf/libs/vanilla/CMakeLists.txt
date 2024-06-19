@@ -4,11 +4,13 @@
 #
 # Description: cmake for cuda hook
 
-cmake_minimum_required (VERSION 3.12)
+cmake_minimum_required (VERSION 3.17)
 
 project (cuda_hook LANGUAGES C CXX)
 
 set (CMAKE_VERBOSE_MAKEFILE ${HOOK_VERBOSE_MAKEFILE})
+
+find_package(CUDAToolkit)
 
 # set (CMAKE_C_VISIBILITY_PRESET hidden)
 # set (CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -60,12 +62,14 @@ file (GLOB HOOK_SRCS
 # libcuda_hook.so
 add_library (cuda_hook SHARED ${HOOK_SRCS})
 target_link_libraries (cuda_hook -ldl)
+target_link_libraries(cuda_hook CUDA::cudart)
 
 install (TARGETS cuda_hook LIBRARY DESTINATION lib64)
 
 # libcuda_hook.a
 add_library (cuda_hook_static STATIC ${HOOK_SRCS})
 target_link_libraries (cuda_hook_static -ldl)
+target_link_libraries(cuda_hook_static CUDA::cudart)
 set_target_properties (cuda_hook_static PROPERTIES OUTPUT_NAME cuda_hook)
 
 install (TARGETS cuda_hook_static ARCHIVE DESTINATION lib64)

@@ -691,7 +691,10 @@ HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaLaunchKernel(const void *func, dim3 
     using func_ptr = cudaError_t (*)(const void *, dim3, dim3, void **, size_t, cudaStream_t);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDART_SYMBOL("cudaLaunchKernel"));
     HOOK_CHECK(func_entry);
-    return func_entry(func, gridDim, blockDim, args, sharedMem, stream);
+    // return func_entry(func, gridDim, blockDim, args, sharedMem, stream);
+    cudaError_t ret = func_entry(func, gridDim, blockDim, args, sharedMem, stream);
+    push_breakpoint();
+    return ret;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudaError_t cudaLaunchCooperativeKernel(const void *func, dim3 gridDim, dim3 blockDim,

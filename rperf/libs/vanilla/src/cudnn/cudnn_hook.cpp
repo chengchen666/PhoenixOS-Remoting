@@ -776,8 +776,12 @@ HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t cudnnConvolutionForward(cudnnHandle_t 
                                        const cudnnTensorDescriptor_t, void *);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDNN_SYMBOL("cudnnConvolutionForward"));
     HOOK_CHECK(func_entry);
-    return func_entry(handle, alpha, xDesc, x, wDesc, w, convDesc, algo, workSpace, workSpaceSizeInBytes, beta, yDesc,
+    // return func_entry(handle, alpha, xDesc, x, wDesc, w, convDesc, algo, workSpace, workSpaceSizeInBytes, beta, yDesc,
+    //                   y);
+    cudnnStatus_t status = func_entry(handle, alpha, xDesc, x, wDesc, w, convDesc, algo, workSpace, workSpaceSizeInBytes, beta, yDesc,
                       y);
+    push_breakpoint();
+    return status;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t cudnnConvolutionBiasActivationForward(
@@ -1439,8 +1443,12 @@ HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t cudnnBatchNormalizationForwardInferenc
                                        const void *, double);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDNN_SYMBOL("cudnnBatchNormalizationForwardInference"));
     HOOK_CHECK(func_entry);
-    return func_entry(handle, mode, alpha, beta, xDesc, x, yDesc, y, bnScaleBiasMeanVarDesc, bnScale, bnBias,
+    // return func_entry(handle, mode, alpha, beta, xDesc, x, yDesc, y, bnScaleBiasMeanVarDesc, bnScale, bnBias,
+    //                   estimatedMean, estimatedVariance, epsilon);
+    cudnnStatus_t status = func_entry(handle, mode, alpha, beta, xDesc, x, yDesc, y, bnScaleBiasMeanVarDesc, bnScale, bnBias,
                       estimatedMean, estimatedVariance, epsilon);
+    push_breakpoint();
+    return status;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t cudnnBatchNormalizationBackward(
