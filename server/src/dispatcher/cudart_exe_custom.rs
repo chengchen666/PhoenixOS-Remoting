@@ -56,9 +56,14 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
         let data = unsafe { std::slice::from_raw_parts(data_buf as *const u8, count) };
         data.send(channel_sender).unwrap();
         unsafe { dealloc(data_buf, Layout::from_size_align(count, 1).unwrap()) };
+        #[cfg(feature = "async_api")]
+        channel_sender.flush_out().unwrap();
     }
-    result.send(channel_sender).unwrap();
-    channel_sender.flush_out().unwrap();
+    #[cfg(not(feature = "async_api"))]
+    {
+        result.send(channel_sender).unwrap();
+        channel_sender.flush_out().unwrap();
+    }
 }
 
 pub fn cudaMallocExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
@@ -91,8 +96,12 @@ pub fn cudaFreeExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mu
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
     let result: cudaError_t = unsafe { cudaFree(param1 as *mut ::std::os::raw::c_void) };
-    result.send(channel_sender).unwrap();
-    channel_sender.flush_out().unwrap();
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        result.send(channel_sender).unwrap();
+        channel_sender.flush_out().unwrap();
+    }
 }
 
 pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
@@ -141,8 +150,11 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
         )
     };
 
-    result.send(channel_sender).unwrap();
-    channel_sender.flush_out().unwrap();
+    #[cfg(not(feature = "async_api"))]
+    {
+        result.send(channel_sender).unwrap();
+        channel_sender.flush_out().unwrap();
+    }
 }
 
 pub fn cudaMallocManagedExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
