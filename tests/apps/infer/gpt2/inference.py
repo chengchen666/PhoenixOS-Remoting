@@ -47,12 +47,12 @@ if path is not None:
 
 T1 = time.time()
 
-for i in range(num_iter):
+for i in range(num_iter*100):
     encoding = tokenizer(texts, padding=True, return_tensors='pt').to(device)
     with torch.no_grad():
         generated_ids = model.generate(**encoding, max_length=20)
     generated_texts = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
     
 T2 = time.time()
-print('time used: ', T2-T1)
+print('time used: ', (T2-T1)/100)
 # print(generated_texts)

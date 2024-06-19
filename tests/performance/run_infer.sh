@@ -22,13 +22,15 @@ cd /workspace || {
   exit 1
 }
 # v100 tcpip rtt bandwidth is 0.025ms 25.3Gbps
+# v100 rdma rtt bandwidth is 0.0034 77491947438.08
+# 214748364800
 # 0.04 0.035 0.03 0.025 0.02 0.015 0.01 0.005 0
-rtt_values=(0.025)
-bandwidth_values=(27165668147.2)
+rtt_values=(0.0034)
+bandwidth_values=(77491947438.08)
 batch_size=64
-output_dir="table-four/rdma"
-# "BERT" "gpt2" "ResNet18_Cifar10_95.46" "STABLEDIFFUSION-v1-4"
-models=("BERT" "gpt2" "ResNet18_Cifar10_95.46")
+output_dir="theotest/emulator-rdma"
+# "BERT" "ResNet18_Cifar10_95.46" "gpt2" "STABLEDIFFUSION-v1-4"
+models=("BERT" "ResNet18_Cifar10_95.46")
 
 declare -A model_params
 model_params["BERT"]="1 ${batch_size} /workspace/tests/apps/infer/BERT/bert-base-uncased"

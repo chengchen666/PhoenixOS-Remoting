@@ -51,12 +51,12 @@ if path is not None:
 
 T1 = time.time()
 
-for i in range(num_iter):
+for i in range(num_iter*10):
     print("iter: ", i)
     images = pipe(prompt=[prompt] * batch_size, num_inference_steps=50).images
     
 T2 = time.time()
-print('time used: ', T2-T1)
+print('time used: ', (T2-T1)/10)
 
 if path is not None:
     end_trace()

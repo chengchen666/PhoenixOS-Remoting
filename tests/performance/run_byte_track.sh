@@ -24,11 +24,11 @@ cd /workspace || {
 # 0.04 0.035 0.03 0.025 0.02 0.015 0.01 0.005 0
 rtt_values=(0.02)
 bandwidth_values=(77491947438)
-batch_size=64
+batch_size=512
 # rtt_values=(0.0034)
 # bandwidth_values=(214748364800)
 # "BERT" "gpt2" "ResNet18_Cifar10_95.46" "STABLEDIFFUSION-v1-4"
-models=("ResNet18_Cifar10_95.46")
+models=("gpt2")
 
 declare -A model_params
 model_params["BERT"]="1 ${batch_size} /workspace/tests/apps/infer/BERT/bert-base-uncased"

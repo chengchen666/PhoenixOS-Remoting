@@ -28,6 +28,7 @@ cudaMallocManaged = { default = false, client_hook = "todo", server_hook = "todo
 cudaHostAlloc = { default = false, client_hook = "todo", server_hook = "todo" }
 cudaPointerGetAttributes = { default = true }
 cudaFuncGetAttributes = { default = false }
+cudaMemGetInfo = { default = true }
 
 [nvml]
 nvmlInit_v2 = { default = true }
