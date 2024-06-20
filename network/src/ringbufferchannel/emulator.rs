@@ -116,8 +116,8 @@ impl CommChannelInner for EmulatorChannel {
     fn flush_out(&self) -> Result<(), CommChannelError> {
         let _ = self.manager.flush_out();
         let ts = self.calculate_ts(self.get_byte_cnt());
-        // let byte_cnt = self.get_byte_cnt();
-        // log::info!(", {}", byte_cnt);
+        let byte_cnt = self.get_byte_cnt();
+        log::info!(", {}", byte_cnt);
         let _ = self.send(ts);
         self.set_byte_cnt(0);
         self.set_last_timestamp(ts);

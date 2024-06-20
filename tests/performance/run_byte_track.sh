@@ -17,8 +17,8 @@ else
     exit 1
 fi
 
-cd /workspace || {
-    echo "Failed to change directory to /workspace"
+cd /workspace/home/xpuremoting || {
+    echo "Failed to change directory to /workspace/home/xpuremoting"
     exit 1
 }
 # 0.04 0.035 0.03 0.025 0.02 0.015 0.01 0.005 0
@@ -28,13 +28,13 @@ batch_size=64
 # rtt_values=(0.0034)
 # bandwidth_values=(214748364800)
 # "BERT" "gpt2" "ResNet18_Cifar10_95.46" "STABLEDIFFUSION-v1-4"
-models=("ResNet18_Cifar10_95.46")
+models=("BERT")
 
 declare -A model_params
-model_params["BERT"]="1 ${batch_size} /workspace/tests/apps/infer/BERT/bert-base-uncased"
-model_params["ResNet18_Cifar10_95.46"]="1 ${batch_size}"
-model_params["STABLEDIFFUSION-v1-4"]="1 ${batch_size} /workspace/tests/apps/infer/STABLEDIFFUSION-v1-4/stable-diffusion-v1-4"
-model_params["gpt2"]="1 ${batch_size} /workspace/tests/apps/infer/gpt2/gpt2"
+model_params["BERT"]="100 ${batch_size}"
+model_params["ResNet18_Cifar10_95.46"]="100 ${batch_size}"
+model_params["STABLEDIFFUSION-v1-4"]="10 ${batch_size}"
+model_params["gpt2"]="100 ${batch_size}"
 cargo build --release ${OPT_FLAG}
 
 echo "Setting RTT to $rtt and Bandwidth to $bandwidth in config.toml"
@@ -48,7 +48,7 @@ for model in "${models[@]}"; do
     pkill server || true
 
     echo "Running server"
-    cargo run --release ${OPT_FLAG} server >"/workspace/log/${server_file}" 2>&1 &
+    cargo run --release ${OPT_FLAG} server >"/workspace/home/xpuremoting/log/${server_file}" 2>&1 &
 
     sleep 3
 
@@ -57,17 +57,17 @@ for model in "${models[@]}"; do
         echo "Failed to change directory to tests/apps"
         exit 1
     }
-    ./run.sh infer/${model}/inference.py ${params} >"/workspace/log/${client_file}" 2>&1
+    ./run.sh infer/${model}/inference.py ${params} >"/workspace/home/xpuremoting/log/${client_file}" 2>&1
     cd ../..
 
     echo "extract"
 
-    python3 /workspace/log/extract.py "/workspace/log/${server_file}" "/workspace/log/out_${server_file}"
-    python3 /workspace/log/extract.py "/workspace/log/${client_file}" "/workspace/log/out_${client_file}"
+    python3 /workspace/home/xpuremoting/log/extract.py "/workspace/home/xpuremoting/log/${server_file}" "/workspace/home/xpuremoting/log/out_${server_file}"
+    python3 /workspace/home/xpuremoting/log/extract.py "/workspace/home/xpuremoting/log/${client_file}" "/workspace/home/xpuremoting/log/out_${client_file}"
 
-    echo "merge"
-    python3 /workspace/log/merge.py "/workspace/log/out_${client_file}" "/workspace/log/out_${server_file}" "/workspace/log/out_${model}_${batch_size}.log"
-    echo "done---"
+    # echo "merge"
+    # python3 /workspace/home/xpuremoting/log/merge.py "/workspace/home/xpuremoting/log/out_${client_file}" "/workspace/home/xpuremoting/log/out_${server_file}" "/workspace/home/xpuremoting/log/out_${model}_${batch_size}.log"
+    # echo "done---"
 
 done
 
