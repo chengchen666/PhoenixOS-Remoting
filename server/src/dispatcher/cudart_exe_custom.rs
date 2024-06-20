@@ -55,7 +55,6 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
     if cudaMemcpyKind::cudaMemcpyDeviceToHost == kind {
         let data = unsafe { std::slice::from_raw_parts(data_buf as *const u8, count) };
         data.send(channel_sender).unwrap();
-        unsafe { dealloc(data_buf, Layout::from_size_align(count, 1).unwrap()) };
         #[cfg(feature = "async_api")]
         channel_sender.flush_out().unwrap();
     }
@@ -63,6 +62,9 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
     {
         result.send(channel_sender).unwrap();
         channel_sender.flush_out().unwrap();
+    }
+    if cudaMemcpyKind::cudaMemcpyDeviceToHost == kind {
+        unsafe { dealloc(data_buf, Layout::from_size_align(count, 1).unwrap()) };
     }
 }
 
