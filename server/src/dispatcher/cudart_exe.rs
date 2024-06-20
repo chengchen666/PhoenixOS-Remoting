@@ -79,3 +79,10 @@ gen_exe!(
 //     "usize",
 //     "cudaStream_t"
 // );
+
+gen_exe!(
+    "cudaDeviceGetStreamPriorityRange",
+    "cudaError_t",
+    "*mut ::std::os::raw::c_int",
+    "*mut ::std::os::raw::c_int"
+);

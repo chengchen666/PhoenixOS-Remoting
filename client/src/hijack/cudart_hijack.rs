@@ -122,3 +122,11 @@ gen_hijack!(
 //     "usize",
 //     "cudaStream_t"
 // );
+
+gen_hijack!(
+    15,
+    "cudaDeviceGetStreamPriorityRange",
+    "cudaError_t",
+    "*mut ::std::os::raw::c_int",
+    "*mut ::std::os::raw::c_int"
+);

@@ -19,7 +19,7 @@ lazy_static = "1.4.0"
 glob = "0.3"
 
 [features]
-default = ["rdma"]
+# default = ["rdma"]
 # default = ["shm", "emulator"]
 # default = ["shm"]
 shm = []
@@ -29,6 +29,8 @@ async_api = []
 shadow_desc = []
 timer = []
 timer_conv = []
+timer_kernel = []
+timer_memcpy = []
 
 [[bin]]
 name = "server"

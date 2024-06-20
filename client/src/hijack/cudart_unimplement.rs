@@ -8,7 +8,6 @@ gen_unimplement!("cudaDeviceSetLimit", "cudaError_t", "cudaLimit", "size_t");
 gen_unimplement!("cudaDeviceGetLimit", "cudaError_t", "*mut size_t", "cudaLimit");
 gen_unimplement!("cudaDeviceGetTexture1DLinearMaxWidth", "cudaError_t", "*mut size_t", "*const cudaChannelFormatDesc", "::std::os::raw::c_int");
 gen_unimplement!("cudaDeviceGetCacheConfig", "cudaError_t", "*mut cudaFuncCache");
-gen_unimplement!("cudaDeviceGetStreamPriorityRange", "cudaError_t", "*mut ::std::os::raw::c_int", "*mut ::std::os::raw::c_int");
 gen_unimplement!("cudaDeviceSetCacheConfig", "cudaError_t", "cudaFuncCache");
 gen_unimplement!("cudaDeviceGetSharedMemConfig", "cudaError_t", "*mut cudaSharedMemConfig");
 gen_unimplement!("cudaDeviceSetSharedMemConfig", "cudaError_t", "cudaSharedMemConfig");

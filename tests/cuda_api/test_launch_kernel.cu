@@ -3,7 +3,7 @@
 #include <chrono>
 #include <iostream>
 
-__global__ void addKernel(unsigned int *c, const unsigned int *a, const unsigned int *b, int size)
+__global__ void addKernel(int *c, const int *a, const int *b, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
@@ -13,10 +13,10 @@ __global__ void addKernel(unsigned int *c, const unsigned int *a, const unsigned
 
 int main(int argc, char **argv)
 {
-    const int size = 100;
+    const int size = 1000000;
     const int iterations = 10000;
-    unsigned int *a = new unsigned int[size];
-    unsigned int *dev_a = nullptr;
+    int *a = new int[size];
+    int *dev_a = nullptr;
 
     for (int i = 0; i < size; i++) {
         a[i] = i;
@@ -27,10 +27,10 @@ int main(int argc, char **argv)
     std::cout << std::endl;
 
     // Allocate GPU buffers for three vectors (two input, one output)
-    cudaMalloc((void **)&dev_a, size * sizeof(unsigned int));
+    cudaMalloc((void **)&dev_a, size * sizeof(int));
 
     // Copy input vectors from host memory to GPU buffers.
-    cudaMemcpy(dev_a, a, size * sizeof(unsigned int), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_a, a, size * sizeof(int), cudaMemcpyHostToDevice);
 
     // remove initial overhead
     for (int i = 0; i < 10; i++) {

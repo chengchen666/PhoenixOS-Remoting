@@ -60,3 +60,4 @@ for i in range(num_iter):
 print(generated_texts)
 
 print(total / num_iter)
+print(total)

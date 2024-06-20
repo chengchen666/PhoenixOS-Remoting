@@ -31,8 +31,8 @@ def get_data():
 
 def get_time(line, p=False):
     f = lambda col: max(line[mp[col]] - line[mp[col] - 1], 0)
-    if p:
-        print(f('cser'), f('sdser'), f('sser'), f('cdser'), f('srecv'), f('crecv'))
+    # if p:
+    #     print(f('cser'), f('sdser'), f('sser'), f('cdser'), f('srecv'), f('crecv'))
     raw = f('raw')
     ser = f('cser') + f('sdser') + f('sser') + f('cdser')
     send = f('csend') + f('ssend')
@@ -63,12 +63,12 @@ def calc(data):
 data = get_data()
 clock_count, total_time, total_num = calc(data)
 
-f = lambda col: line[mp[col] * 2 + 1] - line[mp[col] * 2]
-for line in data:
-    print(line)
-    res = get_time(line, True)
-    print(res)
-    break
+# f = lambda col: line[mp[col] * 2 + 1] - line[mp[col] * 2]
+# for line in data:
+#     # print(line)
+#     res = get_time(line, True)
+#     # print(res)
+#     break
 
 for k in total_time:
     total_time[k] /= 2.2

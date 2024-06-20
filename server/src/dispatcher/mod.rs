@@ -38,6 +38,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         12 => cudaPointerGetAttributesExe(channel_sender, channel_receiver),
         13 => cudaHostAllocExe(channel_sender, channel_receiver),
         14 => cudaFuncGetAttributesExe(channel_sender, channel_receiver),
+        15 => cudaDeviceGetStreamPriorityRangeExe(channel_sender, channel_receiver),
         100 => __cudaRegisterFatBinaryExe(channel_sender, channel_receiver),
         101 => __cudaUnregisterFatBinaryExe(channel_sender, channel_receiver),
         102 => __cudaRegisterFunctionExe(channel_sender, channel_receiver),
@@ -92,6 +93,8 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         2003 => cublasSetMathModeExe(channel_sender, channel_receiver),
         2004 => cublasSgemm_v2Exe(channel_sender, channel_receiver),
         2005 => cublasSgemmStridedBatchedExe(channel_sender, channel_receiver), 
+        2006 => cublasGetMathModeExe(channel_sender, channel_receiver), 
+        2007 => cublasGemmExExe(channel_sender, channel_receiver), 
         other => {
             error!(
                 "[{}:{}] invalid proc_id: {}",

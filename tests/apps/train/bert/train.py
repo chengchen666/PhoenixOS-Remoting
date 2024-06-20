@@ -88,7 +88,7 @@ T1 = time.time()
 trainer.iterative_train(num_iter)
         
 T2 = time.time()
-print('time used: ', T2-T1)
+print(T2-T1)
 
 if path is not None:
     end_trace()
