@@ -9,7 +9,7 @@ def model(previous_api: API, current_api: API):
         previous_api.queue_time = 0
 
     blocking_type = get_blocking_type(current_api.name)
-    remoting_type = get_remoting_type(current_api.name)
+    remoting_type = get_remoting_type(current_api.name)[0]
     
     # issue_{i} = complete_{i-1} + Gap_{i}
     current_api.issue_time = previous_api.complete_time + current_api.Gap

@@ -9,6 +9,7 @@ blocking_type_dict = {
     "cudaGetDevice": "NonBlocking",
     "cudaGetLastError": "NonBlocking",
     "cudaLaunchKernel": "GPUBlocking",
+    "cudaMemcpyAsync": "GPUBlocking",
     "cudaMemcpyAsyncDeviceToDevice": "GPUBlocking",
     "cudaMemcpyAsyncDeviceToHost": "GPUBlocking",
     "cudaMemcpyAsyncHostToDevice": "GPUBlocking",
