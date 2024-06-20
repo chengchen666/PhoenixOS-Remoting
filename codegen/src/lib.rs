@@ -11,6 +11,9 @@ use utils::{
     get_success_status
 };
 
+extern crate measure;
+use measure::*;
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The derive macros for auto trait impl.
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -241,6 +244,11 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
         }
     });
 
+    let set_crecv_statement = quote! {
+        #[cfg(feature = "timer")]
+        timer.set(MEASURE_CRECV);
+    };
+
     // assign vars to params
     let assign_statements = params
         .iter()
@@ -267,6 +275,12 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             assert_eq!(true, *ENABLE_LOG);
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            #[cfg(feature = "timer")]
+            let timer = &mut (*CTIMER.lock().unwrap());
+
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_START);
+
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
             let proc_id = #proc_id;
@@ -278,10 +292,17 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
                 Err(e) => panic!("failed to send proc_id: {:?}", e),
             }
             #( #send_statements )*
+
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_CSER);
+
             match channel_sender.flush_out() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to flush_out: {:?}", e),
             }
+
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_CSEND);
 
             #( #recv_statements )*
             #( #assign_statements )*
@@ -293,6 +314,17 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive timestamp: {:?}", e),
             }
+
+            #set_crecv_statement
+
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_CDSER);
+
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_TOTAL);
+
+            #[cfg(feature = "timer")]
+            timer.plus_cnt();
             return #result_name;
         }
     };
@@ -379,6 +411,11 @@ pub fn gen_hijack_async(input: TokenStream) -> TokenStream {
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             assert_eq!(true, *ENABLE_LOG);
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            #[cfg(feature = "timer")]
+            let timer = &mut (*CTIMER.lock().unwrap());
+
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_START);
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
             let proc_id = #proc_id;
@@ -393,6 +430,12 @@ pub fn gen_hijack_async(input: TokenStream) -> TokenStream {
                 Ok(()) => {}
                 Err(e) => panic!("failed to flush_out: {:?}", e),
             }
+
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_TOTAL);
+
+            #[cfg(feature = "timer")]
+            timer.plus_cnt();
 
             return #result;
         }
@@ -459,6 +502,11 @@ pub fn gen_hijack_local(input: TokenStream) -> TokenStream {
             quote! {
                 if let Some(val) = get_local_info(proc_id as usize) {
                     unsafe { *#name = val as i32; }
+                    #[cfg(feature = "timer")]
+                    timer.set(MEASURE_TOTAL);
+
+                    #[cfg(feature = "timer")]
+                    timer.plus_cnt();
                     return cudaError_t::cudaSuccess;
                 }
             }
@@ -497,6 +545,11 @@ pub fn gen_hijack_local(input: TokenStream) -> TokenStream {
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             assert_eq!(true, *ENABLE_LOG);
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            #[cfg(feature = "timer")]
+            let timer = &mut (*CTIMER.lock().unwrap());
+
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_START);
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
             let proc_id = #proc_id;
@@ -526,6 +579,11 @@ pub fn gen_hijack_local(input: TokenStream) -> TokenStream {
                 Err(e) => panic!("failed to receive timestamp: {:?}", e),
             }
             #( #add_statements )*
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_TOTAL);
+
+            #[cfg(feature = "timer")]
+            timer.plus_cnt();
             return #result_name;
         }
     };
@@ -666,16 +724,38 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
     let gen_fn = quote! {
         pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+            #[cfg(feature = "timer")]
+            let timer = &mut (*STIMER.lock().unwrap());
+
             #( #def_statements )*
             #( #recv_statements )*
             match channel_receiver.recv_ts() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive timestamp: {:?}", e)
             }
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_SRECV);
+
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_SDSER);
+
             #exec_statement
+
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_RAW);
+
             #( #send_statements )*
             #result_name.send(channel_sender).unwrap();
+
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_SSER);
+
             channel_sender.flush_out().unwrap();
+            #[cfg(feature = "timer")]
+            timer.set(MEASURE_SSEND);
+
+            #[cfg(feature = "timer")]
+            timer.plus_cnt();
         }
     };
 

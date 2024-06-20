@@ -120,4 +120,4 @@ for epoch in tqdm(range(1, n_epochs+1)):
         counter += 1
 
 T2 = time.time()
-print('time used: ', T2-T1)
+print(T2-T1)

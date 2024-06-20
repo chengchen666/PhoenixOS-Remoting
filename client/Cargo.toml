@@ -10,6 +10,7 @@ build = "build.rs"
 cudasys = { path = "../cudasys" }
 network = { path = "../network" }
 codegen = { path = "../codegen" }
+measure = { path = "../measure" }
 log = "0.4.0"
 env_logger = "0.9"
 lazy_static = "1.4.0"
@@ -23,7 +24,7 @@ crate-type = ["cdylib"]
 
 [features]
 # default = ["rdma"]
-default = ["shm", "emulator"]
+# default = ["shm", "emulator"]
 # default = ["shm"]
 shm = []
 rdma = []
@@ -31,3 +32,7 @@ emulator = []
 async_api = []
 shadow_desc = []
 local = []
+timer = []
+timer_conv = []
+timer_kernel = []
+timer_memcpy = []

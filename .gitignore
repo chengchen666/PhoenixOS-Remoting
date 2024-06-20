@@ -17,3 +17,4 @@ tests/apps/train/stablediffusion/tmp
 *.tgz
 core-*
 *.log
+data

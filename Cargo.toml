@@ -5,6 +5,10 @@ members = [
     "cudasys",
     "network",
     "server",
+    "measure",
 ]
 
 resolver = "2"
+
+[profile.release]
+opt-level = "z"

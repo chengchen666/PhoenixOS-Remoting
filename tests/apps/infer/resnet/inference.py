@@ -54,7 +54,7 @@ if path is not None:
 
 T1 = time.time()
 
-for i in range(num_iter*100):
+for i in range(num_iter):
     data = data_sample.to(device)
     target = target_sample.to(device)
     # forward pass: compute predicted outputs by passing inputs to the model
@@ -65,7 +65,7 @@ for i in range(num_iter*100):
     correct = np.squeeze(correct_tensor.data.cpu().numpy())
     
 T2 = time.time()
-print('time used: ', (T2-T1)/100)
+print(T2-T1)
 
 if path is not None:
     end_trace()

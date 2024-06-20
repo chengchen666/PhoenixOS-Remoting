@@ -53,7 +53,7 @@ for i in range(num_iter*100):
     unmasked_sentences = [masked_sentences[i].replace('[MASK]', token) for i, token in enumerate(unmasked_tokens)]
     
 T2 = time.time()
-print('time used: ', (T2-T1)/100)
+print((T2-T1)/100)
 
 if path is not None:
     end_trace()

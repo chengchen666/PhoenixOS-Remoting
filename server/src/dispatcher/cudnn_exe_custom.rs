@@ -29,6 +29,9 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
         std::file!(),
         std::line!()
     );
+    #[cfg(feature = "timer")]
+    let timer = &mut (*STIMER.lock().unwrap());
+
     let mut resource_idx: usize = Default::default();
     match resource_idx.recv(channel_receiver) {
         Ok(()) => {}
@@ -40,9 +43,18 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SRECV);
+
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SDSER);
     let mut tensorDesc: cudnnTensorDescriptor_t = Default::default();
     unsafe { cudnnCreateTensorDescriptor(&mut tensorDesc) };
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_RAW);
     add_resource(resource_idx, tensorDesc as usize);
+    #[cfg(feature = "timer")]
+    timer.plus_cnt();
 }
 #[cfg(not(feature = "shadow_desc"))]
 pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
@@ -54,15 +66,32 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
         std::file!(),
         std::line!()
     );
+    #[cfg(feature = "timer")]
+    let timer = &mut (*STIMER.lock().unwrap());
+
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SRECV);
     match channel_receiver.recv_ts() {
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SDSER);
     let mut tensorDesc: cudnnTensorDescriptor_t = Default::default();
     let result: cudnnStatus_t = unsafe { cudnnCreateTensorDescriptor(&mut tensorDesc) };
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_RAW);
+
     tensorDesc.send(channel_sender).unwrap();
     result.send(channel_sender).unwrap();
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SSER);
     channel_sender.flush_out().unwrap();
+    #[cfg(feature = "timer")]
+    timer.set(MEASURE_SSEND);
+
+    #[cfg(feature = "timer")]
+    timer.plus_cnt();
 }
 
 pub fn cudnnCreateActivationDescriptorExe<T: CommChannel>(
@@ -597,6 +626,9 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
         std::file!(),
         std::line!()
     );
+    #[cfg(feature = "timer_conv")]
+    let timer = &mut (*STIMER.lock().unwrap());
+
     let mut handle: cudnnHandle_t = Default::default();
     let mut alpha: f64 = Default::default(); // currently, we assume that alpha is f64
     let mut xDesc: cudnnTensorDescriptor_t = Default::default();
@@ -700,8 +732,15 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_SRECV);
     let alpha_ = &alpha as *const f64;
     let beta_ = &beta as *const f64;
+
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_SDSER);
+
     let result: cudnnStatus_t = unsafe {
         cudnnConvolutionForward(
             handle,
@@ -719,6 +758,8 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
             y as *mut c_void,
         )
     };
+    #[cfg(feature = "timer_conv")]
+    timer.set(MEASURE_RAW);
     #[cfg(not(feature = "async_api"))]
     {
         match result.send(channel_sender) {
@@ -727,7 +768,14 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
                 error!("Error sending result: {:?}", e);
             }
         }
+        #[cfg(feature = "timer_conv")]
+        timer.set(MEASURE_SSER);
         channel_sender.flush_out().unwrap();
+        #[cfg(feature = "timer_conv")]
+        timer.set(MEASURE_SSEND);
+
+        #[cfg(feature = "timer_conv")]
+        timer.plus_cnt();
     }
 }
 
@@ -1832,6 +1880,8 @@ pub fn cudnnGetConvolutionNdForwardOutputDimExe<T: CommChannel> (
     if let Err(e) = convDesc.recv(channel_receiver) {
         error!("Error receiving convDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let convDesc = get_resource(convDesc as usize);
     if let Err(e) = inputTensorDesc.recv(channel_receiver) {
         error!("Error receiving inputTensorDesc: {:?}", e);
     }
