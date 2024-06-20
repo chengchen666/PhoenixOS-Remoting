@@ -6,10 +6,16 @@ import ctypes
 import os
 
 # load remoting bottom library
-path = os.getenv('REMOTING_BOTTOM_LIBRARY')
-if path is not None:
-    cpp_lib = ctypes.CDLL(path)
+remoting_bottom_lib_path = os.getenv('REMOTING_BOTTOM_LIBRARY')
+if remoting_bottom_lib_path is not None:
+    cpp_lib = ctypes.CDLL(remoting_bottom_lib_path)
     start_trace = cpp_lib.startTrace
+    end_trace = cpp_lib.endTrace
+
+log_breakpoint_lib_path = os.getenv('LOG_BREAKPOINT_LIBRARY')
+if log_breakpoint_lib_path is not None:
+    cpp_lib = ctypes.CDLL(log_breakpoint_lib_path)
+    breakpoint = cpp_lib.log_breakpoint
 
 if(len(sys.argv) < 3):
     print('Usage: python3 inference.py num_iter batch_size [model_path]')
@@ -42,7 +48,10 @@ for i in range(2):
         generated_ids = model.generate(**encoding, max_length=20)
     generated_texts = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
 
-if path is not None:
+if log_breakpoint_lib_path is not None:
+    breakpoint()
+
+if remoting_bottom_lib_path is not None:
     start_trace()
 
 print("begin trace")
@@ -58,4 +67,8 @@ for i in range(num_iter):
     
 T2 = time.time()
 print('time used: ', T2-T1)
+
+if remoting_bottom_lib_path is not None:
+    end_trace()
+
 # print(generated_texts)
