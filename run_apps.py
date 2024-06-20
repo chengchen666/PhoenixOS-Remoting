@@ -69,13 +69,13 @@ def run_apps():
     get_path = lambda x: f'{PROJ_ROOT}/tests/apps/{x}'
     mp = {
         # 'infer/resnet/inference.py': ('', [1, 64]),
-        # 'infer/sd/inference.py': (get_path('infer/sd/stable-diffusion-v1-4'), [1]),
-        # 'infer/bert/inference.py': (get_path('infer/bert/bert-base-uncased'), [1, 64]),
+        # 'infer/STABLEDIFFUSION-v1-4/inference.py': (get_path('infer/sd/stable-diffusion-v1-4'), [1]),
+        # 'infer/BERT-base-uncased/inference.py': (get_path('infer/bert/bert-base-uncased'), [1, 64]),
         # 'infer/gpt2/inference.py': (get_path('infer/gpt2/gpt2'), [4, 512]),
 
         'train/resnet/train.py': ('', [64]),
-        'train/sd/train.py': ('', [1]),
-        'train/bert/train.py': ('', [64]),
+        'train/STABLEDIFFUSION-v1-4/train.py': ('', [1]),
+        'train/BERT-base-uncased/train.py': ('', [64]),
     }
 
     results = {}

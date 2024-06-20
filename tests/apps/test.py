@@ -1,4 +1,0 @@
-import torch
-
-print('over')
-
