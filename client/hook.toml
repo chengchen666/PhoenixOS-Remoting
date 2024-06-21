@@ -80,7 +80,6 @@ cublasSetStream_v2 = { default = true }
 cublasSgemm_v2 = { default = false }
 cublasSgemmStridedBatched = { default = false }
 cublasGetMathMode = { default = true }
-cublasGemmEx = { default = true }
 
 [opt]
 async_api = [

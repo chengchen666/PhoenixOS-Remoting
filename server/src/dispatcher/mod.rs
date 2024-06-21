@@ -94,7 +94,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         2004 => cublasSgemm_v2Exe(channel_sender, channel_receiver),
         2005 => cublasSgemmStridedBatchedExe(channel_sender, channel_receiver), 
         2006 => cublasGetMathModeExe(channel_sender, channel_receiver), 
-        2007 => cublasGemmExExe(channel_sender, channel_receiver), 
+        // 2007 => cublasGemmExExe(channel_sender, channel_receiver), 
         other => {
             error!(
                 "[{}:{}] invalid proc_id: {}",
