@@ -51,27 +51,27 @@ gen_hijack!(
     "*mut cublasMath_t"
 );
 
-gen_hijack!(
-    2007,
-    "cublasGemmEx",
-    "cublasStatus_t",
-    "cublasHandle_t",
-    "cublasOperation_t",
-    "cublasOperation_t",
-    "::std::os::raw::c_int",
-    "::std::os::raw::c_int",
-    "::std::os::raw::c_int",
-    "MemPtr",
-    "MemPtr",
-    "cudaDataType",
-    "::std::os::raw::c_int",
-    "MemPtr",
-    "cudaDataType",
-    "::std::os::raw::c_int",
-    "MemPtr",
-    "MemPtr",
-    "cudaDataType",
-    "::std::os::raw::c_int",
-    "cublasComputeType_t",
-    "cublasGemmAlgo_t"
-);
+// gen_hijack!(
+//     2007,
+//     "cublasGemmEx",
+//     "cublasStatus_t",
+//     "cublasHandle_t",
+//     "cublasOperation_t",
+//     "cublasOperation_t",
+//     "::std::os::raw::c_int",
+//     "::std::os::raw::c_int",
+//     "::std::os::raw::c_int",
+//     "MemPtr",
+//     "MemPtr",
+//     "cudaDataType",
+//     "::std::os::raw::c_int",
+//     "MemPtr",
+//     "cudaDataType",
+//     "::std::os::raw::c_int",
+//     "MemPtr",
+//     "MemPtr",
+//     "cudaDataType",
+//     "::std::os::raw::c_int",
+//     "cublasComputeType_t",
+//     "cublasGemmAlgo_t"
+// );

@@ -137,3 +137,20 @@ gen_hijack!(
     "*mut ::std::os::raw::c_int",
     "*mut ::std::os::raw::c_int"
 );
+
+gen_hijack!(
+    16,
+    "cudaMemsetAsync", 
+    "cudaError_t", 
+    "MemPtr", 
+    "::std::os::raw::c_int", 
+    "size_t", 
+    "cudaStream_t"
+);
+gen_hijack!(
+    17,
+    "cudaMemGetInfo", 
+    "cudaError_t", 
+    "*mut size_t", 
+    "*mut size_t"
+);
