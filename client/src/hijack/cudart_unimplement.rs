@@ -102,7 +102,6 @@ gen_unimplement!("cudaMemcpy3D", "cudaError_t", "*const cudaMemcpy3DParms");
 gen_unimplement!("cudaMemcpy3DPeer", "cudaError_t", "*const cudaMemcpy3DPeerParms");
 gen_unimplement!("cudaMemcpy3DAsync", "cudaError_t", "*const cudaMemcpy3DParms", "cudaStream_t");
 gen_unimplement!("cudaMemcpy3DPeerAsync", "cudaError_t", "*const cudaMemcpy3DPeerParms", "cudaStream_t");
-gen_unimplement!("cudaMemGetInfo", "cudaError_t", "*mut size_t", "*mut size_t");
 gen_unimplement!("cudaArrayGetInfo", "cudaError_t", "*mut cudaChannelFormatDesc", "*mut cudaExtent", "*mut ::std::os::raw::c_uint", "cudaArray_t");
 gen_unimplement!("cudaArrayGetPlane", "cudaError_t", "*mut cudaArray_t", "cudaArray_t", "::std::os::raw::c_uint");
 gen_unimplement!("cudaArrayGetSparseProperties", "cudaError_t", "*mut cudaArraySparseProperties", "cudaArray_t");

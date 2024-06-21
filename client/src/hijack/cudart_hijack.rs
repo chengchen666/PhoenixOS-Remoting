@@ -131,6 +131,17 @@ gen_hijack!(
     "*mut ::std::os::raw::c_int"
 );
 
+#[cfg(feature = "async_api")]
+gen_hijack_async!(
+    16,
+    "cudaMemsetAsync", 
+    "cudaError_t", 
+    "MemPtr", 
+    "::std::os::raw::c_int", 
+    "size_t", 
+    "cudaStream_t"
+);
+#[cfg(not(feature = "async_api"))]
 gen_hijack!(
     16,
     "cudaMemsetAsync", 
@@ -140,6 +151,7 @@ gen_hijack!(
     "size_t", 
     "cudaStream_t"
 );
+
 gen_hijack!(
     17,
     "cudaMemGetInfo", 

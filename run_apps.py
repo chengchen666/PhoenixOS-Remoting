@@ -3,7 +3,7 @@ import subprocess
 import time
 
 PROJ_ROOT = '/workspace/xpuremoting'
-ITER = 50
+ITER = 20
 
 env = os.environ.copy()
 env['RUST_LOG'] = 'error'
@@ -78,7 +78,7 @@ def run_app(app, model_path, batch):
 def run_factor(app, model_path, batch):
     res = []
 
-    res.append(run_local(app, model_path, batch))
+    # res.append(run_local(app, model_path, batch))
     res.append(run(app, model_path, batch, comm='rdma', opt=3))
     res.append(run(app, model_path, batch, comm='rdma', opt=2))
     res.append(run(app, model_path, batch, comm='rdma', opt=1))
