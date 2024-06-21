@@ -58,7 +58,7 @@ while len(payloads) > 0 and i < len(apis):
         i += 1
     if i == len(apis):
         break
-    # apis[i].set_Serialization(serialization, serialization)
+    apis[i].set_Serialization(serialization, serialization)
     apis[i].set_Payload(payload_forward, payload_backward)
 
 assert len(payloads) == 0
