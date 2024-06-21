@@ -103,7 +103,7 @@ fn get_local_info(proc_id: usize) -> Option<usize> {
     LOCAL_INFO.lock().unwrap().get(&proc_id).cloned()
 }
 
-#[ctor]
-fn init() {
-    core_affinity::set_for_current(1);
-}
+// #[ctor]
+// fn init() {
+//     core_affinity::set_for_current(1);
+// }
