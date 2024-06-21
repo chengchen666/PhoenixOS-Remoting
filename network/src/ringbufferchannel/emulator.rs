@@ -1,6 +1,5 @@
 use chrono::Utc;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
 
 use crate::{
     CONFIG, CommChannelInner, CommChannelInnerIO, CommChannelError,
@@ -14,7 +13,7 @@ pub struct EmulatorChannel {
     last_timestamp: Arc<Mutex<UsTimestamp>>,
     rtt: f64,
     bandwidth: f64,
-    start: Arc<Mutex<Option<Instant>>>,
+    start: Arc<Mutex<Option<u64>>>,
 }
 
 unsafe impl Send for EmulatorChannel {}
@@ -56,7 +55,7 @@ impl EmulatorChannel {
 
     fn send<T>(&self, src: T) -> Result<(), CommChannelError> {
         if self.get_start() == None {
-            self.set_start(Some(Instant::now()));
+            self.set_start(Some(measure::rdtscp()));
         }
         let memory = RawMemory::new(&src, std::mem::size_of::<T>());
         match self.manager.put_bytes(&memory)? == std::mem::size_of::<T>() {
@@ -95,12 +94,12 @@ impl EmulatorChannel {
     }
 
     #[inline]
-    pub fn get_start(&self) -> Option<Instant> {
+    pub fn get_start(&self) -> Option<u64> {
         *self.start.lock().unwrap()
     }
 
     #[inline]
-    pub fn set_start(&self, start: Option<Instant>) {
+    pub fn set_start(&self, start: Option<u64>) {
         *self.start.lock().unwrap() = start;
     }
 }
@@ -108,7 +107,7 @@ impl EmulatorChannel {
 impl CommChannelInnerIO for EmulatorChannel {
     fn put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
         if self.get_start() == None {
-            self.set_start(Some(Instant::now()));
+            self.set_start(Some(measure::rdtscp()));
         }
         self.set_byte_cnt(self.get_byte_cnt() + src.len);
         self.manager.put_bytes(src)
@@ -116,7 +115,7 @@ impl CommChannelInnerIO for EmulatorChannel {
 
     fn try_put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
         if self.get_start() == None {
-            self.set_start(Some(Instant::now()));
+            self.set_start(Some(measure::rdtscp()));
         }
         self.manager.try_put_bytes(src)
     }
@@ -136,7 +135,8 @@ impl CommChannelInnerIO for EmulatorChannel {
 
 impl CommChannelInner for EmulatorChannel {
     fn flush_out(&self) -> Result<(), CommChannelError> {
-        let elapsed = self.get_start().unwrap().elapsed().as_nanos() as f64;
+        let end = measure::rdtscp();
+        let elapsed = measure::clock2ns(end - self.get_start().unwrap());
         log::info!(", {}", elapsed / 1000.0);
         self.set_start(None);
         let _ = self.manager.flush_out();

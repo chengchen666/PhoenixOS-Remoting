@@ -15,6 +15,7 @@ pub mod ringbufferchannel;
 pub mod type_impl;
 
 extern crate codegen;
+extern crate measure;
 
 #[derive(Deserialize)]
 pub struct NetworkConfig {
