@@ -136,6 +136,9 @@ impl CommChannelInnerIO for EmulatorChannel {
 
 impl CommChannelInner for EmulatorChannel {
     fn flush_out(&self) -> Result<(), CommChannelError> {
+        if self.get_start() == None {
+            self.set_start(Some(measure::rdtscp()));
+        }
         let end = measure::rdtscp();
         let elapsed = measure::clock2ns(end - self.get_start().unwrap());
         log::info!(", {}", elapsed / 1000.0);
