@@ -7,6 +7,8 @@ class API:
         self.Payload_backward = 0
         self.Network_forward = 0
         self.Network_backward = 0
+        self.Serialization = 0
+        self.Deserialization = 0
         self.Process = 0
         self.Block = 0
         self.Gap = 0
@@ -33,6 +35,10 @@ class API:
             float(self.Payload_forward) / BANDWIDTH
         self.Network_backward = RTT/2 + \
             float(self.Payload_backward) / BANDWIDTH
+
+    def set_Serialization(self, Serialization, Deserialization):
+        self.Serialization = Serialization
+        self.Deserialization = Deserialization
 
     def set_Process(self, Process):
         self.Process = Process

@@ -44,32 +44,24 @@ payloads = []
 with open(xpu_remoting_log, "r") as file:
     lines = file.readlines()
     for line in lines:
-        name, Payload = line.strip().split(",")
-        payloads.append((name, int(Payload)))
+        name, Serialization, Payload = line.strip().split(",")
+        payloads.append((name, float(Serialization), int(Payload)))
 
 i = 0
-# while len(payloads) > 0 and i < len(apis):
-#     name, payload_forward = payloads[0][0], payloads[0][1]
-#     if name == "cudaMemcpy":
-#         name = "cudaMemcpyAsync"
-#     payloads.pop(0)
-#     payload_backward = get_remoting_type(name)[1]
-#     while i < len(apis) and apis[i].name != name:
-#         i += 1
-#     if i == len(apis):
-#         break
-#     apis[i].set_Payload(payload_forward, payload_backward)
+while len(payloads) > 0 and i < len(apis):
+    name, serialization, payload_forward = payloads[0][0], payloads[0][1], payloads[0][2]
+    if name == "cudaMemcpy":
+        name = "cudaMemcpyAsync"
+    payloads.pop(0)
+    payload_backward = get_remoting_type(name)[1]
+    while i < len(apis) and apis[i].name != name:
+        i += 1
+    if i == len(apis):
+        break
+    # apis[i].set_Serialization(serialization, serialization)
+    apis[i].set_Payload(payload_forward, payload_backward)
 
-# assert len(payloads) == 0
-
-# # fix cudaStreamSynchonize exe overhead (itself actually has no overhead, just wait for previous blocking API)
-# prev_api = API("dummy")
-# for api in apis:
-#     if api.name == "cudaStreamSynchronize":
-#         prev_api.Exe += api.Exe
-#         api.set_Exe(0)
-#     prev_api = api
-
+assert len(payloads) == 0
 
 
 #### Baseline model

@@ -15,14 +15,14 @@ def model(previous_api: API, current_api: API):
     current_api.issue_time = previous_api.complete_time + current_api.Gap
 
     # start_{i} = issue_{i} + Network_{i}
-    current_api.start_time = current_api.issue_time + current_api.Network_forward
+    current_api.start_time = current_api.issue_time + current_api.Serialization + current_api.Network_forward
 
     # end_{i} = start_{i} + Process_{i}, NonBlocking or GPUBlocking
     #         = max(start_{i} + Process_{i}, queue_{i - 1}) + Block_{i}, CPUBlocking
     if blocking_type == "NonBlocking" or blocking_type == "GPUBlocking":
-        current_api.end_time = current_api.start_time + current_api.Process
+        current_api.end_time = current_api.start_time + current_api.Deserialization + current_api.Process
     elif blocking_type == "CPUBlocking":
-        current_api.end_time = max(current_api.start_time + current_api.Process, previous_api.queue_time) + current_api.Block
+        current_api.end_time = max(current_api.start_time + current_api.Deserialization + current_api.Process, previous_api.queue_time) + current_api.Block
 
     # queue_{i} = queue_{i-1}, NonBlocking
     #           = max(start_{i} + Process_{i}, queue_{i - 1}) + Block_{i}, GPUBlocking or CPUBlocking
