@@ -123,7 +123,6 @@ gen_unimplement!("cudaMemcpyFromSymbolAsync", "cudaError_t", "*mut ::std::os::ra
 gen_unimplement!("cudaMemset", "cudaError_t", "*mut ::std::os::raw::c_void", "::std::os::raw::c_int", "size_t");
 gen_unimplement!("cudaMemset2D", "cudaError_t", "*mut ::std::os::raw::c_void", "size_t", "::std::os::raw::c_int", "size_t", "size_t");
 gen_unimplement!("cudaMemset3D", "cudaError_t", "cudaPitchedPtr", "::std::os::raw::c_int", "cudaExtent");
-gen_unimplement!("cudaMemsetAsync", "cudaError_t", "*mut ::std::os::raw::c_void", "::std::os::raw::c_int", "size_t", "cudaStream_t");
 gen_unimplement!("cudaMemset2DAsync", "cudaError_t", "*mut ::std::os::raw::c_void", "size_t", "::std::os::raw::c_int", "size_t", "size_t", "cudaStream_t");
 gen_unimplement!("cudaMemset3DAsync", "cudaError_t", "cudaPitchedPtr", "::std::os::raw::c_int", "cudaExtent", "cudaStream_t");
 gen_unimplement!("cudaGetSymbolAddress", "cudaError_t", "*mut *mut ::std::os::raw::c_void", "*const ::std::os::raw::c_void");
