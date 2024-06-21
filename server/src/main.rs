@@ -11,5 +11,6 @@ fn main() {
         env::set_var("RUST_LOG", "debug");
     }
     env_logger::init();
+    core_affinity::set_for_current(0);
     launch_server();
 }
