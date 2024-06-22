@@ -1,6 +1,5 @@
 use chrono::Utc;
-use std::sync::{Arc};
-use super::fakemutex::FakeMutex;
+use std::sync::{Arc, Mutex};
 
 use crate::{
     CONFIG, CommChannelInner, CommChannelInnerIO, CommChannelError,
@@ -10,11 +9,11 @@ use super::types::*;
 
 pub struct EmulatorChannel {
     manager: Box<dyn CommChannelInner>,
-    byte_cnt: Arc<FakeMutex<usize>>,
-    last_timestamp: Arc<FakeMutex<NsTimestamp>>,
+    byte_cnt: Arc<Mutex<usize>>,
+    last_timestamp: Arc<Mutex<NsTimestamp>>,
     rtt: f64,
     bandwidth: f64,
-    start: Arc<FakeMutex<Option<u64>>>,
+    start: Arc<Mutex<Option<u64>>>,
 }
 
 unsafe impl Send for EmulatorChannel {}
@@ -24,11 +23,11 @@ impl EmulatorChannel {
     pub fn new(manager: Box<dyn CommChannelInner>) -> Self {
         Self {
             manager,
-            byte_cnt: Arc::new(FakeMutex::new(0)),
-            last_timestamp: Arc::new(FakeMutex::new(NsTimestamp::new())),
+            byte_cnt: Arc::new(Mutex::new(0)),
+            last_timestamp: Arc::new(Mutex::new(NsTimestamp::new())),
             rtt: CONFIG.rtt,
             bandwidth: CONFIG.bandwidth,
-            start: Arc::new(FakeMutex::new(None)),
+            start: Arc::new(Mutex::new(None)),
         }
     }
 
