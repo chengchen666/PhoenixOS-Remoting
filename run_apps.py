@@ -80,8 +80,11 @@ def run_factor(app, model_path, batch):
 
     # res.append(run_local(app, model_path, batch))
     res.append(run(app, model_path, batch, comm='rdma', opt=3))
+    print(res)
     res.append(run(app, model_path, batch, comm='rdma', opt=2))
+    print(res)
     res.append(run(app, model_path, batch, comm='rdma', opt=1))
+    print(res)
     res.append(run(app, model_path, batch, comm='rdma', opt=0))
 
     return res
@@ -95,9 +98,9 @@ def run_apps():
         # 'infer/BERT-base-uncased/inference.py': (get_path('infer/BERT-base-uncased/bert-base-uncased'), [1, 64]),
         # 'infer/gpt2/inference.py': (get_path('infer/gpt2/gpt2'), [4, 512]),
 
-        'train/resnet/train.py': ('', [64]),
-        # 'train/STABLEDIFFUSION-v1-4/train.py': ('', [1]),
-        'train/BERT-base-uncased/train.py': ('', [64]),
+        # 'train/resnet/train.py': ('', [64]),
+        'train/STABLEDIFFUSION-v1-4/train.py': ('', [1]),
+        # 'train/BERT-base-uncased/train.py': ('', [64]),
     }
 
     results = {}
@@ -105,6 +108,7 @@ def run_apps():
         for batch in v[1]:
             res = run_app(app, v[0], str(batch))
             results[(app, batch)] = res
+            print(results)
     
     for k, v in results.items():
         print(f'{k}: {v}')
