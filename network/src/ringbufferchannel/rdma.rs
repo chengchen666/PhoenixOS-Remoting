@@ -222,6 +222,11 @@ impl RDMAChannel {
     }
 
     fn read_remote(&self, offset: usize, len: usize) -> usize {
+        for _ in 0..self.get_pending_num() {
+            Self::poll_till_completion(&self.qp);
+        }
+        self.set_pending_num(0);
+
         let l: u64 = offset as u64;
         let r: u64 = l + len as u64;
         let _ = self.qp.post_send_read(
