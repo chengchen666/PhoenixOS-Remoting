@@ -333,6 +333,9 @@ pub fn cudaMemsetAsyncExe<T: CommChannel>(channel_sender: &mut T, channel_receiv
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
     let result = unsafe { cudaMemsetAsync(devPtr as *mut std::os::raw::c_void, value, count, stream) };
-    result.send(channel_sender).unwrap();
-    channel_sender.flush_out().unwrap();
+    #[cfg(not(feature = "async_api"))]
+    {
+        result.send(channel_sender).unwrap();
+        channel_sender.flush_out().unwrap();
+    }
 }

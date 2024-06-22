@@ -5,3 +5,4 @@ h5py
 diffusers==0.19
 torch-ema
 bitsandbytes-cuda113
+accelerate

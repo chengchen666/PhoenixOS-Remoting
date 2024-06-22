@@ -446,12 +446,16 @@ pub extern "C" fn cublasGemmStridedBatchedEx(
         error!("Error sending algo: {:?}", e)
     }
     channel_sender.flush_out().unwrap();
+
+    #[cfg(feature = "async_api")]
+    return cublasStatus_t::CUBLAS_STATUS_SUCCESS;
+
     if let Err(e) = result.recv(channel_receiver) {
         error!("Error receiving result: {:?}", e)
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }
