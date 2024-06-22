@@ -142,11 +142,11 @@ impl CommChannelInner for EmulatorChannel {
         let end = measure::rdtscp();
         let elapsed = measure::clock2ns(end - self.get_start().unwrap());
         log::info!(", {}", elapsed / 1000.0);
-        let _ = self.manager.flush_out();
         let ts = self.calculate_ts(self.get_byte_cnt());
         let byte_cnt = self.get_byte_cnt();
         log::info!(", {}", byte_cnt);
         let _ = self.send(ts);
+        let _ = self.manager.flush_out();
         self.set_byte_cnt(0);
         self.set_last_timestamp(ts);
         self.set_start(None);
