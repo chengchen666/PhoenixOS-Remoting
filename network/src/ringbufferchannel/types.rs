@@ -1,8 +1,8 @@
 use crate::{RawMemory, Transportable};
-
+use std::time::UNIX_EPOCH;
 #[derive(Debug, Default, Clone)]
 pub struct Request {
-    pub timestamp: UsTimestamp,
+    pub timestamp: NsTimestamp,
     pub proc_id: i32,
     pub data: Vec<u8>,
 }
@@ -10,7 +10,7 @@ pub struct Request {
 impl Request {
     pub fn new(proc_id: i32, data: Vec<u8>) -> Request {
         Request {
-            timestamp: UsTimestamp::new(),
+            timestamp: NsTimestamp::new(),
             proc_id,
             data,
         }
@@ -43,62 +43,66 @@ impl Transportable for Request {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct UsTimestamp {
+pub struct NsTimestamp {
     pub sec_timestamp: i64,
-    pub us_timestamp: u32,
+    pub ns_timestamp: u32,
 }
-impl PartialEq for UsTimestamp {
+impl PartialEq for NsTimestamp {
     fn eq(&self, other: &Self) -> bool {
-        self.sec_timestamp == other.sec_timestamp && self.us_timestamp == other.us_timestamp
+        self.sec_timestamp == other.sec_timestamp && self.ns_timestamp == other.ns_timestamp
     }
 }
 
-impl PartialOrd for UsTimestamp {
+impl PartialOrd for NsTimestamp {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match self.sec_timestamp.cmp(&other.sec_timestamp) {
-            std::cmp::Ordering::Equal => self.us_timestamp.partial_cmp(&other.us_timestamp),
+            std::cmp::Ordering::Equal => self.ns_timestamp.partial_cmp(&other.ns_timestamp),
             other_order => Some(other_order),
         }
     }
 }
 
-impl UsTimestamp {
-    pub fn new() -> UsTimestamp {
-        UsTimestamp {
+impl NsTimestamp {
+    pub fn new() -> NsTimestamp {
+        NsTimestamp {
             sec_timestamp: 0,
-            us_timestamp: 0,
+            ns_timestamp: 0,
         }
     }
-    pub fn from_datetime(datetime: chrono::DateTime<chrono::Utc>) -> UsTimestamp {
-        UsTimestamp {
-            sec_timestamp: datetime.timestamp(),
-            us_timestamp: datetime.timestamp_subsec_micros(),
+    pub fn now() -> NsTimestamp {
+        let now_time = std::time::SystemTime::now();
+        let duration_since_epoch = now_time.duration_since(UNIX_EPOCH).expect("Time went backwards");
+        let sec = duration_since_epoch.as_secs() as i64;
+        let ns = duration_since_epoch.subsec_nanos(); 
+        NsTimestamp {
+            sec_timestamp: sec,
+            ns_timestamp: ns,
         }
     }
 }
 
-impl UsTimestamp {
+impl NsTimestamp {
     pub fn to_raw_memory(&self) -> RawMemory {
-        let mut data = [0u8; std::mem::size_of::<UsTimestamp>()];
+        let mut data = [0u8; std::mem::size_of::<NsTimestamp>()];
         // 0-7 bytes for sec_timestamp
         data[0..8].copy_from_slice(&self.sec_timestamp.to_le_bytes());
         // 8-11 bytes for ms_timestamp
-        data[8..12].copy_from_slice(&self.us_timestamp.to_le_bytes());
+        data[8..12].copy_from_slice(&self.ns_timestamp.to_le_bytes());
         RawMemory::from_ptr(data.as_ptr(), data.len())
     }
 }
 
-impl Transportable for UsTimestamp {
+impl Transportable for NsTimestamp {
     fn emulate_send<T: crate::CommChannel>(&self, channel: &mut T) -> Result<(), crate::CommChannelError> {
         self.sec_timestamp.emulate_send(channel)?;
-        self.us_timestamp.emulate_send(channel)
+        self.ns_timestamp.emulate_send(channel)
     }
     fn send<T: crate::CommChannel>(
         &self,
         channel: &mut T,
     ) -> Result<(), crate::CommChannelError> {
         self.sec_timestamp.send(channel)?;
-        self.us_timestamp.send(channel)
+        self.ns_timestamp.send(channel)
     }
 
     fn recv<T: crate::CommChannel>(
@@ -106,6 +110,6 @@ impl Transportable for UsTimestamp {
         channel: &mut T,
     ) -> Result<(), crate::CommChannelError> {
         self.sec_timestamp.recv(channel)?;
-        self.us_timestamp.recv(channel)
+        self.ns_timestamp.recv(channel)
     }
 }

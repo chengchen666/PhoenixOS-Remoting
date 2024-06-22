@@ -11,7 +11,7 @@ use super::types::*;
 pub struct EmulatorChannel {
     manager: Box<dyn CommChannelInner>,
     byte_cnt: Arc<FakeMutex<usize>>,
-    last_timestamp: Arc<FakeMutex<UsTimestamp>>,
+    last_timestamp: Arc<FakeMutex<NsTimestamp>>,
     rtt: f64,
     bandwidth: f64,
     start: Arc<FakeMutex<Option<u64>>>,
@@ -25,7 +25,7 @@ impl EmulatorChannel {
         Self {
             manager,
             byte_cnt: Arc::new(FakeMutex::new(0)),
-            last_timestamp: Arc::new(FakeMutex::new(UsTimestamp::new())),
+            last_timestamp: Arc::new(FakeMutex::new(NsTimestamp::new())),
             rtt: CONFIG.rtt,
             bandwidth: CONFIG.bandwidth,
             start: Arc::new(FakeMutex::new(None)),
@@ -34,23 +34,23 @@ impl EmulatorChannel {
 
     fn calculate_latency(&self, current_bytes: usize) -> f64 {
         let data_size =
-            current_bytes + std::mem::size_of::<UsTimestamp>() + std::mem::size_of::<i32>();
-        self.rtt * 1000.0 / 2.0 + (data_size as f64 / self.bandwidth) * 1000000.0 * 8.0
+            current_bytes + std::mem::size_of::<NsTimestamp>() + std::mem::size_of::<i32>();
+        self.rtt * 1000000.0 / 2.0 + (data_size as f64 * 8.0 / self.bandwidth) * 1000000000.0 
     }
 
-    pub fn calculate_ts(&self, current_bytes: usize) -> UsTimestamp {
+    pub fn calculate_ts(&self, current_bytes: usize) -> NsTimestamp {
         let latency = self.calculate_latency(current_bytes);
-        let now_timestamp = UsTimestamp::from_datetime(Utc::now());
+        let now_timestamp = NsTimestamp::now();
         let base_timestamp = match now_timestamp > self.get_last_timestamp() {
             true => now_timestamp,
             false => self.get_last_timestamp().clone(),
         };
         let sec = base_timestamp.sec_timestamp
-            + (base_timestamp.us_timestamp as i64 + latency as i64) / 1000000;
-        let us = (base_timestamp.us_timestamp + latency as u32) % 1000000;
-        UsTimestamp {
+            + (base_timestamp.ns_timestamp as i64 + latency as i64) / 1000000000;
+        let ns = (base_timestamp.ns_timestamp + latency as u32) % 1000000000;
+        NsTimestamp {
             sec_timestamp: sec,
-            us_timestamp: us,
+            ns_timestamp: ns,
         }
     }
 
@@ -85,12 +85,12 @@ impl EmulatorChannel {
     }
 
     #[inline]
-    pub fn get_last_timestamp(&self) -> UsTimestamp {
+    pub fn get_last_timestamp(&self) -> NsTimestamp {
         *self.last_timestamp.lock().unwrap()
     }
 
     #[inline]
-    pub fn set_last_timestamp(&self, last_timestamp: UsTimestamp) {
+    pub fn set_last_timestamp(&self, last_timestamp: NsTimestamp) {
         *self.last_timestamp.lock().unwrap() = last_timestamp;
     }
 
@@ -154,9 +154,9 @@ impl CommChannelInner for EmulatorChannel {
     }
 
     fn recv_ts(&self) -> Result<(), crate::CommChannelError> {
-        let mut timestamp: UsTimestamp = Default::default();
+        let mut timestamp: NsTimestamp = Default::default();
         let _ = self.recv(&mut timestamp);
-        while UsTimestamp::from_datetime(Utc::now()) < timestamp {
+        while NsTimestamp::now() < timestamp {
             // Busy-waiting
         }
         Ok(())
