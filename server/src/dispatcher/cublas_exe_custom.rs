@@ -203,6 +203,11 @@ pub fn cublasSgemmStridedBatchedExe<T: CommChannel>(
             &beta_, C as *mut f32, ldc, strideC, batchCount
         ) 
     };
-    result.send(channel_sender).unwrap();
-    channel_sender.flush_out().unwrap();
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.send(channel_sender) {
+            error!("Error sending result: {:?}", e);
+        }
+        channel_sender.flush_out().unwrap();
+    }
 }

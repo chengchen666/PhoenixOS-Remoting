@@ -390,10 +390,6 @@ pub extern "C" fn cudnnCreateFilterDescriptor(
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
     cudnnStatus_t::CUDNN_STATUS_SUCCESS
 }
 #[cfg(not(feature = "shadow_desc"))]
@@ -561,10 +557,6 @@ pub extern "C" fn cudnnCreateConvolutionDescriptor(
     match channel_sender.flush_out() {
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
-    }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
     cudnnStatus_t::CUDNN_STATUS_SUCCESS
 }

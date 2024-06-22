@@ -224,12 +224,19 @@ pub extern "C" fn cublasSgemmStridedBatched(
         error!("Error sending batchCount: {:?}", e)
     }
     channel_sender.flush_out().unwrap();
-    if let Err(e) = result.recv(channel_receiver) {
-        error!("Error receiving result: {:?}", e)
+    #[cfg(feature = "async_api")]
+    {
+        return cublasStatus_t::CUBLAS_STATUS_SUCCESS;
     }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-    result
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            error!("Error receiving result: {:?}", e)
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        return result;
+    }
 }
