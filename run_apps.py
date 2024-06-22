@@ -3,7 +3,7 @@ import subprocess
 import time
 
 PROJ_ROOT = '/workspace/xpuremoting'
-ITER = 20
+ITER = 50
 
 env = os.environ.copy()
 env['RUST_LOG'] = 'error'
@@ -66,11 +66,11 @@ def run_app(app, model_path, batch):
 
     res.append(run_local(app, model_path, batch))
 
-    res.append(run(app, model_path, batch, comm='shm', opt=0))
-    res.append(run(app, model_path, batch, comm='shm', opt=3))
 
     res.append(run(app, model_path, batch, comm='rdma', opt=0))
     res.append(run(app, model_path, batch, comm='rdma', opt=3))
+    res.append(run(app, model_path, batch, comm='shm', opt=0))
+    res.append(run(app, model_path, batch, comm='shm', opt=3))
 
     return res
 
@@ -78,7 +78,7 @@ def run_app(app, model_path, batch):
 def run_factor(app, model_path, batch):
     res = []
 
-    # res.append(run_local(app, model_path, batch))
+    res.append(run_local(app, model_path, batch))
     res.append(run(app, model_path, batch, comm='rdma', opt=3))
     print(res)
     res.append(run(app, model_path, batch, comm='rdma', opt=2))
@@ -98,8 +98,8 @@ def run_apps():
         # 'infer/BERT-base-uncased/inference.py': (get_path('infer/BERT-base-uncased/bert-base-uncased'), [1, 64]),
         # 'infer/gpt2/inference.py': (get_path('infer/gpt2/gpt2'), [4, 512]),
 
-        # 'train/resnet/train.py': ('', [64]),
-        'train/STABLEDIFFUSION-v1-4/train.py': ('', [1]),
+        'train/resnet/train.py': ('', [64]),
+        # 'train/STABLEDIFFUSION-v1-4/train.py': ('', [1]),
         # 'train/BERT-base-uncased/train.py': ('', [64]),
     }
 
@@ -123,8 +123,8 @@ def run_factors():
         # 'infer/BERT-base-uncased/inference.py': (get_path('infer/BERT-base-uncased/bert-base-uncased'), [64]),
         # 'infer/gpt2/inference.py': (get_path('infer/gpt2/gpt2'), [512]),
 
-        # 'train/resnet/train.py': ('', [64]),
-        'train/STABLEDIFFUSION-v1-4/train.py': ('', [1]),
+        'train/resnet/train.py': ('', [64]),
+        # 'train/STABLEDIFFUSION-v1-4/train.py': ('', [1]),
         # 'train/BERT-base-uncased/train.py': ('', [64]),
     }
 
@@ -140,5 +140,5 @@ def run_factors():
 
 
 if __name__ == '__main__':
-    # run_apps()
-    run_factors()
+    run_apps()
+    # run_factors()

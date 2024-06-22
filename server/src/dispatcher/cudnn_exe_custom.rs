@@ -407,7 +407,6 @@ pub fn cudnnCreateConvolutionDescriptorExe<T: CommChannel>(
     let mut convDesc: cudnnConvolutionDescriptor_t = Default::default();
     unsafe { cudnnCreateConvolutionDescriptor(&mut convDesc) };
     add_resource(resource_idx, convDesc as usize);
-    channel_sender.flush_out().unwrap();
 }
 #[cfg(not(feature = "shadow_desc"))]
 pub fn cudnnCreateConvolutionDescriptorExe<T: CommChannel>(
