@@ -73,6 +73,7 @@ cudnnBatchNormalizationForwardInference = { default = false }
 cudnnSetFilter4dDescriptor = { default = true }
 cudnnGetConvolutionNdForwardOutputDim = { default = false }
 cudnnGetConvolutionForwardWorkspaceSize = { default = true }
+cudnnGetErrorString = { default = false }
 
 [cublas]
 cublasCreate_v2 = { default = false }

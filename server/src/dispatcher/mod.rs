@@ -88,6 +88,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         1532 => cudnnSetFilter4dDescriptorExe(channel_sender, channel_receiver),
         1533 => cudnnGetConvolutionNdForwardOutputDimExe(channel_sender, channel_receiver),
         1534 => cudnnGetConvolutionForwardWorkspaceSizeExe(channel_sender, channel_receiver),
+        1535 => cudnnGetErrorStringExe(channel_sender, channel_receiver),
         2000 => cublasCreate_v2Exe(channel_sender, channel_receiver),
         2001 => cublasDestroy_v2Exe(channel_sender, channel_receiver),
         2002 => cublasSetStream_v2Exe(channel_sender, channel_receiver),

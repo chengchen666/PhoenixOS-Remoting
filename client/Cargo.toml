@@ -25,7 +25,7 @@ crate-type = ["cdylib"]
 
 [features]
 # default = ["rdma"]
-# default = ["shm", "emulator"]
+default = ["shm", "emulator"]
 # default = ["shm"]
 shm = []
 rdma = []
