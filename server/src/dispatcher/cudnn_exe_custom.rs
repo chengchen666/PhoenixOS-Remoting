@@ -290,7 +290,6 @@ pub fn cudnnCreateFilterDescriptorExe<T: CommChannel>(
     let mut filterDesc: cudnnFilterDescriptor_t = Default::default();
     unsafe { cudnnCreateFilterDescriptor(&mut filterDesc) };
     add_resource(resource_idx, filterDesc as usize);
-    channel_sender.flush_out().unwrap();
 }
 #[cfg(not(feature = "shadow_desc"))]
 pub fn cudnnCreateFilterDescriptorExe<T: CommChannel>(

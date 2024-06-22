@@ -203,8 +203,11 @@ pub fn cublasSgemmStridedBatchedExe<T: CommChannel>(
             &beta_, C as *mut f32, ldc, strideC, batchCount
         ) 
     };
-    result.send(channel_sender).unwrap();
-    channel_sender.flush_out().unwrap();
+    #[cfg(not(feature = "async_api"))]
+    {
+        result.send(channel_sender).unwrap();
+        channel_sender.flush_out().unwrap();
+    }
 }
 
 pub fn cublasGemmExExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
