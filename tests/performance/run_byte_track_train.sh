@@ -21,28 +21,21 @@ cd /workspace/home/xpuremoting || {
     echo "Failed to change directory to /workspace/home/xpuremoting"
     exit 1
 }
-# 0.04 0.035 0.03 0.025 0.02 0.015 0.01 0.005 0
-rtt_values=(0.02)
-bandwidth_values=(77491947438)
-batch_size=64
-# rtt_values=(0.0034)
-# bandwidth_values=(214748364800)
-# "BERT" "gpt2" "ResNet18_Cifar10_95.46" "STABLEDIFFUSION-v1-4"
-models=("BERT")
+# "BERT-pytorch" "ResNet18_Cifar10_95.46" "naifu-diffusion"
+models=("BERT-pytorch")
 
 declare -A model_params
-model_params["BERT"]="100 ${batch_size}"
-model_params["ResNet18_Cifar10_95.46"]="100 ${batch_size}"
-model_params["STABLEDIFFUSION-v1-4"]="10 ${batch_size}"
-model_params["gpt2"]="100 ${batch_size}"
+model_params["BERT-pytorch"]="100 64"
+model_params["ResNet18_Cifar10_95.46"]="100 64"
+model_params["naifu-diffusion"]="10 1"
 cargo build --release ${OPT_FLAG}
 
 echo "Setting RTT to $rtt and Bandwidth to $bandwidth in config.toml"
 
 for model in "${models[@]}"; do
     params=${model_params[$model]}
-    server_file="server_${model}_${batch_size}_${rtt}_${bandwidth}.log"
-    client_file="client_${model}_${batch_size}_${rtt}_${bandwidth}.log"
+    server_file="server_${model}_${rtt}_${bandwidth}.log"
+    client_file="client_${model}_${rtt}_${bandwidth}.log"
 
     echo "Stopping old server instance if any..."
     pkill server || true
@@ -52,12 +45,12 @@ for model in "${models[@]}"; do
 
     sleep 3
 
-    echo "Running: run.sh infer/${model}/inference.py ${params}"
+    echo "Running: run.sh train/${model}/train.py ${params}"
     cd tests/apps || {
         echo "Failed to change directory to tests/apps"
         exit 1
     }
-    ./run.sh infer/${model}/inference.py ${params} >"/workspace/home/xpuremoting/log/${client_file}" 2>&1
+    ./run.sh train/${model}/train.py ${params} >"/workspace/home/xpuremoting/log/${client_file}" 2>&1
     cd ../..
 
     echo "extract"
