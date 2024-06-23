@@ -912,8 +912,12 @@ HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t cudnnConvolutionBackwardFilter(
                                        const cudnnFilterDescriptor_t, void *);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDNN_SYMBOL("cudnnConvolutionBackwardFilter"));
     HOOK_CHECK(func_entry);
-    return func_entry(handle, alpha, xDesc, x, dyDesc, dy, convDesc, algo, workSpace, workSpaceSizeInBytes, beta,
+    // return func_entry(handle, alpha, xDesc, x, dyDesc, dy, convDesc, algo, workSpace, workSpaceSizeInBytes, beta,
+    //                   dwDesc, dw);
+    cudnnStatus_t status = func_entry(handle, alpha, xDesc, x, dyDesc, dy, convDesc, algo, workSpace, workSpaceSizeInBytes, beta,
                       dwDesc, dw);
+    push_breakpoint();
+    return status;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t cudnnGetConvolutionBackwardDataAlgorithmMaxCount(cudnnHandle_t handle,
@@ -1010,8 +1014,12 @@ HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t cudnnConvolutionBackwardData(
                                        const cudnnTensorDescriptor_t, void *);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDNN_SYMBOL("cudnnConvolutionBackwardData"));
     HOOK_CHECK(func_entry);
-    return func_entry(handle, alpha, wDesc, w, dyDesc, dy, convDesc, algo, workSpace, workSpaceSizeInBytes, beta,
+    // return func_entry(handle, alpha, wDesc, w, dyDesc, dy, convDesc, algo, workSpace, workSpaceSizeInBytes, beta,
+    //                   dxDesc, dx);
+    cudnnStatus_t status = func_entry(handle, alpha, wDesc, w, dyDesc, dy, convDesc, algo, workSpace, workSpaceSizeInBytes, beta,
                       dxDesc, dx);
+    push_breakpoint();
+    return status;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t cudnnIm2Col(cudnnHandle_t handle, const cudnnTensorDescriptor_t xDesc,
@@ -1425,10 +1433,16 @@ HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t cudnnBatchNormalizationForwardTraining
         void *, void *, double, void *, void *, cudnnActivationDescriptor_t, void *, size_t, void *, size_t);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDNN_SYMBOL("cudnnBatchNormalizationForwardTrainingEx"));
     HOOK_CHECK(func_entry);
-    return func_entry(handle, mode, bnOps, alpha, beta, xDesc, xData, zDesc, zData, yDesc, yData,
+    // return func_entry(handle, mode, bnOps, alpha, beta, xDesc, xData, zDesc, zData, yDesc, yData,
+    //                   bnScaleBiasMeanVarDesc, bnScale, bnBias, exponentialAverageFactor, resultRunningMean,
+    //                   resultRunningVariance, epsilon, resultSaveMean, resultSaveInvVariance, activationDesc, workspace,
+    //                   workSpaceSizeInBytes, reserveSpace, reserveSpaceSizeInBytes);
+    cudnnStatus_t status = func_entry(handle, mode, bnOps, alpha, beta, xDesc, xData, zDesc, zData, yDesc, yData,
                       bnScaleBiasMeanVarDesc, bnScale, bnBias, exponentialAverageFactor, resultRunningMean,
                       resultRunningVariance, epsilon, resultSaveMean, resultSaveInvVariance, activationDesc, workspace,
                       workSpaceSizeInBytes, reserveSpace, reserveSpaceSizeInBytes);
+    push_breakpoint();
+    return status;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t cudnnBatchNormalizationForwardInference(
@@ -1488,10 +1502,16 @@ HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t cudnnBatchNormalizationBackwardEx(
         void *, double, const void *, const void *, cudnnActivationDescriptor_t, void *, size_t, void *, size_t);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUDNN_SYMBOL("cudnnBatchNormalizationBackwardEx"));
     HOOK_CHECK(func_entry);
-    return func_entry(handle, mode, bnOps, alphaDataDiff, betaDataDiff, alphaParamDiff, betaParamDiff, xDesc, xData,
+    // return func_entry(handle, mode, bnOps, alphaDataDiff, betaDataDiff, alphaParamDiff, betaParamDiff, xDesc, xData,
+    //                   yDesc, yData, dyDesc, dyData, dzDesc, dzData, dxDesc, dxData, dBnScaleBiasDesc, bnScaleData,
+    //                   bnBiasData, dBnScaleData, dBnBiasData, epsilon, savedMean, savedInvVariance, activationDesc,
+    //                   workSpace, workSpaceSizeInBytes, reserveSpace, reserveSpaceSizeInBytes);
+    cudnnStatus_t status = func_entry(handle, mode, bnOps, alphaDataDiff, betaDataDiff, alphaParamDiff, betaParamDiff, xDesc, xData,
                       yDesc, yData, dyDesc, dyData, dzDesc, dzData, dxDesc, dxData, dBnScaleBiasDesc, bnScaleData,
                       bnBiasData, dBnScaleData, dBnBiasData, epsilon, savedMean, savedInvVariance, activationDesc,
                       workSpace, workSpaceSizeInBytes, reserveSpace, reserveSpaceSizeInBytes);
+    push_breakpoint();
+    return status;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cudnnStatus_t

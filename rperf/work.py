@@ -29,7 +29,9 @@ with open(vanilla_log, "r") as file:
         api.set_Gap(float(Gap))
         if name == "cudaLaunchKernel" or \
             name == "cublasSgemm_v2" or name == "cublasSgemmStridedBatched" or \
-            name == "cudnnConvolutionForward" or name == "cudnnBatchNormalizationForwardInference":
+            name == "cudnnConvolutionForward" or name == "cudnnBatchNormalizationForwardInference" or \
+            name == "cudnnBatchNormalizationBackwardEx" or name == "cudnnBatchNormalizationForwardTrainingEx" or \
+            name == "cudnnConvolutionBackwardData" or name == "cudnnConvolutionBackwardFilter":
             api.set_Block(kernels_block.pop(0))
         elif name == "cudaMemcpyAsync":
             api.set_Block(memcpys_block.pop(0))
@@ -45,6 +47,8 @@ with open(xpu_remoting_log, "r") as file:
     lines = file.readlines()
     for line in lines:
         name, Serialization, Payload = line.strip().split(",")
+        if name == "cuDevicePrimaryCtxGetState":
+            continue # drop because not catched in the vanilla log
         payloads.append((name, float(Serialization), int(Payload)))
 
 i = 0
