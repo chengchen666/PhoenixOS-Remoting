@@ -37,7 +37,7 @@ def model(previous_api: API, current_api: API):
     if remoting_type == "LOCAL":
         current_api.complete_time = current_api.issue_time
     elif remoting_type == "ASYNC":
-        current_api.complete_time = current_api.start_time
+        current_api.complete_time = current_api.issue_time + current_api.Serialization
     elif remoting_type == "SYNC":
         current_api.complete_time = current_api.end_time + current_api.Network_backward
     
