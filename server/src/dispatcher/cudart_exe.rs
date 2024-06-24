@@ -10,39 +10,6 @@ gen_exe!(
     "*mut ::std::os::raw::c_int"
 );
 gen_exe!("cudaGetLastError", "cudaError_t");
-// pub fn cudaGetLastErrorExe<T: CommChannel>(
-//     channel_sender: &mut T,
-//     channel_receiver: &mut T,
-// ) {
-//     info!("[{}:{}] {}", std::file!(), std::line!(), "cudaGetLastError");
-//     let start = network::NsTimestamp::now();
-//     match channel_receiver.recv_ts() {
-//         Ok(()) => {}
-//         Err(e) => {
-//             panic!("failed to receive timestamp: {:?}", e)
-//         }
-//     }
-//     let end = network::NsTimestamp::now();
-//     let elapsed = (end.sec_timestamp - start.sec_timestamp) * 1000000000
-//                 + (end.ns_timestamp as i32 - start.ns_timestamp as i32) as i64;
-//     info!("{}", elapsed);
-    
-//     let start = network::NsTimestamp::now();
-//     let result: cudaError_t = unsafe { cudaGetLastError() };
-//     let end = network::NsTimestamp::now();
-//     let elapsed = (end.sec_timestamp - start.sec_timestamp) * 1000000000
-//                 + (end.ns_timestamp as i32 - start.ns_timestamp as i32) as i64;
-//     info!("{}", elapsed);
-
-//     let start = network::NsTimestamp::now();
-//     result.send(channel_sender).unwrap();
-//     channel_sender.flush_out().unwrap();
-//     let end = network::NsTimestamp::now();
-//     let elapsed = (end.sec_timestamp - start.sec_timestamp) * 1000000000
-//                 + (end.ns_timestamp as i32 - start.ns_timestamp as i32) as i64;
-//     log::info!("server flushout end, {}:{} ", end.sec_timestamp, end.ns_timestamp);
-//     info!("{}", elapsed);
-// }
 gen_exe!("cudaPeekAtLastError", "cudaError_t");
 gen_exe!("cudaStreamSynchronize", "cudaError_t", "cudaStream_t");
 // gen_exe!("cudaMalloc", "cudaError_t", "*mut MemPtr", "size_t");
@@ -66,6 +33,12 @@ gen_exe!(
     "cudaError_t",
     "*mut cudaDeviceProp",
     "::std::os::raw::c_int"
+);
+gen_exe!(
+    "cudaMemGetInfo", 
+    "cudaError_t", 
+    "*mut size_t", 
+    "*mut size_t"
 );
 // gen_exe!(
 //     "__cudaRegisterFatBinary",
@@ -109,3 +82,10 @@ gen_exe!(
 //     "usize",
 //     "cudaStream_t"
 // );
+
+gen_exe!(
+    "cudaDeviceGetStreamPriorityRange",
+    "cudaError_t",
+    "*mut ::std::os::raw::c_int",
+    "*mut ::std::os::raw::c_int"
+);
