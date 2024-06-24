@@ -48,3 +48,12 @@ class API:
 
     def set_Gap(self, Gap):
         self.Gap = Gap
+
+    def __str__(self):
+        str = f"{self.name}: "
+        str += f"issue={self.issue_time}, "
+        str += f"start={self.start_time}, "
+        str += f"end={self.end_time}, "
+        str += f"queue={self.queue_time}, "
+        str += f"complete={self.complete_time}"
+        return str
