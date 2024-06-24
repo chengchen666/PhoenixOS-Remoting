@@ -168,6 +168,8 @@ impl CommChannelInner for EmulatorChannel {
         while NsTimestamp::now() < timestamp {
             // Busy-waiting
         }
+        // let start = NsTimestamp::now();
+        // log::info!("gpu_issue, {}:{}", start.sec_timestamp, start.ns_timestamp as f64 / 1000.0);
         Ok(())
     }
 }
