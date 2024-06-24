@@ -884,7 +884,7 @@ pub fn cudnnBatchNormalizationForwardTrainingExExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "[{}:{}] cudnnBatchNormalizationForwardTrainingExEx",
+        "[{}:{}] cudnnBatchNormalizationForwardTrainingEx",
         std::file!(),
         std::line!()
     );

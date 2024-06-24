@@ -21,7 +21,7 @@ pub fn cublasCreate_v2Exe<T: CommChannel>(channel_sender: &mut T, channel_receiv
 }
 
 pub fn cublasSgemm_v2Exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cublasSgemm_v2Exe", std::file!(), std::line!());
+    info!("[{}:{}] cublasSgemm_v2", std::file!(), std::line!());
     let mut handle: cublasHandle_t = Default::default();
     let mut transa: cublasOperation_t = Default::default();
     let mut transb: cublasOperation_t = Default::default();

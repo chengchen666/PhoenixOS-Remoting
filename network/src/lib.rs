@@ -17,6 +17,8 @@ pub mod type_impl;
 extern crate codegen;
 extern crate measure;
 
+pub use ringbufferchannel::types::NsTimestamp;
+
 #[derive(Deserialize)]
 pub struct NetworkConfig {
     pub comm_type: String,

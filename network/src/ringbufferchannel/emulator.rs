@@ -14,6 +14,7 @@ pub struct EmulatorChannel {
     rtt: f64,
     bandwidth: f64,
     start: Arc<Mutex<Option<u64>>>,
+    // begin: NsTimestamp,
 }
 
 unsafe impl Send for EmulatorChannel {}
@@ -21,6 +22,8 @@ unsafe impl Sync for EmulatorChannel {}
 
 impl EmulatorChannel {
     pub fn new(manager: Box<dyn CommChannelInner>) -> Self {
+        // let now = NsTimestamp::now();
+        // log::info!("{}:{}", now.sec_timestamp, now.ns_timestamp);
         Self {
             manager,
             byte_cnt: Arc::new(Mutex::new(0)),
@@ -28,6 +31,7 @@ impl EmulatorChannel {
             rtt: CONFIG.rtt,
             bandwidth: CONFIG.bandwidth,
             start: Arc::new(Mutex::new(None)),
+            // begin: now,
         }
     }
 
@@ -108,6 +112,10 @@ impl CommChannelInnerIO for EmulatorChannel {
     fn put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
         if self.get_start() == None {
             self.set_start(Some(measure::rdtscp()));
+            // let now = NsTimestamp::now();
+            // let elapsed = (now.sec_timestamp - self.begin.sec_timestamp) * 1000000000
+            //     + (now.ns_timestamp as i32 - self.begin.ns_timestamp as i32) as i64;
+            // log::info!(", {}", elapsed);
         }
         self.set_byte_cnt(self.get_byte_cnt() + src.len);
         self.manager.put_bytes(src)
@@ -140,9 +148,11 @@ impl CommChannelInner for EmulatorChannel {
         }
         let end = measure::rdtscp();
         let elapsed = measure::clock2ns(end - self.get_start().unwrap());
+        #[cfg(not(feature = "log_server"))]
         log::info!(", {}", elapsed / 1000.0);
         let ts = self.calculate_ts(self.get_byte_cnt());
         let byte_cnt = self.get_byte_cnt();
+        #[cfg(not(feature = "log_server"))]
         log::info!(", {}", byte_cnt);
         let _ = self.send(ts);
         let _ = self.manager.flush_out();
