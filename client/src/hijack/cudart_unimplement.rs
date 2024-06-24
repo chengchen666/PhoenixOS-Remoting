@@ -26,7 +26,6 @@ gen_unimplement!("cudaThreadGetLimit", "cudaError_t", "*mut size_t", "cudaLimit"
 gen_unimplement!("cudaThreadGetCacheConfig", "cudaError_t", "*mut cudaFuncCache");
 gen_unimplement!("cudaThreadSetCacheConfig", "cudaError_t", "cudaFuncCache");
 gen_unimplement!("cudaGetErrorName", "*const ::std::os::raw::c_char", "cudaError_t");
-gen_unimplement!("cudaGetErrorString", "*const ::std::os::raw::c_char", "cudaError_t");
 gen_unimplement!("cudaDeviceGetAttribute", "cudaError_t", "*mut ::std::os::raw::c_int", "cudaDeviceAttr", "::std::os::raw::c_int");
 gen_unimplement!("cudaDeviceGetDefaultMemPool", "cudaError_t", "*mut cudaMemPool_t", "::std::os::raw::c_int");
 gen_unimplement!("cudaDeviceSetMemPool", "cudaError_t", "::std::os::raw::c_int", "cudaMemPool_t");

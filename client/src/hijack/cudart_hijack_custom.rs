@@ -339,3 +339,36 @@ pub extern "C" fn cudaHostAlloc(
             }
     result
 }
+
+#[no_mangle]
+pub extern "C" fn cudaGetErrorString(
+    cudaError: cudaError_t,
+) -> *const ::std::os::raw::c_char {
+    info!(
+        "[{}:{}] cudaGetErrorString",
+        std::file!(),
+        std::line!()
+    );
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let proc_id = 17;
+    let mut result:Vec<u8>  = Default::default();
+    match proc_id.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send proc_id: {:?}", e),
+    }
+    match cudaError.send(channel_sender) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send cudaError: {:?}", e),
+    }
+    channel_sender.flush_out().unwrap();
+    match result.recv(channel_receiver) {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive result: {:?}", e),
+    }
+    match channel_receiver.recv_ts() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+            }
+    result.as_ptr() as *const ::std::os::raw::c_char
+}

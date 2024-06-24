@@ -40,6 +40,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         14 => cudaFuncGetAttributesExe(channel_sender, channel_receiver),
         15 => cudaDeviceGetStreamPriorityRangeExe(channel_sender, channel_receiver),
         16 => cudaMemsetAsyncExe(channel_sender, channel_receiver),
+        17 => cudaGetErrorStringExe(channel_sender, channel_receiver),
         100 => __cudaRegisterFatBinaryExe(channel_sender, channel_receiver),
         101 => __cudaUnregisterFatBinaryExe(channel_sender, channel_receiver),
         102 => __cudaRegisterFunctionExe(channel_sender, channel_receiver),
