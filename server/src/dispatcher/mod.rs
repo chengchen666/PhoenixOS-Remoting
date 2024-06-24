@@ -22,6 +22,7 @@ use self::cublas_exe::*;
 use self::cublas_exe_custom::*;
 
 pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_receiver: &mut T) {
+    // let start = network::NsTimestamp::now();
     match proc_id {
         0 => cudaGetDeviceExe(channel_sender, channel_receiver),
         1 => cudaSetDeviceExe(channel_sender, channel_receiver),
@@ -101,4 +102,8 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
             );
         }
     }
+    // let end = network::NsTimestamp::now();
+    // let elapsed = (end.sec_timestamp - start.sec_timestamp) as f64 * 1000000000.0
+    //             + (end.ns_timestamp as i32 - start.ns_timestamp as i32) as f64;
+    // info!("exe: {}", elapsed / 1000.0);
 }

@@ -2,20 +2,7 @@
 
 set -e
 
-if [ $# -eq 0 ]; then
-    echo "usage: $0 [opt|raw]"
-    exit 1
-fi
-
-if [ "$1" == "opt" ]; then
-    OPT_FLAG="--features async_api,shadow_desc,local"
-elif [ "$1" == "raw" ]; then
-    OPT_FLAG=""
-else
-    echo "invalid param: $1"
-    echo "usage: $0 [opt|raw]"
-    exit 1
-fi
+OPT_FLAG="--features async_api,shadow_desc,local"
 
 cd /workspace/home/xpuremoting || {
     echo "Failed to change directory to /workspace/home/xpuremoting"
@@ -42,7 +29,7 @@ for model in "${models[@]}"; do
     pkill server || true
 
     echo "Running server"
-    cargo run --release ${OPT_FLAG} server >"/workspace/home/xpuremoting/log/${server_file}" 2>&1 &
+    numactl --cpunodebind=0 cargo run --release ${OPT_FLAG},log_server server >"/workspace/home/xpuremoting/log/${server_file}" 2>&1 &
 
     sleep 3
 
@@ -51,13 +38,13 @@ for model in "${models[@]}"; do
         echo "Failed to change directory to tests/apps"
         exit 1
     }
-    ./run.sh infer/${model}/inference.py ${params} >"/workspace/home/xpuremoting/log/${client_file}" 2>&1
+    numactl --cpunodebind=0 ./run.sh infer/${model}/inference.py ${params} >"/workspace/home/xpuremoting/log/${client_file}" 2>&1
     cd ../..
 
     echo "extract"
 
-    python3 /workspace/home/xpuremoting/log/extract.py "/workspace/home/xpuremoting/log/${server_file}" "/workspace/home/xpuremoting/log/out_${server_file}"
-    python3 /workspace/home/xpuremoting/log/extract.py "/workspace/home/xpuremoting/log/${client_file}" "/workspace/home/xpuremoting/log/out_${client_file}"
+    python3 /workspace/home/xpuremoting/log/extract_server.py "/workspace/home/xpuremoting/log/${server_file}" "/workspace/home/xpuremoting/log/out_${server_file}"
+    python3 /workspace/home/xpuremoting/log/extract_client.py "/workspace/home/xpuremoting/log/${client_file}" "/workspace/home/xpuremoting/log/out_${client_file}"
 
     # echo "merge"
     # python3 /workspace/home/xpuremoting/log/merge.py "/workspace/home/xpuremoting/log/out_${client_file}" "/workspace/home/xpuremoting/log/out_${server_file}" "/workspace/home/xpuremoting/log/out_${model}_${batch_size}.log"
