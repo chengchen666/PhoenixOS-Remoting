@@ -15,7 +15,10 @@ def model(previous_api: API, current_api: API):
     current_api.issue_time = previous_api.complete_time + current_api.Gap
 
     # start_{i} = issue_{i} + Network_{i}
-    current_api.start_time = current_api.issue_time + current_api.Serialization + current_api.Network_forward
+    if remoting_type == "LOCAL":
+        current_api.set_Block(0)
+        current_api.set_Network(0, 0)
+    current_api.start_time = max(previous_api.start_time, current_api.issue_time + current_api.Serialization) + current_api.Network_forward
 
     # end_{i} = start_{i} + Process_{i}, NonBlocking or GPUBlocking
     #         = max(start_{i} + Process_{i}, queue_{i - 1}) + Block_{i}, CPUBlocking

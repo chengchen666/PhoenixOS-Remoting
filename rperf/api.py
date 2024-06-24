@@ -31,9 +31,9 @@ class API:
     def calc_Network(self, RTT, BANDWIDTH):
         # us, Gbps
         BANDWIDTH = BANDWIDTH * 1024 / 1000 * 1024 / 1000 * 1024 # Gbps -> bpus
-        self.Network_forward = RTT/2 + \
+        self.Network_forward = RTT/2 * 0.9 + \
             float(self.Payload_forward * 8) / BANDWIDTH
-        self.Network_backward = RTT/2 + \
+        self.Network_backward = RTT/2 * 0.9 + \
             float(self.Payload_backward * 8) / BANDWIDTH
 
     def set_Serialization(self, Serialization, Deserialization):
