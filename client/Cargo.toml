@@ -24,8 +24,8 @@ network = { path = "../network" }
 crate-type = ["cdylib"]
 
 [features]
-# default = ["rdma"]
-default = ["shm", "emulator"]
+default = ["rdma"]
+# default = ["shm", "emulator"]
 # default = ["shm"]
 shm = []
 rdma = []

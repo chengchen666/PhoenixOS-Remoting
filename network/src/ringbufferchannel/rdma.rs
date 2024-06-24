@@ -18,7 +18,7 @@ use KRdmaKit::{
     UDriver,
 };
 
-const BATCH_SIZE: usize = 16;
+const BATCH_SIZE: usize = 1;
 
 pub struct RDMAChannel {
     mr_ptr: *mut u8,
