@@ -12,7 +12,7 @@ rperf_data_dir = sys.argv[1]
 gpu_time_sql = f"{rperf_data_dir}/gpu_time.sqlite"
 kernel_group_sql = f"{rperf_data_dir}/kernel_group.sqlite"
 vanilla_log = f"{rperf_data_dir}/vanilla_rperf.log"
-xpu_remoting_log = f"{rperf_data_dir}/xpu_remoting.log"
+xpu_remoting_log = f"{rperf_data_dir}/xpu_remoting_client.log"
 
 kernels_block, memcpys_block = parse_sql(gpu_time_sql, kernel_group_sql)
 
@@ -28,7 +28,8 @@ with open(vanilla_log, "r") as file:
         api.set_Process(float(Process))
         api.set_Gap(float(Gap))
         if name == "cudaLaunchKernel" or \
-            name == "cublasSgemm_v2" or name == "cublasSgemmStridedBatched" or \
+            name == "cublasSgemm_v2" or name == "cublasGemmEx" or \
+            name == "cublasSgemmStridedBatched" or name == "cublasGemmStridedBatchedEx" or \
             name == "cudnnConvolutionForward" or name == "cudnnBatchNormalizationForwardInference" or \
             name == "cudnnBatchNormalizationBackwardEx" or name == "cudnnBatchNormalizationForwardTrainingEx" or \
             name == "cudnnConvolutionBackwardData" or name == "cudnnConvolutionBackwardFilter":
@@ -37,6 +38,9 @@ with open(vanilla_log, "r") as file:
             api.set_Block(memcpys_block.pop(0))
         elif name == "cudaStreamSynchronize":
             api.set_Process(2) # own Process time should be small
+        # drop if not in remoting_type, handle error
+        if get_remoting_type(name) is None:
+            continue
         apis.append(api)
 
 assert len(kernels_block) == 0
@@ -65,6 +69,9 @@ while len(payloads) > 0 and i < len(apis):
     apis[i].set_Serialization(serialization, serialization)
     apis[i].set_Payload(payload_forward, payload_backward)
 
+# if len(payloads) > 0:
+#     print(f"{payloads[0][0]} is not found in the vanilla log.")
+#     print(f"len(payloads) = {len(payloads)}")
 assert len(payloads) == 0
 
 

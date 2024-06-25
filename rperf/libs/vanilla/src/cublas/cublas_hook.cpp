@@ -3295,8 +3295,12 @@ HOOK_C_API HOOK_DECL_EXPORT cublasStatus_t cublasGemmEx(cublasHandle_t handle, c
                                         const void *, void *, cudaDataType, int, cublasComputeType_t, cublasGemmAlgo_t);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUBLAS_SYMBOL("cublasGemmEx"));
     HOOK_CHECK(func_entry);
-    return func_entry(handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc,
+    // return func_entry(handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc,
+    //                   computeType, algo);
+    cublasStatus_t status = func_entry(handle, transa, transb, m, n, k, alpha, A, Atype, lda, B, Btype, ldb, beta, C, Ctype, ldc,
                       computeType, algo);
+    push_breakpoint();
+    return status;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cublasStatus_t cublasCgemmEx(cublasHandle_t handle, cublasOperation_t transa,
@@ -3912,8 +3916,12 @@ HOOK_C_API HOOK_DECL_EXPORT cublasStatus_t cublasGemmStridedBatchedEx(
                                         long long int, int, cublasComputeType_t, cublasGemmAlgo_t);
     static auto func_entry = reinterpret_cast<func_ptr>(HOOK_CUBLAS_SYMBOL("cublasGemmStridedBatchedEx"));
     HOOK_CHECK(func_entry);
-    return func_entry(handle, transa, transb, m, n, k, alpha, A, Atype, lda, strideA, B, Btype, ldb, strideB, beta, C,
+    // return func_entry(handle, transa, transb, m, n, k, alpha, A, Atype, lda, strideA, B, Btype, ldb, strideB, beta, C,
+    //                   Ctype, ldc, strideC, batchCount, computeType, algo);
+    cublasStatus_t status = func_entry(handle, transa, transb, m, n, k, alpha, A, Atype, lda, strideA, B, Btype, ldb, strideB, beta, C,
                       Ctype, ldc, strideC, batchCount, computeType, algo);
+    push_breakpoint();
+    return status;
 }
 
 HOOK_C_API HOOK_DECL_EXPORT cublasStatus_t cublasSgemmStridedBatched(cublasHandle_t handle, cublasOperation_t transa,
