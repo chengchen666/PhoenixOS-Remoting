@@ -12,6 +12,7 @@ quote = "1.0"
 serde = "1.0"
 serde_json = "1.0"
 lazy_static = "1.4.0"
+measure = { path = "../measure" }
 
 [lib]
 proc-macro = true

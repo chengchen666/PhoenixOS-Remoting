@@ -28,6 +28,9 @@ cudaMallocManaged = { default = false, client_hook = "todo", server_hook = "todo
 cudaHostAlloc = { default = false, client_hook = "todo", server_hook = "todo" }
 cudaPointerGetAttributes = { default = true }
 cudaFuncGetAttributes = { default = false }
+cudaDeviceGetStreamPriorityRange = { default = true }
+cudaMemsetAsync = { default = true }
+cudaMemGetInfo = { default = true }
 
 [nvml]
 nvmlInit_v2 = { default = true }
@@ -78,6 +81,9 @@ cublasSetMathMode = { default = true }
 cublasSetStream_v2 = { default = true }
 cublasSgemm_v2 = { default = false }
 cublasSgemmStridedBatched = { default = false }
+cublasGetMathMode = { default = true }
+cublasGemmEx = { default = false }
+cublasGemmStridedBatchedEx = { default = false }
 
 [opt]
 async_api = [

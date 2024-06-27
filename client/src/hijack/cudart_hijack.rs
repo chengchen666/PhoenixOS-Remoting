@@ -25,6 +25,9 @@ gen_hijack!(
 );
 gen_hijack!(3, "cudaGetLastError", "cudaError_t");
 gen_hijack!(4, "cudaPeekAtLastError", "cudaError_t");
+#[cfg(feature = "async_api")]
+gen_hijack_async!(5, "cudaStreamSynchronize", "cudaError_t", "cudaStream_t");
+#[cfg(not(feature = "async_api"))]
 gen_hijack!(5, "cudaStreamSynchronize", "cudaError_t", "cudaStream_t");
 gen_hijack!(6, "cudaMalloc", "cudaError_t", "*mut MemPtr", "size_t");
 // gen_hijack!(
@@ -119,3 +122,40 @@ gen_hijack!(
 //     "usize",
 //     "cudaStream_t"
 // );
+
+gen_hijack!(
+    15,
+    "cudaDeviceGetStreamPriorityRange",
+    "cudaError_t",
+    "*mut ::std::os::raw::c_int",
+    "*mut ::std::os::raw::c_int"
+);
+
+#[cfg(feature = "async_api")]
+gen_hijack_async!(
+    16,
+    "cudaMemsetAsync", 
+    "cudaError_t", 
+    "MemPtr", 
+    "::std::os::raw::c_int", 
+    "size_t", 
+    "cudaStream_t"
+);
+#[cfg(not(feature = "async_api"))]
+gen_hijack!(
+    16,
+    "cudaMemsetAsync", 
+    "cudaError_t", 
+    "MemPtr", 
+    "::std::os::raw::c_int", 
+    "size_t", 
+    "cudaStream_t"
+);
+
+gen_hijack!(
+    17,
+    "cudaMemGetInfo", 
+    "cudaError_t", 
+    "*mut size_t", 
+    "*mut size_t"
+);
