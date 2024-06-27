@@ -19,9 +19,6 @@ extern crate codegen;
 use codegen::{gen_hijack, gen_hijack_async, gen_hijack_local};
 use codegen::gen_unimplement;
 
-extern crate measure;
-use measure::*;
-
 pub mod hijack;
 pub use hijack::*;
 

@@ -29,9 +29,6 @@ use std::boxed::Box;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-extern crate measure;
-use measure::*;
-
 use cudasys::cudnn::cudnnTensorDescriptor_t;
 
 #[derive(Clone)]

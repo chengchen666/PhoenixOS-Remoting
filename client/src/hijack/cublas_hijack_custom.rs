@@ -38,8 +38,8 @@ pub extern "C" fn cublasCreate_v2(
         Err(e) => error!("Error receiving result: {:?}", e),
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
     result
 }
@@ -347,9 +347,9 @@ pub extern "C" fn cublasGemmEx(
         return result;
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }
 
