@@ -301,8 +301,11 @@ pub fn cublasGemmExExe<T: CommChannel>(channel_sender: &mut T, channel_receiver:
             B as *const c_void, Btype, ldb, beta as *const c_void,
             C as *mut c_void, Ctype, ldc, computeType, algo)
     };
-    result.send(channel_sender).unwrap();
-    channel_sender.flush_out().unwrap();
+    #[cfg(not(feature = "async_api"))]
+    {
+        result.send(channel_sender).unwrap();
+        channel_sender.flush_out().unwrap();
+    }
 }
 
 pub fn cublasGemmStridedBatchedExExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {

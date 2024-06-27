@@ -1234,15 +1234,21 @@ pub extern "C" fn cudnnBatchNormalizationForwardTrainingEx(
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.recv(channel_receiver) {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive result: {:?}", e),
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
 }
 
 #[no_mangle]
@@ -1473,14 +1479,20 @@ pub extern "C" fn cudnnBatchNormalizationBackwardEx(
     if let Err(e) = channel_sender.flush_out() {
         panic!("failed to send: {:?}", e);
     }
-    if let Err(e) = result.recv(channel_receiver) {
-        error!("failed to receive result: {:?}", e);
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            error!("failed to receive result: {:?}", e);
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
 }
 
 #[no_mangle]
@@ -1666,14 +1678,21 @@ pub extern "C" fn cudnnConvolutionBackwardData(
     if let Err(e) = channel_sender.flush_out() {
         panic!("failed to send: {:?}", e);
     }
-    if let Err(e) = result.recv(channel_receiver) {
-        panic!("failed to receive result: {:?}", e);
+
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            panic!("failed to receive result: {:?}", e);
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
 }
 
 #[no_mangle]
@@ -1828,14 +1847,20 @@ pub extern "C" fn cudnnConvolutionBackwardFilter(
     if let Err(e) = channel_sender.flush_out() {
         panic!("failed to send: {:?}", e);
     }
-    if let Err(e) = result.recv(channel_receiver) {
-        panic!("failed to receive result: {:?}", e);
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            panic!("failed to receive result: {:?}", e);
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
 }
 
 #[no_mangle]

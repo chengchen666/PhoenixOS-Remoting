@@ -332,9 +332,8 @@ pub extern "C" fn cublasGemmEx(
     }
     channel_sender.flush_out().unwrap();
     #[cfg(feature = "async_api")]
-    {
-        return cublasStatus_t::CUBLAS_STATUS_SUCCESS;
-    }
+    return cublasStatus_t::CUBLAS_STATUS_SUCCESS;
+
     #[cfg(not(feature = "async_api"))]
     {
         if let Err(e) = result.recv(channel_receiver) {
