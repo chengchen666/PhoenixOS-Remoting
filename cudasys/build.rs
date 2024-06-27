@@ -161,8 +161,10 @@ fn split(file_path: PathBuf, types_file: PathBuf, funcs_file: PathBuf) {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 struct HookConfig {
+    // Design for the future: user self-defined API hook.
     default: bool,
     client_hook: Option<String>,
     server_hook: Option<String>,
@@ -208,7 +210,7 @@ fn write(file_path: PathBuf, output: &str) {
     for f in funcs {
         let sig = parse_sig(f);
         match user_hook.get(&sig.func_name) {
-            Some(config) => {
+            Some(_config) => {
                 // TODO: read user config, then default gen_hijack or use client_hook and server_hook
             }
             _ => write_macro(&unimplemented_file, "gen_unimplement", sig),

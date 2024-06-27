@@ -7,9 +7,10 @@ use syn::{parse_macro_input, parse_str, Ident, Type};
 mod utils;
 use utils::{
     Element, ElementMode, ExeParser, HijackParser, UnimplementParser,
-    SHADOW_DESC_TYPES,
     get_success_status
 };
+#[cfg(feature = "shadow_desc")]
+use utils::SHADOW_DESC_TYPES;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The derive macros for auto trait impl.
@@ -339,28 +340,6 @@ pub fn gen_hijack_async(input: TokenStream) -> TokenStream {
             }
         });
 
-    // receive vars
-    let recv_statements = vars.iter().map(|var| {
-        let name = &var.name;
-        quote! {
-            match #name.recv(channel_receiver) {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive #name: {:?}", e),
-            }
-        }
-    });
-
-    // assign vars to params
-    let assign_statements = params
-        .iter()
-        .filter(|param| param.mode == ElementMode::Output)
-        .zip(vars.iter())
-        .map(|(param, var)| {
-            let param_name = &param.name;
-            let var_name = &var.name;
-            quote! { unsafe { *#param_name = #var_name; } }
-        });
-
     let params = params.iter().map(|param| {
         let name = &param.name;
         let ty = &param.ty;
@@ -594,13 +573,16 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
             quote! { #name.recv(channel_receiver).unwrap(); }
         });
 
-    let func_name = quote!{#func}.to_string();
-    let parts: Vec<_> = func_name.split("Destroy").collect();
-    let (is_destroy, resource_str) = if parts.len() == 2 {
-        (true, parts[1])
-    } else {
-        (false, "")
-    };
+    #[cfg(feature = "shadow_desc")]
+    let (mut is_destroy, mut resource_str) = (false, String::new());
+    #[cfg(feature = "shadow_desc")]
+    {
+        let func_name = quote!{#func}.to_string();
+        let parts: Vec<_> = func_name.split("Destroy").collect();
+        if parts.len() == 2 {
+            (is_destroy, resource_str) = (true, parts[1].to_string());
+        }
+    }
 
     // get resource when SR
     #[cfg(feature = "shadow_desc")]
@@ -615,7 +597,7 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
             let name = &param.name;
             let ty = &param.ty;
             let ty_str = quote!{#ty}.to_string();
-            if is_destroy && ty_str.contains(resource_str) {
+            if is_destroy && ty_str.contains(&resource_str) {
                 quote! { let mut #name = remove_resource(#name as usize); }
             } else {
                 quote! { let mut #name = get_resource(#name as usize); }
@@ -705,13 +687,16 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
             quote! { #name.recv(channel_receiver).unwrap(); }
         });
 
-    let func_name = quote!{#func}.to_string();
-    let parts: Vec<_> = func_name.split("Destroy").collect();
-    let (is_destroy, resource_str) = if parts.len() == 2 {
-        (true, parts[1])
-    } else {
-        (false, "")
-    };
+    #[cfg(feature = "shadow_desc")]
+    let (mut is_destroy, mut resource_str) = (false, String::new());
+    #[cfg(feature = "shadow_desc")]
+    {
+        let func_name = quote!{#func}.to_string();
+        let parts: Vec<_> = func_name.split("Destroy").collect();
+        if parts.len() == 2 {
+            (is_destroy, resource_str) = (true, parts[1].to_string());
+        }
+    }
 
     // get resource when SR
     #[cfg(feature = "shadow_desc")]
@@ -726,7 +711,7 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
             let name = &param.name;
             let ty = &param.ty;
             let ty_str = quote!{#ty}.to_string();
-            if is_destroy && ty_str.contains(resource_str) {
+            if is_destroy && ty_str.contains(&resource_str) {
                 quote! { let mut #name = remove_resource(#name as usize); }
             } else {
                 quote! { let mut #name = get_resource(#name as usize); }
