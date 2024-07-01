@@ -19,11 +19,13 @@ glob = "0.3"
 
 [features]
 # default = ["rdma"]
-default = ["shm", "emulator"]
+# default = ["shm", "emulator"]
 # default = ["shm"]
 shm = []
 rdma = []
 emulator = []
+async_api = []
+shadow_desc = []
 
 [[bin]]
 name = "server"

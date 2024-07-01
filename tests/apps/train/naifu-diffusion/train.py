@@ -149,7 +149,7 @@ def main():
     trainer.fit(model=model, ckpt_path=None)
     
     T2 = time.time()
-    print('time used: ', T2-T1)
+    print(T2-T1)
 
     if path is not None:
         end_trace()

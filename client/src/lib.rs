@@ -17,6 +17,10 @@ use network::{
 
 extern crate codegen;
 use codegen::gen_hijack;
+#[cfg(feature = "async_api")]
+use codegen::gen_hijack_async;
+#[cfg(feature = "local")]
+use codegen::gen_hijack_local;
 use codegen::gen_unimplement;
 
 pub mod hijack;
@@ -30,6 +34,7 @@ pub mod dl;
 pub use dl::*;
 
 use std::boxed::Box;
+use std::collections::HashMap;
 use std::{
     sync::Mutex,
 };
@@ -85,4 +90,18 @@ lazy_static! {
         env_logger::init();
         true
     };
+
+    static ref RESOURCE_IDX: Mutex<usize> = Mutex::new(0);
+
+    static ref LOCAL_INFO: Mutex<HashMap<usize, usize>> = Mutex::new(HashMap::new());
+}
+
+#[cfg(feature = "local")]
+fn add_local_info(proc_id: usize, info: usize) {
+    LOCAL_INFO.lock().unwrap().insert(proc_id, info);
+}
+
+#[cfg(feature = "local")]
+fn get_local_info(proc_id: usize) -> Option<usize> {
+    LOCAL_INFO.lock().unwrap().get(&proc_id).cloned()
 }

@@ -93,7 +93,7 @@ pub trait RingBufferManager: BufferManager {
 
     #[inline]
     fn is_full(&self) -> bool {
-        self.num_bytes_stored() == self.capacity()
+        self.num_bytes_stored() >= self.capacity() - 1
     }
 
     #[inline]

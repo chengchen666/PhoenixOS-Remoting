@@ -3,6 +3,8 @@ use syn::{
     parse::{Parse, ParseStream},
     Ident, Type, LitInt, LitStr, Result, Token,
 };
+extern crate lazy_static;
+use lazy_static::lazy_static;
 
 pub enum ElementType {
     Void,
@@ -209,5 +211,26 @@ impl Parse for UnimplementParser {
             result,
             params,
         })
+    }
+}
+
+lazy_static! {
+    pub static ref SHADOW_DESC_TYPES: Vec<String> = {
+        vec![
+            "cudnnTensorDescriptor_t".to_string(),
+            "cudnnFilterDescriptor_t".to_string(),
+            "cudnnConvolutionDescriptor_t".to_string(),
+        ]
+    };
+}
+
+pub fn get_success_status(ty: &str) -> &str {
+    match ty {
+        "cublasStatus_t" => "CUBLAS_STATUS_SUCCESS",
+        "CUresult" => "CUDA_SUCCESS",
+        "cudaError_t" => "cudaSuccess",
+        "cudnnStatus_t" => "CUDNN_STATUS_SUCCESS",
+        "nvmlReturn_t" => "NVML_SUCCESS",
+        &_ => todo!(),
     }
 }

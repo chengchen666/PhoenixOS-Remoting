@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 extern crate log;
 mod dispatcher;
 
@@ -6,13 +7,17 @@ extern crate cudasys;
 extern crate network;
 
 use codegen::gen_exe;
+#[cfg(feature = "async_api")]
+use codegen::gen_exe_async;
 use cudasys::{
     cuda::{CUdeviceptr, CUfunction, CUmodule},
     cudart::{cudaDeviceSynchronize, cudaError_t, cudaGetDeviceCount, cudaSetDevice},
 };
 use dispatcher::dispatch;
 
+#[cfg(feature = "emulator")]
 use network::ringbufferchannel::EmulatorChannel;
+
 #[allow(unused_imports)]
 use network::{
     ringbufferchannel::{RDMAChannel, SHMChannel},
@@ -36,6 +41,8 @@ lazy_static! {
     static ref FUNCTIONS: Mutex<HashMap<MemPtr, CUfunction>> = Mutex::new(HashMap::new());
     // host_var -> device_var
     static ref VARIABLES: Mutex<HashMap<MemPtr, CUdeviceptr>> = Mutex::new(HashMap::new());
+
+    static ref RESOURCES: Mutex<HashMap<usize, usize>> = Mutex::new(HashMap::new());
 }
 
 fn add_module(client_address: MemPtr, module: CUmodule) {
@@ -60,6 +67,18 @@ fn add_variable(host_var: MemPtr, device_var: CUdeviceptr) {
 
 fn get_variable(host_var: MemPtr) -> Option<CUdeviceptr> {
     VARIABLES.lock().unwrap().get(&host_var).cloned()
+}
+
+fn add_resource(id: usize, res: usize) {
+    RESOURCES.lock().unwrap().insert(id, res);
+}
+
+fn get_resource(id: usize) -> usize {
+    RESOURCES.lock().unwrap().get(&id).cloned().unwrap()
+}
+
+fn remove_resource(id: usize) -> usize {
+    RESOURCES.lock().unwrap().remove(&id).unwrap()
 }
 
 #[cfg(not(feature = "emulator"))]

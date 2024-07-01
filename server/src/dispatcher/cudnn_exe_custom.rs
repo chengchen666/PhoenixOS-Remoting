@@ -19,6 +19,32 @@ pub fn cudnnCreateExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: 
     channel_sender.flush_out().unwrap();
 }
 
+#[cfg(feature = "shadow_desc")]
+pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
+    channel_sender: &mut T,
+    channel_receiver: &mut T,
+) {
+    info!(
+        "[{}:{}] cudnnCreateTensorDescriptor",
+        std::file!(),
+        std::line!()
+    );
+    let mut resource_idx: usize = Default::default();
+    match resource_idx.recv(channel_receiver) {
+        Ok(()) => {}
+        Err(e) => {
+            error!("Error receiving tensor_desc_addr: {:?}", e);
+        }
+    }
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
+    let mut tensorDesc: cudnnTensorDescriptor_t = Default::default();
+    unsafe { cudnnCreateTensorDescriptor(&mut tensorDesc) };
+    add_resource(resource_idx, tensorDesc as usize);
+}
+#[cfg(not(feature = "shadow_desc"))]
 pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
     channel_sender: &mut T,
     channel_receiver: &mut T,
@@ -34,6 +60,7 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
     }
     let mut tensorDesc: cudnnTensorDescriptor_t = Default::default();
     let result: cudnnStatus_t = unsafe { cudnnCreateTensorDescriptor(&mut tensorDesc) };
+
     tensorDesc.send(channel_sender).unwrap();
     result.send(channel_sender).unwrap();
     channel_sender.flush_out().unwrap();
@@ -94,6 +121,8 @@ pub fn cudnnActivationForwardExe<T: CommChannel>(channel_sender: &mut T, channel
             error!("Error receiving xDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
     match x.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
@@ -112,6 +141,8 @@ pub fn cudnnActivationForwardExe<T: CommChannel>(channel_sender: &mut T, channel
             error!("Error receiving yDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let yDesc = get_resource(yDesc as usize);
     match y.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
@@ -159,6 +190,8 @@ pub fn cudnnSetTensorNdDescriptorExe<T: CommChannel>(
             error!("Error receiving tensorDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let tensorDesc = get_resource(tensorDesc as usize);
     match dataType.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
@@ -198,10 +231,39 @@ pub fn cudnnSetTensorNdDescriptorExe<T: CommChannel>(
         )
     };
 
-    result.send(channel_sender).unwrap();
-    channel_sender.flush_out().unwrap();
+    #[cfg(not(feature = "async_api"))]
+    {
+        result.send(channel_sender).unwrap();
+        channel_sender.flush_out().unwrap();
+    }
 }
 
+#[cfg(feature = "shadow_desc")]
+pub fn cudnnCreateFilterDescriptorExe<T: CommChannel>(
+    channel_sender: &mut T,
+    channel_receiver: &mut T,
+) {
+    info!(
+        "[{}:{}] cudnnCreateFilterDescriptor",
+        std::file!(),
+        std::line!()
+    );
+    let mut resource_idx: usize = Default::default();
+    match resource_idx.recv(channel_receiver) {
+        Ok(()) => {}
+        Err(e) => {
+            error!("Error receiving tensor_desc_addr: {:?}", e);
+        }
+    }
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
+    let mut filterDesc: cudnnFilterDescriptor_t = Default::default();
+    unsafe { cudnnCreateFilterDescriptor(&mut filterDesc) };
+    add_resource(resource_idx, filterDesc as usize);
+}
+#[cfg(not(feature = "shadow_desc"))]
 pub fn cudnnCreateFilterDescriptorExe<T: CommChannel>(
     channel_sender: &mut T,
     channel_receiver: &mut T,
@@ -242,6 +304,8 @@ pub fn cudnnSetFilterNdDescriptorExe<T: CommChannel>(
             error!("Error receiving filterDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let filterDesc = get_resource(filterDesc as usize);
     match dataType.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
@@ -279,15 +343,44 @@ pub fn cudnnSetFilterNdDescriptorExe<T: CommChannel>(
             filterDimA.as_ptr() as *const c_int,
         )
     };
-    match result.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => {
-            error!("Error sending result: {:?}", e);
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.send(channel_sender) {
+            Ok(()) => {}
+            Err(e) => {
+                error!("Error sending result: {:?}", e);
+            }
         }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
+#[cfg(feature = "shadow_desc")]
+pub fn cudnnCreateConvolutionDescriptorExe<T: CommChannel>(
+    channel_sender: &mut T,
+    channel_receiver: &mut T,
+) {
+    info!(
+        "[{}:{}] cudnnCreateConvolutionDescriptor",
+        std::file!(),
+        std::line!()
+    );
+    let mut resource_idx: usize = Default::default();
+    match resource_idx.recv(channel_receiver) {
+        Ok(()) => {}
+        Err(e) => {
+            error!("Error receiving tensor_desc_addr: {:?}", e);
+        }
+    }
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
+    let mut convDesc: cudnnConvolutionDescriptor_t = Default::default();
+    unsafe { cudnnCreateConvolutionDescriptor(&mut convDesc) };
+    add_resource(resource_idx, convDesc as usize);
+}
+#[cfg(not(feature = "shadow_desc"))]
 pub fn cudnnCreateConvolutionDescriptorExe<T: CommChannel>(
     channel_sender: &mut T,
     channel_receiver: &mut T,
@@ -330,6 +423,8 @@ pub fn cudnnSetConvolutionNdDescriptorExe<T: CommChannel>(
             error!("Error receiving convDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let convDesc = get_resource(convDesc as usize);
     match arrayLength.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
@@ -381,13 +476,16 @@ pub fn cudnnSetConvolutionNdDescriptorExe<T: CommChannel>(
             computeType,
         )
     };
-    match result.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => {
-            error!("Error sending result: {:?}", e);
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.send(channel_sender) {
+            Ok(()) => {}
+            Err(e) => {
+                error!("Error sending result: {:?}", e);
+            }
         }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnGetConvolutionForwardAlgorithm_v7Exe<T: CommChannel>(
@@ -419,24 +517,32 @@ pub fn cudnnGetConvolutionForwardAlgorithm_v7Exe<T: CommChannel>(
             error!("Error receiving xDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
     match wDesc.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
             error!("Error receiving wDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let wDesc = get_resource(wDesc as usize);
     match convDesc.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
             error!("Error receiving convDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let convDesc = get_resource(convDesc as usize);
     match yDesc.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
             error!("Error receiving yDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let yDesc = get_resource(yDesc as usize);
     match requestedAlgoCount.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
@@ -521,6 +627,8 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
             error!("Error receiving xDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
     match x.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
@@ -533,6 +641,8 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
             error!("Error receiving wDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let wDesc = get_resource(wDesc as usize);
     match w.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
@@ -545,6 +655,8 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
             error!("Error receiving convDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let convDesc = get_resource(convDesc as usize);
     match algo.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
@@ -575,6 +687,8 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
             error!("Error receiving yDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let yDesc = get_resource(yDesc as usize);
     match y.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
@@ -585,6 +699,7 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+
     let alpha_ = &alpha as *const f64;
     let beta_ = &beta as *const f64;
     let result: cudnnStatus_t = unsafe {
@@ -604,13 +719,16 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
             y as *mut c_void,
         )
     };
-    match result.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => {
-            error!("Error sending result: {:?}", e);
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.send(channel_sender) {
+            Ok(()) => {}
+            Err(e) => {
+                error!("Error sending result: {:?}", e);
+            }
         }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnGetBatchNormalizationForwardTrainingExWorkspaceSizeExe<T: CommChannel>(
@@ -648,18 +766,26 @@ pub fn cudnnGetBatchNormalizationForwardTrainingExWorkspaceSizeExe<T: CommChanne
         Ok(()) => {}
         Err(e) => error!("Error receiving xDesc: {:?}", e),
     }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
     match zDesc.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => error!("Error receiving zDesc: {:?}", e),
     }
+    #[cfg(feature = "shadow_desc")]
+    let zDesc = get_resource(zDesc as usize);
     match yDesc.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => error!("Error receiving yDesc: {:?}", e),
     }
+    #[cfg(feature = "shadow_desc")]
+    let yDesc = get_resource(yDesc as usize);
     match bnScaleBiasMeanVarDesc.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => error!("Error receiving bnScaleBiasMeanVarDesc: {:?}", e),
     }
+    #[cfg(feature = "shadow_desc")]
+    let bnScaleBiasMeanVarDesc = get_resource(bnScaleBiasMeanVarDesc as usize);
     match activationDesc.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => error!("Error receiving activationDesc: {:?}", e),
@@ -727,6 +853,8 @@ pub fn cudnnGetBatchNormalizationTrainingExReserveSpaceSizeExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => error!("Error receiving xDesc: {:?}", e),
     }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
     match channel_receiver.recv_ts() {
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
@@ -811,6 +939,8 @@ pub fn cudnnBatchNormalizationForwardTrainingExExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => error!("Error receiving xDesc: {:?}", e),
     }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
     match x.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => error!("Error receiving x: {:?}", e),
@@ -819,6 +949,8 @@ pub fn cudnnBatchNormalizationForwardTrainingExExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => error!("Error receiving zDesc: {:?}", e),
     }
+    #[cfg(feature = "shadow_desc")]
+    let zDesc = get_resource(zDesc as usize);
     match z.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => error!("Error receiving z: {:?}", e),
@@ -827,6 +959,8 @@ pub fn cudnnBatchNormalizationForwardTrainingExExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => error!("Error receiving yDesc: {:?}", e),
     }
+    #[cfg(feature = "shadow_desc")]
+    let yDesc = get_resource(yDesc as usize);
     match y.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => error!("Error receiving y: {:?}", e),
@@ -835,6 +969,8 @@ pub fn cudnnBatchNormalizationForwardTrainingExExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => error!("Error receiving bnScaleBiasMeanVarDesc: {:?}", e),
     }
+    #[cfg(feature = "shadow_desc")]
+    let bnScaleBiasMeanVarDesc = get_resource(bnScaleBiasMeanVarDesc as usize);
     match bnScale.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => error!("Error receiving bnScale: {:?}", e),
@@ -922,11 +1058,14 @@ pub fn cudnnBatchNormalizationForwardTrainingExExe<T: CommChannel>(
             reserveSpaceSizeInBytes,
         )
     };
-    match result.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => error!("Error sending result: {:?}", e),
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.send(channel_sender) {
+            Ok(()) => {}
+            Err(e) => error!("Error sending result: {:?}", e),
+        }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnGetBatchNormalizationBackwardExWorkspaceSizeExe<T: CommChannel>(
@@ -961,21 +1100,33 @@ pub fn cudnnGetBatchNormalizationBackwardExWorkspaceSizeExe<T: CommChannel>(
     if let Err(e) = xDesc.recv(channel_receiver) {
         error!("Error receiving xDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
     if let Err(e) = yDesc.recv(channel_receiver) {
         error!("Error receiving yDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let yDesc = get_resource(yDesc as usize);
     if let Err(e) = dyDesc.recv(channel_receiver) {
         error!("Error receiving dyDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dyDesc = get_resource(dyDesc as usize);
     if let Err(e) = dzDesc.recv(channel_receiver) {
         error!("Error receiving dzDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dzDesc = get_resource(dzDesc as usize);
     if let Err(e) = dxDesc.recv(channel_receiver) {
         error!("Error receiving dxDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dxDesc = get_resource(dxDesc as usize);
     if let Err(e) = dbnScaleBiasDesc.recv(channel_receiver) {
         error!("Error receiving dbnScaleBiasDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dbnScaleBiasDesc = get_resource(dbnScaleBiasDesc as usize);
     if let Err(e) = activationDesc.recv(channel_receiver) {
         error!("Error receiving activationDesc: {:?}", e);
     }
@@ -1070,36 +1221,48 @@ pub fn cudnnBatchNormalizationBackwardExExe<T: CommChannel>(
     if let Err(e) = xDesc.recv(channel_receiver) {
         error!("Error receiving xDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
     if let Err(e) = xData.recv(channel_receiver) {
         error!("Error receiving xData: {:?}", e);
     }
     if let Err(e) = yDesc.recv(channel_receiver) {
         error!("Error receiving yDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let yDesc = get_resource(yDesc as usize);
     if let Err(e) = yData.recv(channel_receiver) {
         error!("Error receiving yData: {:?}", e);
     }
     if let Err(e) = dyDesc.recv(channel_receiver) {
         error!("Error receiving dyDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dyDesc = get_resource(dyDesc as usize);
     if let Err(e) = dyData.recv(channel_receiver) {
         error!("Error receiving dyData: {:?}", e);
     }
     if let Err(e) = dzDesc.recv(channel_receiver) {
         error!("Error receiving dzDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dzDesc = get_resource(dzDesc as usize);
     if let Err(e) = dzData.recv(channel_receiver) {
         error!("Error receiving dzData: {:?}", e);
     }
     if let Err(e) = dxDesc.recv(channel_receiver) {
         error!("Error receiving dxDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dxDesc = get_resource(dxDesc as usize);
     if let Err(e) = dxData.recv(channel_receiver) {
         error!("Error receiving dxData: {:?}", e);
     }
     if let Err(e) = dbnScaleBiasDesc.recv(channel_receiver) {
         error!("Error receiving dbnScaleBiasDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dbnScaleBiasDesc = get_resource(dbnScaleBiasDesc as usize);
     if let Err(e) = bnScaleData.recv(channel_receiver) {
         error!("Error receiving bnScaleData: {:?}", e);
     }
@@ -1178,10 +1341,13 @@ pub fn cudnnBatchNormalizationBackwardExExe<T: CommChannel>(
             reserveSpaceSizeInBytes,
         )
     };
-    if let Err(e) = result.send(channel_sender) {
-        error!("Error sending result: {:?}", e);
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.send(channel_sender) {
+            error!("Error sending result: {:?}", e);
+        }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnGetConvolutionBackwardDataAlgorithm_v7Exe<T: CommChannel>(
@@ -1213,24 +1379,32 @@ pub fn cudnnGetConvolutionBackwardDataAlgorithm_v7Exe<T: CommChannel>(
             error!("Error receiving wDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let wDesc = get_resource(wDesc as usize);
     match dyDesc.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
             error!("Error receiving xDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let dyDesc = get_resource(dyDesc as usize);
     match convDesc.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
             error!("Error receiving convDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let convDesc = get_resource(convDesc as usize);
     match dxDesc.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
             error!("Error receiving yDesc: {:?}", e);
         }
     }
+    #[cfg(feature = "shadow_desc")]
+    let dxDesc = get_resource(dxDesc as usize);
     match requestedAlgoCount.recv(channel_receiver) {
         Ok(()) => {}
         Err(e) => {
@@ -1307,18 +1481,24 @@ pub fn cudnnConvolutionBackwardDataExe<T: CommChannel>(
     if let Err(e) = wDesc.recv(channel_receiver) {
         error!("Error receiving wDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let wDesc = get_resource(wDesc as usize);
     if let Err(e) = w.recv(channel_receiver) {
         error!("Error receiving w: {:?}", e);
     }
     if let Err(e) = dyDesc.recv(channel_receiver) {
         error!("Error receiving dyDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dyDesc = get_resource(dyDesc as usize);
     if let Err(e) = dy.recv(channel_receiver) {
         error!("Error receiving dy: {:?}", e);
     }
     if let Err(e) = convDesc.recv(channel_receiver) {
         error!("Error receiving convDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let convDesc = get_resource(convDesc as usize);
     if let Err(e) = algo.recv(channel_receiver) {
         error!("Error receiving algo: {:?}", e);
     }
@@ -1334,6 +1514,8 @@ pub fn cudnnConvolutionBackwardDataExe<T: CommChannel>(
     if let Err(e) = dxDesc.recv(channel_receiver) {
         error!("Error receiving dxDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dxDesc = get_resource(dxDesc as usize);
     if let Err(e) = dx.recv(channel_receiver) {
         error!("Error receiving dx: {:?}", e);
     }
@@ -1360,10 +1542,13 @@ pub fn cudnnConvolutionBackwardDataExe<T: CommChannel>(
             dx as *mut c_void,
         )
     };
-    if let Err(e) = result.send(channel_sender) {
-        error!("Error sending result: {:?}", e);
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.send(channel_sender) {
+            error!("Error sending result: {:?}", e);
+        }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnGetConvolutionBackwardFilterAlgorithm_v7Exe<T: CommChannel>(
@@ -1390,15 +1575,23 @@ pub fn cudnnGetConvolutionBackwardFilterAlgorithm_v7Exe<T: CommChannel>(
     if let Err(e) = xDesc.recv(channel_receiver) {
         error!("Error receiving xDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
     if let Err(e) = dyDesc.recv(channel_receiver) {
         error!("Error receiving dyDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dyDesc = get_resource(dyDesc as usize);
     if let Err(e) = convDesc.recv(channel_receiver) {
         error!("Error receiving convDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let convDesc = get_resource(convDesc as usize);
     if let Err(e) = dwDesc.recv(channel_receiver) {
         error!("Error receiving dwDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dwDesc = get_resource(dwDesc as usize);
     if let Err(e) = requestedAlgoCount.recv(channel_receiver) {
         error!("Error receiving requestedAlgoCount: {:?}", e);
     }
@@ -1462,18 +1655,24 @@ pub fn cudnnConvolutionBackwardFilterExe<T: CommChannel>(
     if let Err(e) = xDesc.recv(channel_receiver) {
         error!("Error receiving xDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
     if let Err(e) = x.recv(channel_receiver) {
         error!("Error receiving x: {:?}", e);
     }
     if let Err(e) = dyDesc.recv(channel_receiver) {
         error!("Error receiving dyDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dyDesc = get_resource(dyDesc as usize);
     if let Err(e) = dy.recv(channel_receiver) {
         error!("Error receiving dy: {:?}", e);
     }
     if let Err(e) = convDesc.recv(channel_receiver) {
         error!("Error receiving convDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let convDesc = get_resource(convDesc as usize);
     if let Err(e) = algo.recv(channel_receiver) {
         error!("Error receiving algo: {:?}", e);
     }
@@ -1489,6 +1688,8 @@ pub fn cudnnConvolutionBackwardFilterExe<T: CommChannel>(
     if let Err(e) = dwDesc.recv(channel_receiver) {
         error!("Error receiving dwDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let dwDesc = get_resource(dwDesc as usize);
     if let Err(e) = dw.recv(channel_receiver) {
         error!("Error receiving dw: {:?}", e);
     }
@@ -1515,10 +1716,13 @@ pub fn cudnnConvolutionBackwardFilterExe<T: CommChannel>(
             dw as *mut c_void,
         )
     };
-    if let Err(e) = result.send(channel_sender) {
-        error!("Error sending result: {:?}", e);
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.send(channel_sender) {
+            error!("Error sending result: {:?}", e);
+        }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnBatchNormalizationForwardInferenceExe<T: CommChannel>(
@@ -1559,18 +1763,24 @@ pub fn cudnnBatchNormalizationForwardInferenceExe<T: CommChannel>(
     if let Err(e) = xDesc.recv(channel_receiver) {
         error!("Error receiving xDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let xDesc = get_resource(xDesc as usize);
     if let Err(e) = x.recv(channel_receiver) {
         error!("Error receiving x: {:?}", e);
     }
     if let Err(e) = yDesc.recv(channel_receiver) {
         error!("Error receiving yDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let yDesc = get_resource(yDesc as usize);
     if let Err(e) = y.recv(channel_receiver) {
         error!("Error receiving y: {:?}", e);
     }
     if let Err(e) = bnScaleBiasMeanVarDesc.recv(channel_receiver) {
         error!("Error receiving bnScaleBiasMeanVarDesc: {:?}", e);
     }
+    #[cfg(feature = "shadow_desc")]
+    let bnScaleBiasMeanVarDesc = get_resource(bnScaleBiasMeanVarDesc as usize);
     if let Err(e) = bnScale.recv(channel_receiver) {
         error!("Error receiving bnScale: {:?}", e);
     }
@@ -1610,6 +1820,62 @@ pub fn cudnnBatchNormalizationForwardInferenceExe<T: CommChannel>(
             epsilon,
         )
     };
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.send(channel_sender) {
+            error!("Error sending result: {:?}", e);
+        }
+        channel_sender.flush_out().unwrap();
+    }
+}
+
+
+
+pub fn cudnnGetConvolutionNdForwardOutputDimExe<T: CommChannel> (
+    channel_sender: &mut T,
+    channel_receiver: &mut T,
+) {
+    info!("[{}:{}] cudnnGetConvolutionNdForwardOutputDim", std::file!(), std::line!());
+    let mut convDesc: cudnnConvolutionDescriptor_t = Default::default();
+    let mut inputTensorDesc: cudnnTensorDescriptor_t = Default::default();
+    let mut filterDesc: cudnnFilterDescriptor_t = Default::default();
+    let mut nbDims: c_int = Default::default();
+
+    if let Err(e) = convDesc.recv(channel_receiver) {
+        error!("Error receiving convDesc: {:?}", e);
+    }
+    #[cfg(feature = "shadow_desc")]
+    let convDesc = get_resource(convDesc as usize);
+    if let Err(e) = inputTensorDesc.recv(channel_receiver) {
+        error!("Error receiving inputTensorDesc: {:?}", e);
+    }
+    #[cfg(feature = "shadow_desc")]
+    let inputTensorDesc = get_resource(inputTensorDesc as usize);
+    if let Err(e) = filterDesc.recv(channel_receiver) {
+        error!("Error receiving wDesc: {:?}", e);
+    }
+    #[cfg(feature = "shadow_desc")]
+    let filterDesc = get_resource(filterDesc as usize);
+    if let Err(e) = nbDims.recv(channel_receiver) {
+        error!("Error receiving n: {:?}", e);
+    }
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
+    let mut tensorOutputDim_ = vec![0; nbDims as usize];
+    let result = unsafe {
+        cudnnGetConvolutionNdForwardOutputDim(
+            convDesc,
+            inputTensorDesc,
+            filterDesc,
+            nbDims,
+            tensorOutputDim_.as_mut_ptr() as *mut c_int,
+        )
+    };
+    if let Err(e) = tensorOutputDim_.send(channel_sender) {
+        error!("Error sending tensorDimA: {:?}", e);
+    }
     if let Err(e) = result.send(channel_sender) {
         error!("Error sending result: {:?}", e);
     }

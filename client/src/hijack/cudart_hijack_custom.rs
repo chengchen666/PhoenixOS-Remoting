@@ -1,4 +1,6 @@
 #![allow(non_snake_case)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
 use super::*;
 use cudasys::types::cudart::*;
 use ::std::os::raw::*;
@@ -66,17 +68,28 @@ pub extern "C" fn cudaMemcpy(
             Ok(()) => {}
             Err(e) => panic!("failed to receive data: {:?}", e),
         }
+        #[cfg(feature = "async_api")]
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
     }
 
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
+    #[cfg(feature = "async_api")]
+    return cudaError_t::cudaSuccess;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.recv(channel_receiver) {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive result: {:?}", e),
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        return result;
     }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-    return result;
 }
 
 // TODO: maybe we should understand the semantic diff of cudaMemcpyAsync&cudaMemcpy
@@ -109,7 +122,6 @@ pub extern "C" fn cudaLaunchKernel(
 
     let proc_id = 200;
     let mut result: cudaError_t = Default::default();
-
     let info: *mut kernel_info_t =
         ELF_CONTROLLER.find_kernel_host_func(func as *mut ::std::os::raw::c_void);
     if info.is_null() {
@@ -165,15 +177,21 @@ pub extern "C" fn cudaLaunchKernel(
         Err(e) => panic!("failed to send: {:?}", e),
     }
 
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
+    #[cfg(feature = "async_api")]
+    return cudaError_t::cudaSuccess;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.recv(channel_receiver) {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive result: {:?}", e),
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        return result;
     }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-    return result;
 }
 
 #[no_mangle]
@@ -217,9 +235,9 @@ pub extern "C" fn cudaMallocManaged(
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }
 
@@ -263,8 +281,8 @@ pub extern "C" fn cudaHostAlloc(
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }

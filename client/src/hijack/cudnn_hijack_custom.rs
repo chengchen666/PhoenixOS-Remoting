@@ -1,4 +1,6 @@
 #![allow(non_snake_case)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
 
 use super::*;
 use cudasys::types::cudnn::*;
@@ -40,15 +42,46 @@ pub extern "C" fn cudnnCreate(
         }
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreate: {:?}", result);
     }
     result
 }
 
+#[cfg(feature = "shadow_desc")]
+#[no_mangle]
+pub extern "C" fn cudnnCreateTensorDescriptor(
+    tensorDesc: *mut cudnnTensorDescriptor_t,
+) -> cudnnStatus_t {
+    info!("[{}:{}] cudnnCreateTensorDescriptor", std::file!(), std::line!());
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let proc_id = 1501;
+    match proc_id.send(channel_sender) {
+        Ok(_) => {}
+        Err(e) => {
+            error!("Error sending proc_id: {:?}", e);
+        }
+    }
+    let resource_idx: cudnnTensorDescriptor_t = *RESOURCE_IDX.lock().unwrap();
+    unsafe { *tensorDesc = resource_idx; }
+    *RESOURCE_IDX.lock().unwrap() += 1;
+    match resource_idx.send(channel_sender) {
+        Ok(_) => {}
+        Err(e) => {
+            error!("Error sending tensor_desc_addr: {:?}", e);
+        }
+    }
+    match channel_sender.flush_out() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send: {:?}", e),
+    }
+    cudnnStatus_t::CUDNN_STATUS_SUCCESS
+}
+#[cfg(not(feature = "shadow_desc"))]
 #[no_mangle]
 pub extern "C" fn cudnnCreateTensorDescriptor(
     tensorDesc: *mut cudnnTensorDescriptor_t,
@@ -85,9 +118,9 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
         }
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreateTensorDescriptor: {:?}", result);
     }
@@ -134,9 +167,9 @@ pub extern "C" fn cudnnCreateActivationDescriptor(
         }
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreateActivationDescriptor: {:?}", result);
     }
@@ -230,9 +263,9 @@ pub extern "C" fn cudnnActivationForward(
         }
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }
 
@@ -302,20 +335,61 @@ pub extern "C" fn cudnnSetTensorNdDescriptor(
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    match result.recv(channel_receiver) {
-        Ok(_) => {}
-        Err(e) => {
-            error!("Error receiving result: {:?}", e);
-        }
-    }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.recv(channel_receiver) {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Error receiving result: {:?}", e);
             }
-    result
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        return result;
+    }
 }
 
 
+#[cfg(feature = "shadow_desc")]
+#[no_mangle]
+pub extern "C" fn cudnnCreateFilterDescriptor(
+    filterDesc: *mut cudnnFilterDescriptor_t
+) -> cudnnStatus_t {
+    info!(
+        "[{}:{}] cudnnCreateFilterDescriptor",
+        std::file!(),
+        std::line!()
+    );
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let proc_id = 1511;
+    match proc_id.send(channel_sender) {
+        Ok(_) => {}
+        Err(e) => {
+            error!("Error sending proc_id: {:?}", e);
+        }
+    }
+    let resource_idx: cudnnFilterDescriptor_t = *RESOURCE_IDX.lock().unwrap();
+    unsafe { *filterDesc = resource_idx; }
+    *RESOURCE_IDX.lock().unwrap() += 1;
+    match resource_idx.send(channel_sender) {
+        Ok(_) => {}
+        Err(e) => {
+            error!("Error sending tensor_desc_addr: {:?}", e);
+        }
+    }
+    match channel_sender.flush_out() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send: {:?}", e),
+    }
+    cudnnStatus_t::CUDNN_STATUS_SUCCESS
+}
+#[cfg(not(feature = "shadow_desc"))]
 #[no_mangle]
 pub extern "C" fn cudnnCreateFilterDescriptor(
     filterDesc: *mut cudnnFilterDescriptor_t
@@ -356,9 +430,9 @@ pub extern "C" fn cudnnCreateFilterDescriptor(
         }
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreateFilterDescriptor: {:?}", result);
     }
@@ -427,20 +501,61 @@ pub extern "C" fn cudnnSetFilterNdDescriptor(
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    match result.recv(channel_receiver) {
-        Ok(_) => {}
-        Err(e) => {
-            error!("Error receiving result: {:?}", e);
-        }
-    }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.recv(channel_receiver) {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Error receiving result: {:?}", e);
             }
-    result
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        return result;
+    }
 }
 
 
+#[cfg(feature = "shadow_desc")]
+#[no_mangle]
+pub extern "C" fn cudnnCreateConvolutionDescriptor(
+    convDesc: *mut cudnnConvolutionDescriptor_t
+) -> cudnnStatus_t {
+    info!(
+        "[{}:{}] cudnnCreateConvolutionDescriptor",
+        std::file!(),
+        std::line!()
+    );
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let proc_id = 1514;
+    match proc_id.send(channel_sender) {
+        Ok(_) => {}
+        Err(e) => {
+            error!("Error sending proc_id: {:?}", e);
+        }
+    }
+    let resource_idx: cudnnConvolutionDescriptor_t = *RESOURCE_IDX.lock().unwrap();
+    unsafe { *convDesc = resource_idx; }
+    *RESOURCE_IDX.lock().unwrap() += 1;
+    match resource_idx.send(channel_sender) {
+        Ok(_) => {}
+        Err(e) => {
+            error!("Error sending tensor_desc_addr: {:?}", e);
+        }
+    }
+    match channel_sender.flush_out() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to send: {:?}", e),
+    }
+    cudnnStatus_t::CUDNN_STATUS_SUCCESS
+}
+#[cfg(not(feature = "shadow_desc"))]
 #[no_mangle]
 pub extern "C" fn cudnnCreateConvolutionDescriptor(
     convDesc: *mut cudnnConvolutionDescriptor_t
@@ -481,9 +596,9 @@ pub extern "C" fn cudnnCreateConvolutionDescriptor(
         }
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     if cudnnStatus_t::CUDNN_STATUS_SUCCESS != result {
         panic!("error cudnnCreateConvolutionDescriptor: {:?}", result);
     }
@@ -574,17 +689,23 @@ pub extern "C" fn cudnnSetConvolutionNdDescriptor(
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    match result.recv(channel_receiver) {
-        Ok(_) => {}
-        Err(e) => {
-            error!("Error receiving result: {:?}", e);
-        }
-    }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.recv(channel_receiver) {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Error receiving result: {:?}", e);
             }
-    result
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        return result;
+    }
 }
 
 #[no_mangle]
@@ -684,9 +805,9 @@ pub extern "C" fn cudnnGetConvolutionForwardAlgorithm_v7(
         }
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }
 
@@ -717,11 +838,13 @@ pub extern "C" fn cudnnConvolutionForward(
     // process alpha and beta
     // assume that the datatype is double
     let alpha_ = unsafe {
-        let slice = std::slice::from_raw_parts(alpha as *const f64, 1);
+        let a: f64 = std::ptr::read_unaligned(alpha as *const f64);
+        let slice = std::slice::from_raw_parts(&a as *const f64, 1);
         slice[0]
     };
     let beta_ = unsafe {
-        let slice = std::slice::from_raw_parts(beta as *const f64, 1);
+        let b: f64 = std::ptr::read_unaligned(beta as *const f64);
+        let slice = std::slice::from_raw_parts(&b as *const f64, 1);
         slice[0]
     };
 
@@ -785,15 +908,21 @@ pub extern "C" fn cudnnConvolutionForward(
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.recv(channel_receiver) {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive result: {:?}", e),
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        return result;
     }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-    result
 }
 
 #[no_mangle]
@@ -876,9 +1005,9 @@ pub extern "C" fn cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
         }
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result 
 }
 
@@ -947,9 +1076,9 @@ pub extern "C" fn cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
         }
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }
 
@@ -1107,15 +1236,21 @@ pub extern "C" fn cudnnBatchNormalizationForwardTrainingEx(
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.recv(channel_receiver) {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive result: {:?}", e),
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-    result
 }
 
 #[no_mangle]
@@ -1188,9 +1323,9 @@ pub extern "C" fn cudnnGetBatchNormalizationBackwardExWorkspaceSize(
         error!("failed to receiving result: {:?}", e);
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }
 
@@ -1346,14 +1481,20 @@ pub extern "C" fn cudnnBatchNormalizationBackwardEx(
     if let Err(e) = channel_sender.flush_out() {
         panic!("failed to send: {:?}", e);
     }
-    if let Err(e) = result.recv(channel_receiver) {
-        error!("failed to receive result: {:?}", e);
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            error!("failed to receive result: {:?}", e);
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-    result
 }
 
 #[no_mangle]
@@ -1453,9 +1594,9 @@ pub extern "C" fn cudnnGetConvolutionBackwardDataAlgorithm_v7(
         }
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }
 
@@ -1539,14 +1680,21 @@ pub extern "C" fn cudnnConvolutionBackwardData(
     if let Err(e) = channel_sender.flush_out() {
         panic!("failed to send: {:?}", e);
     }
-    if let Err(e) = result.recv(channel_receiver) {
-        panic!("failed to receive result: {:?}", e);
+
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            panic!("failed to receive result: {:?}", e);
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-    result
 }
 
 #[no_mangle]
@@ -1615,9 +1763,9 @@ pub extern "C" fn cudnnGetConvolutionBackwardFilterAlgorithm_v7(
         error!("Error receiving result: {:?}", e);
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }
 
@@ -1701,14 +1849,20 @@ pub extern "C" fn cudnnConvolutionBackwardFilter(
     if let Err(e) = channel_sender.flush_out() {
         panic!("failed to send: {:?}", e);
     }
-    if let Err(e) = result.recv(channel_receiver) {
-        panic!("failed to receive result: {:?}", e);
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            panic!("failed to receive result: {:?}", e);
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-    result
 }
 
 #[no_mangle]
@@ -1794,13 +1948,76 @@ pub extern "C" fn cudnnBatchNormalizationForwardInference(
     if let Err(e) = channel_sender.flush_out() {
         panic!("failed to send: {:?}", e);
     }
-    // receive result from server
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        // receive result from server
+        if let Err(e) = result.recv(channel_receiver) {
+            panic!("failed to receive result: {:?}", e);
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        return result;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn cudnnGetConvolutionNdForwardOutputDim(
+    convDesc: cudnnConvolutionDescriptor_t,
+    inputTensorDesc: cudnnTensorDescriptor_t,
+    filterDesc: cudnnFilterDescriptor_t,
+    nbDims: c_int,
+    tensorOuputDimA: *mut c_int,
+) -> cudnnStatus_t{
+    info!(
+        "[{}:{}] cudnnGetConvolutionNdForwardOutputDim",
+        std::file!(),
+        std::line!()
+    );
+    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
+    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let proc_id = 1533;
+    let mut result: cudnnStatus_t = Default::default();
+    if let Err(e) = proc_id.send(channel_sender) {
+        error!("Error sending proc_id: {:?}", e);
+    }
+    if let Err(e) = convDesc.send(channel_sender) {
+        error!("Error sending convDesc: {:?}", e);
+    }
+    if let Err(e) = inputTensorDesc.send(channel_sender) {
+        error!("Error sending inputTensorDesc: {:?}", e);
+    }
+    if let Err(e) = filterDesc.send(channel_sender) {
+        error!("Error sending filterDesc: {:?}", e);
+    }
+    if let Err(e) = nbDims.send(channel_sender) {
+        error!("Error sending nbDims: {:?}", e);
+    }
+    if let Err(e) = channel_sender.flush_out() {
+        panic!("failed to send: {:?}", e);
+    }
+    let mut tensorOuputDimAs_: Vec<c_int> = Default::default();
+    if let Err(e) = tensorOuputDimAs_.recv(channel_receiver) {
+        error!("Error receiving tensorOuputDimAs: {:?}", e);
+    };
+    unsafe{
+        std::ptr::copy_nonoverlapping(
+            tensorOuputDimAs_.as_ptr(),
+            tensorOuputDimA,
+            nbDims as usize
+        );
+    }
     if let Err(e) = result.recv(channel_receiver) {
-        panic!("failed to receive result: {:?}", e);
+        error!("Error receiving result: {:?}", e);
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
+    
 }
