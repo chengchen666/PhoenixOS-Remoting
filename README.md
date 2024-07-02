@@ -64,9 +64,11 @@ The default configuration using shared memory communication method and using emu
 
 You can use `config.toml` file to config communication type, buffer size, RDMA server listener socket and so on.
 
-Due to `cargo` will use cwd as running root folder, use absolute path for config file. The default path will be `/workspace/xpuremoting/config.toml`. If you want a specific path, you can use environment variable `NETWORK_CONFIG` customize it. For example: `NETWORK_CONFG="/path/to/my/config cargo run`.
+Due to `cargo` will use cwd as running root folder, use absolute path for config file. The default path will be `xpuremoting/config.toml`. If you want a specific path, you can use environment variable `NETWORK_CONFIG` customize it. For example: `NETWORK_CONFG="/path/to/my/config cargo run`.
 
 ### Emulator
+
+The network emulator is a component used to simulate system performance under different network conditions. When enabled, it calculates network latency and make the message receiver busy-wait, thus simulating the network overhead caused by RTT and bandwidth. Real-world tests have shown that the emulator's performance deviates from the actual conditions by no more than 5%. You can configure the `rtt` and `bandwidth` settings in `config.toml`.
 
 By default, the network emulator is enabled, and this feature is only available when using shared memory. To disable the emulator, you can simply remove the `emulator` field from the default features in the `client/Cargo.toml`, `server/Cargo.toml`, and `network/Cargo.toml` files.
 

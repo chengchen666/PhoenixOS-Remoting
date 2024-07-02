@@ -19,8 +19,8 @@ core_affinity = "0.8.1"
 glob = "0.3"
 
 [features]
-default = ["rdma"]
-# default = ["shm", "emulator"]
+# default = ["rdma"]
+default = ["shm", "emulator"]
 # default = ["shm"]
 shm = []
 rdma = []
