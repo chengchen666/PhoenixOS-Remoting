@@ -46,18 +46,16 @@ if path is not None:
     start_trace()
 
 
-total = 0
-for i in range(num_iter):
-    T1 = time.time()
+T1 = time.time()
+for i in range(num_iter*20):
     encoding = tokenizer(texts, padding=True, return_tensors='pt').to(device)
     with torch.no_grad():
         generated_ids = model.generate(**encoding, max_length=20)
     generated_texts = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
-    T2 = time.time()
-    print(f'iter: {i}, time used: {T2-T1}')
-    total += T2 - T1
+    # T2 = time.time()
+    # print(f'iter: {i}, time used: {T2-T1}')
+    # total += T2 - T1
     
-print(generated_texts)
-
-print(total / num_iter)
-print(total)
+T2 = time.time()
+print('time used: ', (T2-T1)/20)
+# print(generated_texts)

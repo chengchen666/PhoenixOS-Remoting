@@ -4,7 +4,6 @@ use cudasys::types::cudnn::*;
 
 gen_unimplement!("cudnnGetVersion", "size_t");
 gen_unimplement!("cudnnGetCudartVersion", "size_t");
-gen_unimplement!("cudnnGetErrorString", "*const ::std::os::raw::c_char", "cudnnStatus_t");
 gen_unimplement!("cudnnQueryRuntimeError", "cudnnStatus_t", "cudnnHandle_t", "*mut cudnnStatus_t", "cudnnErrQueryMode_t", "*mut cudnnRuntimeTag_t");
 gen_unimplement!("cudnnGetProperty", "cudnnStatus_t", "libraryPropertyType", "*mut ::std::os::raw::c_int");
 gen_unimplement!("cudnnGetStream", "cudnnStatus_t", "cudnnHandle_t", "*mut cudaStream_t");

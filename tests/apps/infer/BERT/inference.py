@@ -45,7 +45,7 @@ if path is not None:
 
 T1 = time.time()
 
-for i in range(num_iter):
+for i in range(num_iter*100):
     encoded_inputs = tokenizer(masked_sentences, return_tensors='pt', padding='max_length', max_length=20).to(device)
     outputs = model(**encoded_inputs)
     most_likely_token_ids = [torch.argmax(outputs[0][i, pos, :]) for i, pos in enumerate(pos_masks)]
@@ -53,7 +53,7 @@ for i in range(num_iter):
     unmasked_sentences = [masked_sentences[i].replace('[MASK]', token) for i, token in enumerate(unmasked_tokens)]
     
 T2 = time.time()
-print(T2-T1)
+print((T2-T1)/100)
 
 if path is not None:
     end_trace()

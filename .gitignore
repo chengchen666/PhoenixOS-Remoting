@@ -12,6 +12,9 @@ tests/apps/infer/BERT-base-uncased/bert-base-uncased
 tests/apps/checkpoint
 tests/apps/dataset
 
+tests/apps/train/stablediffusion/tmp
+
+*.tgz
 core-*
 *.log
 data
