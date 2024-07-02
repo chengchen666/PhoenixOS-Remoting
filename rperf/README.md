@@ -39,3 +39,9 @@ The `perf.sh` script will run the application multiple times with different conf
 cd path/to/rperf
 python3 work.py $RPERF_OUTPUT_DIR
 ```
+
+## Acknowlegement
+
+Thanks to the [cuda_hook](https://github.com/Bruce-Lee-LY/cuda_hook) library which can intercept CUDA API calls locally.
+
+We modify the `cuda_hook` library to collect some of the performance metrics of CUDA API. In particular, we also insert probes to the `LaunchKernel-like` functions (cudnn library, etc.) to collect the kernel execution time with `Nsight Systems` profiling results.
