@@ -14,6 +14,6 @@ ctos_channel_name = "/ctos"
 buf_size = 4000000000
 
 # network configuration
-# bandwidth in bps, rtt in ms 
-rtt = 0.0034
-bandwidth = 107374182400
+# bandwidth is in bps, rtt is in ms 
+rtt = 0.0
+bandwidth = 77491947438.08

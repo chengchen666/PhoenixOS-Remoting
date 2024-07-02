@@ -29,6 +29,7 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
         std::file!(),
         std::line!()
     );
+
     let mut resource_idx: usize = Default::default();
     match resource_idx.recv(channel_receiver) {
         Ok(()) => {}
@@ -40,6 +41,7 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+
     let mut tensorDesc: cudnnTensorDescriptor_t = Default::default();
     unsafe { cudnnCreateTensorDescriptor(&mut tensorDesc) };
     add_resource(resource_idx, tensorDesc as usize);
@@ -54,6 +56,7 @@ pub fn cudnnCreateTensorDescriptorExe<T: CommChannel>(
         std::file!(),
         std::line!()
     );
+
     match channel_receiver.recv_ts() {
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
@@ -596,6 +599,7 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
         std::file!(),
         std::line!()
     );
+
     let mut handle: cudnnHandle_t = Default::default();
     let mut alpha: f64 = Default::default(); // currently, we assume that alpha is f64
     let mut xDesc: cudnnTensorDescriptor_t = Default::default();
@@ -702,6 +706,7 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
 
     let alpha_ = &alpha as *const f64;
     let beta_ = &beta as *const f64;
+
     let result: cudnnStatus_t = unsafe {
         cudnnConvolutionForward(
             handle,
@@ -719,6 +724,7 @@ pub fn cudnnConvolutionForwardExe<T: CommChannel>(
             y as *mut c_void,
         )
     };
+    
     #[cfg(not(feature = "async_api"))]
     {
         match result.send(channel_sender) {
@@ -886,7 +892,7 @@ pub fn cudnnBatchNormalizationForwardTrainingExExe<T: CommChannel>(
     channel_receiver: &mut T,
 ) {
     info!(
-        "[{}:{}] cudnnBatchNormalizationForwardTrainingExEx",
+        "[{}:{}] cudnnBatchNormalizationForwardTrainingEx",
         std::file!(),
         std::line!()
     );

@@ -12,7 +12,7 @@ with open(input_filename, 'r') as file:
     log_data = file.read()
 
 pattern = re.compile(
-    r'\[.*?\] \[.*?\] (\w+)\n\[.*?\] , (\d+)'
+    r'\[.*?\] \[.*?\] (\w+)\n\[.*?\] exe: ([\d.]+)',
 )
 
 matches = pattern.findall(log_data)

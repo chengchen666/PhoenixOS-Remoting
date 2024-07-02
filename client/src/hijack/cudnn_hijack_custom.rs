@@ -55,6 +55,7 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
     tensorDesc: *mut cudnnTensorDescriptor_t,
 ) -> cudnnStatus_t {
     info!("[{}:{}] cudnnCreateTensorDescriptor", std::file!(), std::line!());
+
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 1501;
@@ -87,6 +88,7 @@ pub extern "C" fn cudnnCreateTensorDescriptor(
     tensorDesc: *mut cudnnTensorDescriptor_t,
 ) -> cudnnStatus_t{
     info!("[{}:{}] cudnnCreateTensorDescriptor", std::file!(), std::line!());
+
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 1501;
@@ -826,6 +828,7 @@ pub extern "C" fn cudnnConvolutionForward(
 ) -> cudnnStatus_t {
     assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] cudnnConvolutionForward", std::file!(), std::line!());
+
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -904,9 +907,11 @@ pub extern "C" fn cudnnConvolutionForward(
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    #[cfg(feature = "async_api")]
-    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
 
+    #[cfg(feature = "async_api")]
+    {
+        return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+    }
     #[cfg(not(feature = "async_api"))]
     {
         match result.recv(channel_receiver) {

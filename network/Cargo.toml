@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 codegen = { path = "../codegen" }
+measure = { path = "../measure" }
 libc = "*"
 log = "0.4.0"
 errno = "0.2.7" 
@@ -19,3 +20,6 @@ KRdmaKit = { git = "https://github.com/Gahow/krcore-artifacts.git", branch = "fe
 
 [dev-dependencies]
 cudasys = { path = "../cudasys" }
+
+[features]
+log_rperf = []

@@ -1,4 +1,3 @@
-use chrono::Utc;
 use std::sync::{Arc, Mutex};
 
 use crate::{
@@ -14,6 +13,7 @@ pub struct EmulatorChannel {
     rtt: f64,
     bandwidth: f64,
     start: Arc<Mutex<Option<u64>>>,
+    // begin: NsTimestamp,
 }
 
 unsafe impl Send for EmulatorChannel {}
@@ -21,6 +21,8 @@ unsafe impl Sync for EmulatorChannel {}
 
 impl EmulatorChannel {
     pub fn new(manager: Box<dyn CommChannelInner>) -> Self {
+        // let now = NsTimestamp::now();
+        // log::info!("{}:{}", now.sec_timestamp, now.ns_timestamp);
         Self {
             manager,
             byte_cnt: Arc::new(Mutex::new(0)),
@@ -28,6 +30,7 @@ impl EmulatorChannel {
             rtt: CONFIG.rtt,
             bandwidth: CONFIG.bandwidth,
             start: Arc::new(Mutex::new(None)),
+            // begin: now,
         }
     }
 
@@ -89,10 +92,28 @@ impl EmulatorChannel {
     pub fn set_last_timestamp(&self, last_timestamp: NsTimestamp) {
         *self.last_timestamp.lock().unwrap() = last_timestamp;
     }
+
+    #[inline]
+    pub fn get_start(&self) -> Option<u64> {
+        *self.start.lock().unwrap()
+    }
+
+    #[inline]
+    pub fn set_start(&self, start: Option<u64>) {
+        *self.start.lock().unwrap() = start;
+    }
 }
 
 impl CommChannelInnerIO for EmulatorChannel {
     fn put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
+        #[cfg(feature = "log_rperf")]
+        if self.get_start() == None {
+            self.set_start(Some(measure::rdtscp()));
+            // let now = NsTimestamp::now();
+            // let elapsed = (now.sec_timestamp - self.begin.sec_timestamp) * 1000000000
+            //     + (now.ns_timestamp as i32 - self.begin.ns_timestamp as i32) as i64;
+            // log::info!(", {}", elapsed);
+        }
         self.set_byte_cnt(self.get_byte_cnt() + src.len);
         self.manager.put_bytes(src)
     }
@@ -116,6 +137,18 @@ impl CommChannelInnerIO for EmulatorChannel {
 
 impl CommChannelInner for EmulatorChannel {
     fn flush_out(&self) -> Result<(), CommChannelError> {
+        #[cfg(feature = "log_rperf")]
+        {
+            if self.get_start() == None {
+                self.set_start(Some(measure::rdtscp()));
+            }
+            let end = measure::rdtscp();
+            let elapsed = measure::clock2ns(end - self.get_start().unwrap());
+            log::info!(", {}", elapsed / 1000.0);
+            let byte_cnt = self.get_byte_cnt();
+            log::info!(", {}", byte_cnt);
+            self.set_start(None);
+        }
         let ts = self.calculate_ts(self.get_byte_cnt());
         let _ = self.send(ts);
         let _ = self.manager.flush_out();
@@ -130,6 +163,8 @@ impl CommChannelInner for EmulatorChannel {
         while NsTimestamp::now() < timestamp {
             // Busy-waiting
         }
+        // let start = NsTimestamp::now();
+        // log::info!("gpu_issue, {}:{}", start.sec_timestamp, start.ns_timestamp as f64 / 1000.0);
         Ok(())
     }
 }

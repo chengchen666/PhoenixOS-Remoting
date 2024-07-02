@@ -9,11 +9,16 @@ import ctypes
 import os
 
 # load remoting bottom library
-path = os.getenv('REMOTING_BOTTOM_LIBRARY')
-if path is not None:
-    cpp_lib = ctypes.CDLL(path)
+remoting_bottom_lib_path = os.getenv('REMOTING_BOTTOM_LIBRARY')
+if remoting_bottom_lib_path is not None:
+    cpp_lib = ctypes.CDLL(remoting_bottom_lib_path)
     start_trace = cpp_lib.startTrace
     end_trace = cpp_lib.endTrace
+
+log_breakpoint_lib_path = os.getenv('LOG_BREAKPOINT_LIBRARY')
+if log_breakpoint_lib_path is not None:
+    cpp_lib = ctypes.CDLL(log_breakpoint_lib_path)
+    breakpoint = cpp_lib.log_breakpoint
 
 if(len(sys.argv) != 3):
     print('Usage: python3 inference.py num_iter batch_size')
@@ -49,8 +54,14 @@ for i in range(2):
     correct_tensor = pred.eq(target.data.view_as(pred))
     correct = np.squeeze(correct_tensor.data.cpu().numpy())
 
-if path is not None:
+if log_breakpoint_lib_path is not None:
+    breakpoint()
+
+if remoting_bottom_lib_path is not None:
     start_trace()
+
+print("begin trace")
+sys.stdout.flush()
 
 T1 = time.time()
 
@@ -65,9 +76,9 @@ for i in range(num_iter):
     correct = np.squeeze(correct_tensor.data.cpu().numpy())
     
 T2 = time.time()
-print(T2-T1)
+print('time used: ', T2-T1)
 
-if path is not None:
+if remoting_bottom_lib_path is not None:
     end_trace()
 
 # print(correct)

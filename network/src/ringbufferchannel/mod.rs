@@ -18,6 +18,7 @@ pub use rdma::RDMAChannel;
 
 pub mod utils;
 
+mod fakemutex;
 pub mod emulator;
 pub use emulator::EmulatorChannel;
 pub mod types;

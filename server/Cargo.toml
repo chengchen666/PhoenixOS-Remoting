@@ -25,6 +25,7 @@ default = ["shm", "emulator"]
 shm = []
 rdma = []
 emulator = []
+log_rperf = []
 async_api = []
 shadow_desc = []
 
