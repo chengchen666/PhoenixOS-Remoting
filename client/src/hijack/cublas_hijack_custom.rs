@@ -1,17 +1,13 @@
-
 #![allow(non_snake_case)]
 #![allow(unused_variables)]
 #![allow(unused_mut)]
 
 use super::*;
 use cudasys::types::cublas::*;
-use ::std::os::raw::*;
-
+use std::os::raw::*;
 
 #[no_mangle]
-pub extern "C" fn cublasCreate_v2(
-    handle: *mut cublasHandle_t,
-) -> cublasStatus_t {
+pub extern "C" fn cublasCreate_v2(handle: *mut cublasHandle_t) -> cublasStatus_t {
     info!("[{}:{}] cublasCreate_v2", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
@@ -28,10 +24,10 @@ pub extern "C" fn cublasCreate_v2(
     }
     // receive handle from server
     let mut handle_: cublasHandle_t = Default::default();
-    let mut result: cublasStatus_t = Default::default(); 
+    let mut result: cublasStatus_t = Default::default();
     match handle_.recv(channel_receiver) {
         Ok(()) => {
-            unsafe{ *handle = handle_ };
+            unsafe { *handle = handle_ };
         }
         Err(e) => error!("Error receiving handle: {:?}", e),
     }
@@ -49,17 +45,17 @@ pub extern "C" fn cublasCreate_v2(
 #[no_mangle]
 pub extern "C" fn cublasSgemm_v2(
     handle: cublasHandle_t,
-    transa: cublasOperation_t, 
+    transa: cublasOperation_t,
     transb: cublasOperation_t,
     m: c_int,
     n: c_int,
     k: c_int,
-    alpha: *const c_float,          // assume alpha is on host
+    alpha: *const c_float, // assume alpha is on host
     A: MemPtr,
     lda: c_int,
     B: MemPtr,
     ldb: c_int,
-    beta: *const c_float,           // assume beta is on host
+    beta: *const c_float, // assume beta is on host
     C: MemPtr,
     ldc: c_int,
 ) -> cublasStatus_t {
@@ -158,7 +154,11 @@ pub extern "C" fn cublasSgemmStridedBatched(
     strideC: c_longlong,
     batchCount: c_int,
 ) -> cublasStatus_t {
-    info!("[{}:{}] cublasSgemmStridedBatched", std::file!(), std::line!());
+    info!(
+        "[{}:{}] cublasSgemmStridedBatched",
+        std::file!(),
+        std::line!()
+    );
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 2005;
@@ -226,12 +226,12 @@ pub extern "C" fn cublasSgemmStridedBatched(
         error!("Error sending batchCount: {:?}", e)
     }
 
+    channel_sender.flush_out().unwrap();
     #[cfg(feature = "async_api")]
     return cublasStatus_t::CUBLAS_STATUS_SUCCESS;
 
     #[cfg(not(feature = "async_api"))]
     {
-        channel_sender.flush_out().unwrap();
         if let Err(e) = result.recv(channel_receiver) {
             error!("Error receiving result: {:?}", e)
         }
@@ -378,7 +378,11 @@ pub extern "C" fn cublasGemmStridedBatchedEx(
     computeType: cudaDataType,
     algo: cublasGemmAlgo_t,
 ) -> cublasStatus_t {
-    info!("[{}:{}] cublasGemmStridedBatchedEx", std::file!(), std::line!());
+    info!(
+        "[{}:{}] cublasGemmStridedBatchedEx",
+        std::file!(),
+        std::line!()
+    );
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
     let proc_id = 2008;

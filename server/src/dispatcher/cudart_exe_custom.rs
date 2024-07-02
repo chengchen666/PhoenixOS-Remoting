@@ -305,19 +305,9 @@ pub fn cudaGetErrorStringExe<T: CommChannel>(channel_sender: &mut T, channel_rec
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
     let result = unsafe { cudaGetErrorString(error) };
-    let mut error_string = Vec::new();
-    let mut i = 0;
-    unsafe{
-        loop {
-            let c = result.offset(i);
-            if *c == 0 {
-                error_string.push(0);
-                break;
-            }
-            error_string.push(*c as u8);
-            i += 1;
-        }
+    let result = unsafe { std::ffi::CStr::from_ptr(result).to_bytes().to_vec() };
+    if let Err(e) = result.send(channel_sender) {
+        error!("Error sending result: {:?}", e);
     }
-    error_string.send(channel_sender).unwrap();
     channel_sender.flush_out().unwrap();
 }

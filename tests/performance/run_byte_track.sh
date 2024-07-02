@@ -12,7 +12,7 @@ bert_model_path=""
 sd_model_path=""
 gpt_model_path=""
 # config file, using default path
-config_path="xpuremoting/config.toml"
+config_path="config.toml"
 # log path
 log_dir="/workspace/log"
 
@@ -63,7 +63,7 @@ for model in "${models[@]}"; do
         echo "Failed to change directory to tests/apps"
         exit 1
     }
-    ./run.sh infer/${model}/inference.py ${params} >"${log_dir}/${client_file}" 2>&1
+    NETWORK_CONFIG=../../config.toml ./run.sh infer/${model}/inference.py ${params} >"${log_dir}/${client_file}" 2>&1
     cd ../..
 
     echo "extract"

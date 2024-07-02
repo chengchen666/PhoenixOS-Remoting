@@ -4,7 +4,7 @@ output_dir="output-dir" # output path under tests/performace directory
 # "BERT-pytorch" "ResNet18_Cifar10_95.46" "naifu-diffusion"
 models=("BERT-pytorch" "ResNet18_Cifar10_95.46" "naifu-diffusion")
 # config file, using default path
-config_path="xpuremoting/config.toml"
+config_path="config.toml"
 
 
 set -e
@@ -85,7 +85,7 @@ for model in "${models[@]}"; do
         if [ ! -d "../../tests/performance/${output_dir}" ]; then
             mkdir -p "../../tests/performance/${output_dir}"
         fi
-        RUST_LOG=warn ./run.sh train/${model}/train.py ${params} >"../../tests/performance/${output_dir}/${model}_train_($1)_${rtt}_${bandwidth}.log" 2>&1
+        NETWORK_CONFIG=../../config.toml RUST_LOG=warn ./run.sh train/${model}/train.py ${params} >"../../tests/performance/${output_dir}/${model}_train_($1)_${rtt}_${bandwidth}.log" 2>&1
         cd ../..
 
         echo "done ---"
