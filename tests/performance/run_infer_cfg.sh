@@ -8,7 +8,7 @@ bert_model_path=""
 sd_model_path=""
 gpt_model_path=""
 # config file, using default path
-config_path="xpuremoting/config.toml"
+config_path="config.toml"
 
 
 set -e
@@ -89,7 +89,7 @@ for model in "${models[@]}"; do
         if [ ! -d "../../tests/performance/${output_dir}" ]; then
             mkdir -p "../../tests/performance/${output_dir}"
         fi
-        RUST_LOG=warn ./run.sh infer/${model}/inference.py ${params} >"../../tests/${output_dir}/${model}_infer_($1)_${rtt}_${bandwidth}.log" 2>&1
+        NETWORK_CONFIG=../../config.toml RUST_LOG=warn ./run.sh infer/${model}/inference.py ${params} >"../../tests/performance/${output_dir}/${model}_infer_($1)_${rtt}_${bandwidth}.log" 2>&1
         cd ../..
 
         echo "done ---"

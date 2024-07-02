@@ -5,7 +5,7 @@ bandwidth_values=(214748364800)
 output_dir="output-dir" # output path under tests/performace directory
 # "BERT-pytorch" "ResNet18_Cifar10_95.46" "naifu-diffusion"
 models=("BERT-pytorch" "ResNet18_Cifar10_95.46" "naifu-diffusion")
-config_path="xpuremoting/config.toml"
+config_path="config.toml"
 
 set -e
 
@@ -56,7 +56,7 @@ for rtt in "${rtt_values[@]}"; do
                 echo "Failed to change directory to tests/apps"
                 exit 1
             }
-            RUST_LOG=warn ./run.sh train/${model}/train.py ${params} >"../../tests/performace/${output_dir}/${model}_train_($1)_${rtt}_${bandwidth}.log" 2>&1
+            NETWORK_CONFIG=../../config.toml RUST_LOG=warn ./run.sh train/${model}/train.py ${params} >"../../tests/performace/${output_dir}/${model}_train_($1)_${rtt}_${bandwidth}.log" 2>&1
             cd ../..
 
             echo "done ---"
