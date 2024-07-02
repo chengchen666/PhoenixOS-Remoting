@@ -1,43 +1,29 @@
-#include <chrono>
 #include <cuda_runtime.h>
 #include <iostream>
+#include <chrono>
 
 int main()
 {
-    // const int iterations = 1;
-    int count = 0;
+    const int iterations = 10000;
     int device;
+    for (int i = 0; i < 10; ++i) {
+        cudaGetDevice(&device);
+    }
 
-    cudaGetDeviceCount(&count);
-    std::cout << "Number of CUDA devices: " << count << std::endl;
-    cudaGetDevice(&device);
-    std::cout << "Current CUDA device: " << device << std::endl;
-    cudaSetDevice(count - 1);
-    cudaGetDevice(&device);
-    std::cout << "Current CUDA device: " << device << std::endl;
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < iterations; ++i) {
+        cudaGetDevice(&device);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
 
-    // test cudaDeviceProp
-    cudaDeviceProp prop;
-    memset(&prop, 0, sizeof(cudaDeviceProp));
-    std::cout << prop.name << std::endl;
-    cudaGetDeviceProperties(&prop, device);
-    std::cout << prop.name << std::endl;
+    // Calculate the elapsed time in milliseconds
+    std::chrono::duration<double, std::milli> elapsed = end - start;
+    double totalElapsedTime = elapsed.count();
 
-    // auto start = std::chrono::high_resolution_clock::now();
-    // for (int i = 0; i < iterations; ++i) {
-    //     cudaGetDevice(&device);
-    //     cudaSetDevice(0);
-    // }
-    // auto end = std::chrono::high_resolution_clock::now();
+    //  Calculate the average elapsed time
+    double averageElapsedTime = totalElapsedTime / iterations;
 
-    // // Calculate the elapsed time in milliseconds
-    // std::chrono::duration<double, std::milli> elapsed = end - start;
-    // double totalElapsedTime = elapsed.count();
-
-    // //  Calculate the average elapsed time
-    // double averageElapsedTime = totalElapsedTime / iterations;
-
-    // std::cout << "Average elapsed time: " << averageElapsedTime << " ms" << std::endl;
+    std::cout << "Average elapsed time: " << averageElapsedTime << " ms" << std::endl;
 
     return 0;
 }

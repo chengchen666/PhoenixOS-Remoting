@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 extern crate log;
 mod dispatcher;
 
@@ -5,14 +6,18 @@ extern crate codegen;
 extern crate cudasys;
 extern crate network;
 
-use codegen::{gen_exe, gen_exe_async};
+use codegen::gen_exe;
+#[cfg(feature = "async_api")]
+use codegen::gen_exe_async;
 use cudasys::{
     cuda::{CUdeviceptr, CUfunction, CUmodule},
     cudart::{cudaDeviceSynchronize, cudaError_t, cudaGetDeviceCount, cudaSetDevice},
 };
 use dispatcher::dispatch;
 
+#[cfg(feature = "emulator")]
 use network::ringbufferchannel::EmulatorChannel;
+
 #[allow(unused_imports)]
 use network::{
     ringbufferchannel::{RDMAChannel, SHMChannel},
@@ -28,13 +33,6 @@ use lazy_static::lazy_static;
 use std::boxed::Box;
 use std::collections::HashMap;
 use std::sync::Mutex;
-
-use cudasys::cudnn::cudnnTensorDescriptor_t;
-
-#[derive(Clone)]
-enum ResourceType {
-    TensorDescriptor(cudnnTensorDescriptor_t),
-}
 
 lazy_static! {
     // client_address -> module

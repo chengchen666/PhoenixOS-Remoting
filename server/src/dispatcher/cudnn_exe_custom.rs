@@ -1104,11 +1104,14 @@ pub fn cudnnBatchNormalizationForwardTrainingExExe<T: CommChannel>(
             reserveSpaceSizeInBytes,
         )
     };
-    match result.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => error!("Error sending result: {:?}", e),
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.send(channel_sender) {
+            Ok(()) => {}
+            Err(e) => error!("Error sending result: {:?}", e),
+        }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnGetBatchNormalizationBackwardExWorkspaceSizeExe<T: CommChannel>(
@@ -1384,10 +1387,13 @@ pub fn cudnnBatchNormalizationBackwardExExe<T: CommChannel>(
             reserveSpaceSizeInBytes,
         )
     };
-    if let Err(e) = result.send(channel_sender) {
-        error!("Error sending result: {:?}", e);
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.send(channel_sender) {
+            error!("Error sending result: {:?}", e);
+        }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnGetConvolutionBackwardDataAlgorithm_v7Exe<T: CommChannel>(
@@ -1582,10 +1588,13 @@ pub fn cudnnConvolutionBackwardDataExe<T: CommChannel>(
             dx as *mut c_void,
         )
     };
-    if let Err(e) = result.send(channel_sender) {
-        error!("Error sending result: {:?}", e);
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.send(channel_sender) {
+            error!("Error sending result: {:?}", e);
+        }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnGetConvolutionBackwardFilterAlgorithm_v7Exe<T: CommChannel>(
@@ -1753,10 +1762,13 @@ pub fn cudnnConvolutionBackwardFilterExe<T: CommChannel>(
             dw as *mut c_void,
         )
     };
-    if let Err(e) = result.send(channel_sender) {
-        error!("Error sending result: {:?}", e);
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.send(channel_sender) {
+            error!("Error sending result: {:?}", e);
+        }
+        channel_sender.flush_out().unwrap();
     }
-    channel_sender.flush_out().unwrap();
 }
 
 pub fn cudnnBatchNormalizationForwardInferenceExe<T: CommChannel>(

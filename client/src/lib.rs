@@ -16,7 +16,11 @@ use network::{
 };
 
 extern crate codegen;
-use codegen::{gen_hijack, gen_hijack_async, gen_hijack_local};
+use codegen::gen_hijack;
+#[cfg(feature = "async_api")]
+use codegen::gen_hijack_async;
+#[cfg(feature = "local")]
+use codegen::gen_hijack_local;
 use codegen::gen_unimplement;
 
 pub mod hijack;
@@ -92,10 +96,17 @@ lazy_static! {
     static ref LOCAL_INFO: Mutex<HashMap<usize, usize>> = Mutex::new(HashMap::new());
 }
 
+#[cfg(feature = "local")]
 fn add_local_info(proc_id: usize, info: usize) {
     LOCAL_INFO.lock().unwrap().insert(proc_id, info);
 }
 
+#[cfg(feature = "local")]
 fn get_local_info(proc_id: usize) -> Option<usize> {
     LOCAL_INFO.lock().unwrap().get(&proc_id).cloned()
 }
+
+// #[ctor]
+// fn init() {
+//     core_affinity::set_for_current(1);
+// }

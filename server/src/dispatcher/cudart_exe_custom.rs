@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![allow(unused_variables)]
 use super::*;
 use cudasys::cudart::*;
 use std::os::raw::*;
@@ -70,7 +71,7 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
     if cudaMemcpyKind::cudaMemcpyDeviceToHost == kind {
         let data = unsafe { std::slice::from_raw_parts(data_buf as *const u8, count) };
         data.send(channel_sender).unwrap();
-
+        unsafe { dealloc(data_buf, Layout::from_size_align(count, 1).unwrap()) };
         #[cfg(feature = "async_api")]
         {
             #[cfg(feature = "timer_memcpy")]
@@ -318,6 +319,53 @@ pub fn cudaFuncGetAttributesExe<T: CommChannel>(channel_sender: &mut T, channel_
     channel_sender.flush_out().unwrap();
 }
 
+pub fn cudaMemsetAsyncExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+    info!("[{}:{}] cudaMemsetAsync", std::file!(), std::line!());
+    let mut devPtr: MemPtr = Default::default();
+    devPtr.recv(channel_receiver).unwrap();
+    let mut value: i32 = Default::default();
+    value.recv(channel_receiver).unwrap();
+    let mut count: size_t = Default::default();
+    count.recv(channel_receiver).unwrap();
+    let mut stream: cudaStream_t = Default::default();
+    stream.recv(channel_receiver).unwrap();
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
+    let result = unsafe { cudaMemsetAsync(devPtr as *mut std::os::raw::c_void, value, count, stream) };
+    #[cfg(not(feature = "async_api"))]
+    {
+        result.send(channel_sender).unwrap();
+        channel_sender.flush_out().unwrap();
+    }
+}
+
+pub fn cudaGetErrorStringExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+    info!("[{}:{}] cudaGetErrorString", std::file!(), std::line!());
+    let mut error: cudaError_t = Default::default();
+    error.recv(channel_receiver).unwrap();
+    match channel_receiver.recv_ts() {
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
+    let result = unsafe { cudaGetErrorString(error) };
+    let mut error_string = Vec::new();
+    let mut i = 0;
+    unsafe{
+        loop {
+            let c = result.offset(i);
+            if *c == 0 {
+                error_string.push(0);
+                break;
+            }
+            error_string.push(*c as u8);
+            i += 1;
+        }
+    }
+    error_string.send(channel_sender).unwrap();
+    channel_sender.flush_out().unwrap();
+}
 pub fn cudaMemsetAsyncExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
     info!("[{}:{}] cudaMemsetAsync", std::file!(), std::line!());
     let mut devPtr: MemPtr = Default::default();

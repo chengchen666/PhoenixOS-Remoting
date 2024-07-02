@@ -1,4 +1,6 @@
 #![allow(non_snake_case)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
 
 use super::*;
 use cudasys::types::cudnn::*;
@@ -358,9 +360,8 @@ pub extern "C" fn cudnnSetTensorNdDescriptor(
         Err(e) => panic!("failed to send: {:?}", e),
     }
     #[cfg(feature = "async_api")]
-    {
-        return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
-    }
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
     #[cfg(not(feature = "async_api"))]
     {
         match result.recv(channel_receiver) {
@@ -526,9 +527,8 @@ pub extern "C" fn cudnnSetFilterNdDescriptor(
         Err(e) => panic!("failed to send: {:?}", e),
     }
     #[cfg(feature = "async_api")]
-    {
-        return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
-    }
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
     #[cfg(not(feature = "async_api"))]
     {
         match result.recv(channel_receiver) {
@@ -716,9 +716,8 @@ pub extern "C" fn cudnnSetConvolutionNdDescriptor(
         Err(e) => panic!("failed to send: {:?}", e),
     }
     #[cfg(feature = "async_api")]
-    {
-        return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
-    }
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
     #[cfg(not(feature = "async_api"))]
     {
         match result.recv(channel_receiver) {
@@ -1058,7 +1057,7 @@ pub extern "C" fn cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
-    result
+    result 
 }
 
 #[no_mangle]
@@ -1286,15 +1285,21 @@ pub extern "C" fn cudnnBatchNormalizationForwardTrainingEx(
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        match result.recv(channel_receiver) {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive result: {:?}", e),
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
 }
 
 #[no_mangle]
@@ -1529,14 +1534,20 @@ pub extern "C" fn cudnnBatchNormalizationBackwardEx(
     if let Err(e) = channel_sender.flush_out() {
         panic!("failed to send: {:?}", e);
     }
-    if let Err(e) = result.recv(channel_receiver) {
-        error!("failed to receive result: {:?}", e);
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            error!("failed to receive result: {:?}", e);
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
 }
 
 #[no_mangle]
@@ -1722,14 +1733,21 @@ pub extern "C" fn cudnnConvolutionBackwardData(
     if let Err(e) = channel_sender.flush_out() {
         panic!("failed to send: {:?}", e);
     }
-    if let Err(e) = result.recv(channel_receiver) {
-        panic!("failed to receive result: {:?}", e);
+
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            panic!("failed to receive result: {:?}", e);
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
 }
 
 #[no_mangle]
@@ -1884,14 +1902,20 @@ pub extern "C" fn cudnnConvolutionBackwardFilter(
     if let Err(e) = channel_sender.flush_out() {
         panic!("failed to send: {:?}", e);
     }
-    if let Err(e) = result.recv(channel_receiver) {
-        panic!("failed to receive result: {:?}", e);
+    #[cfg(feature = "async_api")]
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            panic!("failed to receive result: {:?}", e);
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
 }
 
 #[no_mangle]
@@ -1978,9 +2002,8 @@ pub extern "C" fn cudnnBatchNormalizationForwardInference(
         panic!("failed to send: {:?}", e);
     }
     #[cfg(feature = "async_api")]
-    {
-        return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
-    }
+    return cudnnStatus_t::CUDNN_STATUS_SUCCESS;
+
     #[cfg(not(feature = "async_api"))]
     {
         // receive result from server
@@ -2048,7 +2071,6 @@ pub extern "C" fn cudnnGetConvolutionNdForwardOutputDim(
 }
 
 
-// gen_unimplement!("cudnnGetErrorString", "*const ::std::os::raw::c_char", "cudnnStatus_t");
 #[no_mangle]
 pub extern "C" fn cudnnGetErrorString(
     error_status: cudnnStatus_t,
