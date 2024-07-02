@@ -1,6 +1,6 @@
 
 from api import API
-from baseline_model.model import model as baseline_model
+# from baseline_model.model import model as baseline_model
 from disaggregation_model.model import model as disaggregation_model
 from typedict.remoting import get_remoting_type
 from sql_parser.parser import parse as parse_sql
@@ -108,7 +108,7 @@ def calc(apis, baseline_time, RTT, BANDWIDTH):
     disaggregation_time = apis[-1].complete_time
 
     print(f"Disaggregation, RTT = {RTT} us, BANDWIDTH = {BANDWIDTH} GBps")
-    print(f"           end time = {apis[-1].complete_time} us")
+    print(f"           end time = {disaggregation_time} us")
     # print(f"           Overhead = {disaggregation_time - baseline_time} us")
 
 
