@@ -22,10 +22,10 @@ glob = "0.3"
 # default = ["rdma"]
 default = ["shm", "emulator"]
 # default = ["shm"]
-log_server = []
 shm = []
 rdma = []
 emulator = []
+log_rperf = []
 async_api = []
 shadow_desc = []
 

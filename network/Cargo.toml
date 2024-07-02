@@ -22,4 +22,4 @@ KRdmaKit = { git = "https://github.com/Gahow/krcore-artifacts.git", branch = "fe
 cudasys = { path = "../cudasys" }
 
 [features]
-log_server = []
+log_rperf = []

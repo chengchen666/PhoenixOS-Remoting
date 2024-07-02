@@ -57,6 +57,7 @@ impl EmulatorChannel {
     }
 
     fn send<T>(&self, src: T) -> Result<(), CommChannelError> {
+        #[cfg(feature = "log_rperf")]
         if self.get_start() == None {
             self.set_start(Some(measure::rdtscp()));
         }
@@ -109,6 +110,7 @@ impl EmulatorChannel {
 
 impl CommChannelInnerIO for EmulatorChannel {
     fn put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
+        #[cfg(feature = "log_rperf")]
         if self.get_start() == None {
             self.set_start(Some(measure::rdtscp()));
             // let now = NsTimestamp::now();
@@ -121,6 +123,7 @@ impl CommChannelInnerIO for EmulatorChannel {
     }
 
     fn try_put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
+        #[cfg(feature = "log_rperf")]
         if self.get_start() == None {
             self.set_start(Some(measure::rdtscp()));
         }
@@ -142,22 +145,23 @@ impl CommChannelInnerIO for EmulatorChannel {
 
 impl CommChannelInner for EmulatorChannel {
     fn flush_out(&self) -> Result<(), CommChannelError> {
-        if self.get_start() == None {
-            self.set_start(Some(measure::rdtscp()));
+        #[cfg(feature = "log_rperf")]
+        {
+            if self.get_start() == None {
+                self.set_start(Some(measure::rdtscp()));
+            }
+            let end = measure::rdtscp();
+            let elapsed = measure::clock2ns(end - self.get_start().unwrap());
+            log::info!(", {}", elapsed / 1000.0);
+            let byte_cnt = self.get_byte_cnt();
+            log::info!(", {}", byte_cnt);
+            self.set_start(None);
         }
-        let end = measure::rdtscp();
-        let elapsed = measure::clock2ns(end - self.get_start().unwrap());
-        #[cfg(not(feature = "log_server"))]
-        log::info!(", {}", elapsed / 1000.0);
         let ts = self.calculate_ts(self.get_byte_cnt());
-        let byte_cnt = self.get_byte_cnt();
-        #[cfg(not(feature = "log_server"))]
-        log::info!(", {}", byte_cnt);
         let _ = self.send(ts);
         let _ = self.manager.flush_out();
         self.set_byte_cnt(0);
         self.set_last_timestamp(ts);
-        self.set_start(None);
         Ok(())
     }
 
