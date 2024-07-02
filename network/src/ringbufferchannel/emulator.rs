@@ -57,10 +57,6 @@ impl EmulatorChannel {
     }
 
     fn send<T>(&self, src: T) -> Result<(), CommChannelError> {
-        #[cfg(feature = "log_rperf")]
-        if self.get_start() == None {
-            self.set_start(Some(measure::rdtscp()));
-        }
         let memory = RawMemory::new(&src, std::mem::size_of::<T>());
         match self.manager.put_bytes(&memory)? == std::mem::size_of::<T>() {
             true => {
@@ -123,10 +119,6 @@ impl CommChannelInnerIO for EmulatorChannel {
     }
 
     fn try_put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
-        #[cfg(feature = "log_rperf")]
-        if self.get_start() == None {
-            self.set_start(Some(measure::rdtscp()));
-        }
         self.manager.try_put_bytes(src)
     }
 

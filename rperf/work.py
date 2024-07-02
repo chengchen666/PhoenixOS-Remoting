@@ -95,11 +95,6 @@ def calc(apis, baseline_time, RTT, BANDWIDTH):
     for api in apis:
         api.calc_Network(RTT, BANDWIDTH)
 
-    # just for random thought
-    # for api in apis:
-    #     if api.name == "cudaGetDevice":
-    #         api.Gap = min(api.Gap, 20)
-
     prev_api = API("dummy")
     for api in apis:
         disaggregation_model(prev_api, api)
