@@ -37,7 +37,7 @@ lazy_static! {
         // Use environment variable to set config file's path.
         let path = match std::env::var("NETWORK_CONFIG") {
             Ok(val) => val,
-            Err(_) => "xpuremoting/config.toml".to_string(),
+            Err(_) => "config.toml".to_string(),
         };
         let content = std::fs::read_to_string(path).expect("Failed to read config.toml");
         toml::from_str(&content).expect("Failed to parse config.toml")
