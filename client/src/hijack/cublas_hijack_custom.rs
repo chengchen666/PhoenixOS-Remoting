@@ -1,5 +1,7 @@
 
 #![allow(non_snake_case)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
 
 use super::*;
 use cudasys::types::cublas::*;
@@ -38,8 +40,8 @@ pub extern "C" fn cublasCreate_v2(
         Err(e) => error!("Error receiving result: {:?}", e),
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
     result
 }
@@ -223,15 +225,22 @@ pub extern "C" fn cublasSgemmStridedBatched(
     if let Err(e) = batchCount.send(channel_sender) {
         error!("Error sending batchCount: {:?}", e)
     }
-    channel_sender.flush_out().unwrap();
-    if let Err(e) = result.recv(channel_receiver) {
-        error!("Error receiving result: {:?}", e)
+
+    #[cfg(feature = "async_api")]
+    return cublasStatus_t::CUBLAS_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        channel_sender.flush_out().unwrap();
+        if let Err(e) = result.recv(channel_receiver) {
+            error!("Error receiving result: {:?}", e)
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-    result
 }
 
 #[no_mangle]
@@ -327,14 +336,20 @@ pub extern "C" fn cublasGemmEx(
         error!("Error sending algo: {:?}", e)
     }
     channel_sender.flush_out().unwrap();
-    if let Err(e) = result.recv(channel_receiver) {
-        error!("Error receiving result: {:?}", e)
+    #[cfg(feature = "async_api")]
+    return cublasStatus_t::CUBLAS_STATUS_SUCCESS;
+
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            error!("Error receiving result: {:?}", e)
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-    result
 }
 
 #[no_mangle]
@@ -450,12 +465,15 @@ pub extern "C" fn cublasGemmStridedBatchedEx(
     #[cfg(feature = "async_api")]
     return cublasStatus_t::CUBLAS_STATUS_SUCCESS;
 
-    if let Err(e) = result.recv(channel_receiver) {
-        error!("Error receiving result: {:?}", e)
+    #[cfg(not(feature = "async_api"))]
+    {
+        if let Err(e) = result.recv(channel_receiver) {
+            error!("Error receiving result: {:?}", e)
+        }
+        match channel_receiver.recv_ts() {
+            Ok(()) => {}
+            Err(e) => panic!("failed to receive timestamp: {:?}", e),
+        }
+        result
     }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
 }

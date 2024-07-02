@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![allow(unused_variables)]
 use super::*;
 use cudasys::cudart::*;
 use std::os::raw::*;
@@ -9,8 +10,6 @@ use std::{
 
 pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
     info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
-    #[cfg(feature = "timer_memcpy")]
-    let timer = &mut (*STIMER.lock().unwrap());
 
     let mut dst: MemPtr = Default::default();
     dst.recv(channel_receiver).unwrap();
@@ -43,12 +42,6 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
 
-    #[cfg(feature = "timer_memcpy")]
-    timer.set(MEASURE_SRECV);
-
-    #[cfg(feature = "timer_memcpy")]
-    timer.set(MEASURE_SDSER);
-
     let result = unsafe {
         cudaMemcpy(
             dst as *mut std::os::raw::c_void,
@@ -58,42 +51,23 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
         )
     };
 
-    #[cfg(feature = "timer_memcpy")]
-    timer.set(MEASURE_RAW);
-
     if cudaMemcpyKind::cudaMemcpyHostToDevice == kind {
-        #[cfg(all(feature = "async_api", feature = "timer_memcpy"))]
-        timer.set(MEASURE_SSER);
-
         unsafe { dealloc(data_buf, Layout::from_size_align(count, 1).unwrap()) };
     }
     if cudaMemcpyKind::cudaMemcpyDeviceToHost == kind {
         let data = unsafe { std::slice::from_raw_parts(data_buf as *const u8, count) };
         data.send(channel_sender).unwrap();
-
         #[cfg(feature = "async_api")]
-        {
-            #[cfg(feature = "timer_memcpy")]
-            timer.set(MEASURE_SSER);
-
-            channel_sender.flush_out().unwrap();
-        }
+        channel_sender.flush_out().unwrap();
     }
     #[cfg(not(feature = "async_api"))]
     {
         result.send(channel_sender).unwrap();
-        #[cfg(feature = "timer_memcpy")]
-        timer.set(MEASURE_SSER);
         channel_sender.flush_out().unwrap();
     }
     if cudaMemcpyKind::cudaMemcpyDeviceToHost == kind {
         unsafe { dealloc(data_buf, Layout::from_size_align(count, 1).unwrap()) };
     }
-    #[cfg(feature = "timer_memcpy")]
-    timer.set(MEASURE_SSEND);
-
-    #[cfg(feature = "timer_memcpy")]
-    timer.plus_cnt();
 }
 
 pub fn cudaMallocExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
@@ -136,8 +110,6 @@ pub fn cudaFreeExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mu
 
 pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
     info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
-    #[cfg(feature = "timer_kernel")]
-    let timer = &mut (*STIMER.lock().unwrap());
 
     let mut func: MemPtr = Default::default();
     func.recv(channel_receiver).unwrap();
@@ -166,13 +138,7 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
 
-    #[cfg(feature = "timer_kernel")]
-    timer.set(MEASURE_SRECV);
-
     let device_func = get_function(func).unwrap();
-    #[cfg(feature = "timer_kernel")]
-    timer.set(MEASURE_SDSER);
-
     let result = unsafe {
         cudasys::cuda::cuLaunchKernel(
             device_func,
@@ -188,21 +154,11 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
             std::ptr::null_mut(),
         )
     };
-    #[cfg(feature = "timer_kernel")]
-    timer.set(MEASURE_RAW);
 
     #[cfg(not(feature = "async_api"))]
     {
         result.send(channel_sender).unwrap();
-        #[cfg(feature = "timer_kernel")]
-        timer.set(MEASURE_SSER);
-
         channel_sender.flush_out().unwrap();
-        #[cfg(feature = "timer_kernel")]
-        timer.set(MEASURE_SSEND);
-
-        #[cfg(feature = "timer_kernel")]
-        timer.plus_cnt();
     }
 }
 

@@ -7,12 +7,10 @@ use syn::{parse_macro_input, parse_str, Ident, Type};
 mod utils;
 use utils::{
     Element, ElementMode, ExeParser, HijackParser, UnimplementParser,
-    SHADOW_DESC_TYPES,
     get_success_status
 };
-
-extern crate measure;
-use measure::*;
+#[cfg(feature = "shadow_desc")]
+use utils::SHADOW_DESC_TYPES;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The derive macros for auto trait impl.
@@ -244,11 +242,6 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
         }
     });
 
-    let set_crecv_statement = quote! {
-        #[cfg(feature = "timer")]
-        timer.set(MEASURE_CRECV);
-    };
-
     // assign vars to params
     let assign_statements = params
         .iter()
@@ -275,12 +268,6 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             assert_eq!(true, *ENABLE_LOG);
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
-            #[cfg(feature = "timer")]
-            let timer = &mut (*CTIMER.lock().unwrap());
-
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_START);
-
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
             let proc_id = #proc_id;
@@ -293,16 +280,10 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
             }
             #( #send_statements )*
 
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_CSER);
-
             match channel_sender.flush_out() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to flush_out: {:?}", e),
             }
-
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_CSEND);
 
             #( #recv_statements )*
             #( #assign_statements )*
@@ -314,17 +295,6 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive timestamp: {:?}", e),
             }
-
-            #set_crecv_statement
-
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_CDSER);
-
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_TOTAL);
-
-            #[cfg(feature = "timer")]
-            timer.plus_cnt();
             return #result_name;
         }
     };
@@ -370,28 +340,6 @@ pub fn gen_hijack_async(input: TokenStream) -> TokenStream {
             }
         });
 
-    // receive vars
-    let recv_statements = vars.iter().map(|var| {
-        let name = &var.name;
-        quote! {
-            match #name.recv(channel_receiver) {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive #name: {:?}", e),
-            }
-        }
-    });
-
-    // assign vars to params
-    let assign_statements = params
-        .iter()
-        .filter(|param| param.mode == ElementMode::Output)
-        .zip(vars.iter())
-        .map(|(param, var)| {
-            let param_name = &param.name;
-            let var_name = &var.name;
-            quote! { unsafe { *#param_name = #var_name; } }
-        });
-
     let params = params.iter().map(|param| {
         let name = &param.name;
         let ty = &param.ty;
@@ -411,11 +359,6 @@ pub fn gen_hijack_async(input: TokenStream) -> TokenStream {
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             assert_eq!(true, *ENABLE_LOG);
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
-            #[cfg(feature = "timer")]
-            let timer = &mut (*CTIMER.lock().unwrap());
-
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_START);
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
             let proc_id = #proc_id;
@@ -430,13 +373,6 @@ pub fn gen_hijack_async(input: TokenStream) -> TokenStream {
                 Ok(()) => {}
                 Err(e) => panic!("failed to flush_out: {:?}", e),
             }
-
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_TOTAL);
-
-            #[cfg(feature = "timer")]
-            timer.plus_cnt();
-
             return #result;
         }
     };
@@ -502,11 +438,6 @@ pub fn gen_hijack_local(input: TokenStream) -> TokenStream {
             quote! {
                 if let Some(val) = get_local_info(proc_id as usize) {
                     unsafe { *#name = val as i32; }
-                    #[cfg(feature = "timer")]
-                    timer.set(MEASURE_TOTAL);
-
-                    #[cfg(feature = "timer")]
-                    timer.plus_cnt();
                     return cudaError_t::cudaSuccess;
                 }
             }
@@ -545,11 +476,6 @@ pub fn gen_hijack_local(input: TokenStream) -> TokenStream {
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             assert_eq!(true, *ENABLE_LOG);
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
-            #[cfg(feature = "timer")]
-            let timer = &mut (*CTIMER.lock().unwrap());
-
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_START);
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
             let proc_id = #proc_id;
@@ -579,11 +505,6 @@ pub fn gen_hijack_local(input: TokenStream) -> TokenStream {
                 Err(e) => panic!("failed to receive timestamp: {:?}", e),
             }
             #( #add_statements )*
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_TOTAL);
-
-            #[cfg(feature = "timer")]
-            timer.plus_cnt();
             return #result_name;
         }
     };
@@ -652,13 +573,16 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
             quote! { #name.recv(channel_receiver).unwrap(); }
         });
 
-    let func_name = quote!{#func}.to_string();
-    let parts: Vec<_> = func_name.split("Destroy").collect();
-    let (is_destroy, resource_str) = if parts.len() == 2 {
-        (true, parts[1])
-    } else {
-        (false, "")
-    };
+    #[cfg(feature = "shadow_desc")]
+    let (mut is_destroy, mut resource_str) = (false, String::new());
+    #[cfg(feature = "shadow_desc")]
+    {
+        let func_name = quote!{#func}.to_string();
+        let parts: Vec<_> = func_name.split("Destroy").collect();
+        if parts.len() == 2 {
+            (is_destroy, resource_str) = (true, parts[1].to_string());
+        }
+    }
 
     // get resource when SR
     #[cfg(feature = "shadow_desc")]
@@ -673,7 +597,7 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
             let name = &param.name;
             let ty = &param.ty;
             let ty_str = quote!{#ty}.to_string();
-            if is_destroy && ty_str.contains(resource_str) {
+            if is_destroy && ty_str.contains(&resource_str) {
                 quote! { let mut #name = remove_resource(#name as usize); }
             } else {
                 quote! { let mut #name = get_resource(#name as usize); }
@@ -724,38 +648,16 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
     let gen_fn = quote! {
         pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
-            #[cfg(feature = "timer")]
-            let timer = &mut (*STIMER.lock().unwrap());
-
             #( #def_statements )*
             #( #recv_statements )*
             match channel_receiver.recv_ts() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive timestamp: {:?}", e)
             }
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_SRECV);
-
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_SDSER);
 
             #exec_statement
-
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_RAW);
-
             #( #send_statements )*
             #result_name.send(channel_sender).unwrap();
-
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_SSER);
-
-            channel_sender.flush_out().unwrap();
-            #[cfg(feature = "timer")]
-            timer.set(MEASURE_SSEND);
-
-            #[cfg(feature = "timer")]
-            timer.plus_cnt();
         }
     };
 
@@ -785,13 +687,16 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
             quote! { #name.recv(channel_receiver).unwrap(); }
         });
 
-    let func_name = quote!{#func}.to_string();
-    let parts: Vec<_> = func_name.split("Destroy").collect();
-    let (is_destroy, resource_str) = if parts.len() == 2 {
-        (true, parts[1])
-    } else {
-        (false, "")
-    };
+    #[cfg(feature = "shadow_desc")]
+    let (mut is_destroy, mut resource_str) = (false, String::new());
+    #[cfg(feature = "shadow_desc")]
+    {
+        let func_name = quote!{#func}.to_string();
+        let parts: Vec<_> = func_name.split("Destroy").collect();
+        if parts.len() == 2 {
+            (is_destroy, resource_str) = (true, parts[1].to_string());
+        }
+    }
 
     // get resource when SR
     #[cfg(feature = "shadow_desc")]
@@ -806,7 +711,7 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
             let name = &param.name;
             let ty = &param.ty;
             let ty_str = quote!{#ty}.to_string();
-            if is_destroy && ty_str.contains(resource_str) {
+            if is_destroy && ty_str.contains(&resource_str) {
                 quote! { let mut #name = remove_resource(#name as usize); }
             } else {
                 quote! { let mut #name = get_resource(#name as usize); }
@@ -829,32 +734,7 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
         quote! { let #result_name: #result_ty = unsafe { #func(#(#params),*) }; }
     };
 
-    if params.iter().filter(|param| param.mode == ElementMode::Output).count() == 0 {
-        let gen_fn = quote! {
-            pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-                info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
-                #( #def_statements )*
-                #( #recv_statements )*
-                #( #get_resource_statements )*
-                match channel_receiver.recv_ts() {
-                    Ok(()) => {}
-                    Err(e) => panic!("failed to receive timestamp: {:?}", e)
-                }
-                #exec_statement
-            }
-        };
-        return gen_fn.into();
-    }
-
-    // send result
-    let send_statements = params
-        .iter()
-        .filter(|param| param.mode == ElementMode::Output)
-        .map(|param| {
-            let name = &param.name;
-            quote! { #name.send(channel_sender).unwrap(); }
-        });
-
+    assert!(params.iter().filter(|param| param.mode == ElementMode::Output).count() == 0);
     let gen_fn = quote! {
         pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
@@ -868,7 +748,6 @@ pub fn gen_exe_async(input: TokenStream) -> TokenStream {
             #exec_statement
         }
     };
-
     gen_fn.into()
 }
 

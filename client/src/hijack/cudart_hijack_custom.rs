@@ -1,4 +1,6 @@
 #![allow(non_snake_case)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
 use super::*;
 use cudasys::types::cudart::*;
 use ::std::os::raw::*;
@@ -12,11 +14,6 @@ pub extern "C" fn cudaMemcpy(
 ) -> cudaError_t {
     assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
-    #[cfg(feature = "timer_memcpy")]
-    let timer = &mut (*CTIMER.lock().unwrap());
-
-    #[cfg(feature = "timer_memcpy")]
-    timer.set(MEASURE_START);
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -58,15 +55,11 @@ pub extern "C" fn cudaMemcpy(
             Err(e) => panic!("failed to send data: {:?}", e),
         }
     }
-    #[cfg(feature = "timer_memcpy")]
-    timer.set(MEASURE_CSER);
 
     match channel_sender.flush_out() {
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    #[cfg(feature = "timer_memcpy")]
-    timer.set(MEASURE_CSEND);
 
     if cudaMemcpyKind::cudaMemcpyDeviceToHost == kind {
         // receive [dst; count] from device
@@ -83,16 +76,8 @@ pub extern "C" fn cudaMemcpy(
     }
 
     #[cfg(feature = "async_api")]
-    {
-        #[cfg(feature = "timer_memcpy")]
-        {
-            timer.set(MEASURE_CRECV);
-            timer.set(MEASURE_CDSER);
-            timer.set(MEASURE_TOTAL);
-            timer.plus_cnt();
-        }
-        return cudaError_t::cudaSuccess;
-    }
+    return cudaError_t::cudaSuccess;
+
     #[cfg(not(feature = "async_api"))]
     {
         match result.recv(channel_receiver) {
@@ -103,16 +88,6 @@ pub extern "C" fn cudaMemcpy(
             Ok(()) => {}
             Err(e) => panic!("failed to receive timestamp: {:?}", e),
         }
-        #[cfg(feature = "timer_memcpy")]
-        timer.set(MEASURE_CRECV);
-        #[cfg(feature = "timer_memcpy")]
-        timer.set(MEASURE_CDSER);
-
-        #[cfg(feature = "timer_memcpy")]
-        timer.set(MEASURE_TOTAL);
-
-        #[cfg(feature = "timer_memcpy")]
-        timer.plus_cnt();
         return result;
     }
 }
@@ -142,12 +117,6 @@ pub extern "C" fn cudaLaunchKernel(
 ) -> cudaError_t {
     assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
-    #[cfg(feature = "timer_kernel")]
-    let timer = &mut (*CTIMER.lock().unwrap());
-
-    #[cfg(feature = "timer_kernel")]
-    timer.set(MEASURE_START);
-
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
 
@@ -203,26 +172,14 @@ pub extern "C" fn cudaLaunchKernel(
         Ok(()) => {}
         Err(e) => panic!("failed to send stream: {:?}", e),
     }
-    #[cfg(feature = "timer_kernel")]
-    timer.set(MEASURE_CSER);
-
     match channel_sender.flush_out() {
         Ok(()) => {}
         Err(e) => panic!("failed to send: {:?}", e),
     }
-    #[cfg(feature = "timer_kernel")]
-    timer.set(MEASURE_CSEND);
 
     #[cfg(feature = "async_api")]
-    {
-        #[cfg(feature = "timer_kernel")]
-        {
-            timer.set(MEASURE_TOTAL);
-            timer.plus_cnt();
-        }
+    return cudaError_t::cudaSuccess;
 
-        return cudaError_t::cudaSuccess;
-    }
     #[cfg(not(feature = "async_api"))]
     {
         match result.recv(channel_receiver) {
@@ -233,16 +190,6 @@ pub extern "C" fn cudaLaunchKernel(
             Ok(()) => {}
             Err(e) => panic!("failed to receive timestamp: {:?}", e),
         }
-        #[cfg(feature = "timer_kernel")]
-        timer.set(MEASURE_CRECV);
-        #[cfg(feature = "timer_kernel")]
-        timer.set(MEASURE_CDSER);
-
-        #[cfg(feature = "timer_kernel")]
-        timer.set(MEASURE_TOTAL);
-
-        #[cfg(feature = "timer_kernel")]
-        timer.plus_cnt();
         return result;
     }
 }
@@ -288,9 +235,9 @@ pub extern "C" fn cudaMallocManaged(
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
 }
 
@@ -334,41 +281,8 @@ pub extern "C" fn cudaHostAlloc(
         Err(e) => panic!("failed to receive result: {:?}", e),
     }
     match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
+        Ok(()) => {}
+        Err(e) => panic!("failed to receive timestamp: {:?}", e),
+    }
     result
-}
-
-#[no_mangle]
-pub extern "C" fn cudaGetErrorString(
-    cudaError: cudaError_t,
-) -> *const ::std::os::raw::c_char {
-    info!(
-        "[{}:{}] cudaGetErrorString",
-        std::file!(),
-        std::line!()
-    );
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
-    let proc_id = 17;
-    let mut result:Vec<u8>  = Default::default();
-    match proc_id.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send proc_id: {:?}", e),
-    }
-    match cudaError.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send cudaError: {:?}", e),
-    }
-    channel_sender.flush_out().unwrap();
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
-    }
-    match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-    result.as_ptr() as *const ::std::os::raw::c_char
 }
