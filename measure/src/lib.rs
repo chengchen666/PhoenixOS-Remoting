@@ -1,6 +1,5 @@
 use std::arch::asm;
 use std::fs::File;
-use std::fs::OpenOptions;
 use std::io::{self, Write};
 
 #[macro_use]
