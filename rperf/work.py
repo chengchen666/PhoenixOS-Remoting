@@ -12,7 +12,7 @@ rperf_data_dir = sys.argv[1]
 gpu_time_sql = f"{rperf_data_dir}/gpu_time.sqlite"
 kernel_group_sql = f"{rperf_data_dir}/kernel_group.sqlite"
 vanilla_log = f"{rperf_data_dir}/vanilla_rperf.log"
-xpu_remoting_log = f"{rperf_data_dir}/xpu_remoting_client.log"
+xpu_remoting_log = f"{rperf_data_dir}/xpu_remoting.log"
 
 kernels_block, memcpys_block = parse_sql(gpu_time_sql, kernel_group_sql)
 
@@ -77,13 +77,13 @@ assert len(payloads) == 0
 
 #### Baseline model
 
-prev_api = API("dummy")
-for api in apis:
-    baseline_model(prev_api, api)
-    prev_api = api
+# prev_api = API("dummy")
+# for api in apis:
+#     baseline_model(prev_api, api)
+#     prev_api = api
 
-# complete_{n}
-print(f"Baseline end time: {apis[-1].complete_time} us")
+# # complete_{n}
+# print(f"Baseline end time: {apis[-1].complete_time} us")
 
 baseline_time = apis[-1].complete_time
 
@@ -109,7 +109,7 @@ def calc(apis, baseline_time, RTT, BANDWIDTH):
 
     print(f"Disaggregation, RTT = {RTT} us, BANDWIDTH = {BANDWIDTH} GBps")
     print(f"           end time = {apis[-1].complete_time} us")
-    print(f"           Overhead = {disaggregation_time - baseline_time} us")
+    # print(f"           Overhead = {disaggregation_time - baseline_time} us")
 
 
 rtts = [i for i in range(0, 41, 5)]
