@@ -2,14 +2,16 @@
 
 set -e
 
-OPT_FLAG="--features async_api,shadow_desc,local"
+OPT_FLAG="--features async_api,shadow_desc,local,log_rperf"
 
-cd /workspace/home/xpuremoting || {
-    echo "Failed to change directory to /workspace/home/xpuremoting"
+cd ${BASH_SOURCE[0]%/*}
+cd ../.. || {
+    echo "Failed to change directory to root path"
     exit 1
 }
+
 # "BERT" "gpt2" "ResNet18_Cifar10_95.46" "STABLEDIFFUSION-v1-4"
-models=("ResNet18_Cifar10_95.46")
+models=("BERT")
 
 declare -A model_params
 model_params["BERT"]="100 64"
@@ -18,18 +20,16 @@ model_params["STABLEDIFFUSION-v1-4"]="10 1"
 model_params["gpt2"]="100 512"
 cargo build --release ${OPT_FLAG}
 
-echo "Setting RTT to $rtt and Bandwidth to $bandwidth in config.toml"
-
 for model in "${models[@]}"; do
     params=${model_params[$model]}
-    server_file="server_${model}_${rtt}_${bandwidth}.log"
-    client_file="client_${model}_${rtt}_${bandwidth}.log"
+    server_file="server_${model}.log"
+    client_file="client_${model}.log"
 
     echo "Stopping old server instance if any..."
     pkill server || true
 
     echo "Running server"
-    numactl --cpunodebind=0 cargo run --release ${OPT_FLAG},log_server server >"/workspace/home/xpuremoting/log/${server_file}" 2>&1 &
+    numactl --cpunodebind=0 cargo run --release ${OPT_FLAG} server >"log/${server_file}" 2>&1 &
 
     sleep 3
 
@@ -38,17 +38,19 @@ for model in "${models[@]}"; do
         echo "Failed to change directory to tests/apps"
         exit 1
     }
-    numactl --cpunodebind=0 ./run.sh infer/${model}/inference.py ${params} >"/workspace/home/xpuremoting/log/${client_file}" 2>&1
+    NETWORK_CONFIG=../../config.toml numactl --cpunodebind=0 ./run.sh infer/${model}/inference.py ${params} >"../../log/${client_file}" 2>&1
     cd ../..
 
     echo "extract"
 
-    python3 /workspace/home/xpuremoting/log/extract_server.py "/workspace/home/xpuremoting/log/${server_file}" "/workspace/home/xpuremoting/log/out_${server_file}"
-    python3 /workspace/home/xpuremoting/log/extract_client.py "/workspace/home/xpuremoting/log/${client_file}" "/workspace/home/xpuremoting/log/out_${client_file}"
+    python3 log/extract_server.py "log/${server_file}" "log/out_${server_file}"
+    python3 log/extract_client.py "log/${client_file}" "log/out_${client_file}"
 
     # echo "merge"
-    # python3 /workspace/home/xpuremoting/log/merge.py "/workspace/home/xpuremoting/log/out_${client_file}" "/workspace/home/xpuremoting/log/out_${server_file}" "/workspace/home/xpuremoting/log/out_${model}_${batch_size}.log"
-    # echo "done---"
+
+    # python3 log/merge.py "log/out_${client_file}" "log/out_${model}.log"
+
+    echo "done---"
 
 done
 
