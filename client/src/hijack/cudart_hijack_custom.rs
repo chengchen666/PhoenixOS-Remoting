@@ -102,7 +102,7 @@ pub extern "C" fn cudaMemcpyAsync(
     _stream: cudaStream_t,
 ) -> cudaError_t {
     assert_eq!(true, *ENABLE_LOG);
-    // info!("[{}:{}] cudaMemcpyAsync", std::file!(), std::line!());
+    info!("[{}:{}] cudaMemcpyAsync", std::file!(), std::line!());
     cudaMemcpy(dst, src, count, kind)
 }
 
