@@ -74,45 +74,16 @@ impl Timer {
     }
 
     pub fn write(&self) -> io::Result<()> {
-        // let mut file = OpenOptions::new()
-        //     .append(true)
-        //     .create(true)
-        //     .open(file_name)?;
         let mut file = File::create(self.output_file.clone())?;
         for i in 0..ITER_NUM {
             let mut row_result = Vec::new();
-            // let mut end = MEASURE_MAX_NUM;
-            // loop {
-            //     if self.start_time[i][end - 1] > 0 {
-            //         break;
-            //     }
-            //     end -= 1;
-            // }
             for j in 0..MEASURE_MAX_NUM {
                 row_result.push(self.start_time[i][j].to_string());
-                // row_result.push(self.stop_time[i][j].to_string());
             }
             writeln!(file, "{}", &row_result.join(", "))?;
         }
-        // writeln!(file, "{}, {}, {}, {}, {}",
-        //     self.get_time(MEASURE_TOTAL),
-        //     self.get_time(MEASURE_RAW),
-        //     self.get_time(MEASURE_SER),
-        //     self.get_time(MEASURE_SEND),
-        //     self.get_time(MEASURE_WAIT)
-        // )?;
         Ok(())
     }
-
-    // #[inline]
-    // pub fn get_clock(&self, ty: usize) -> u64 {
-    //     self.stop_time[ty] - self.start_time[ty]
-    // }
-
-    // #[inline]
-    // pub fn get_time(&self, ty: usize) -> f64 {
-    //     clock2ns(self.get_clock(ty))
-    // }
 }
 
 use std::sync::Mutex;
