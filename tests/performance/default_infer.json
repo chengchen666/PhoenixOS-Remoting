@@ -1,0 +1,45 @@
+{
+  "setups": [
+    "cxl-1000"
+  ],
+  "output_dir": "tests/performance/output-dir",
+  "models": [
+    "BERT",
+    "ResNet18_Cifar10_95.46",
+    "gpt2",
+    "STABLEDIFFUSION-v1-4"
+  ],
+  "config_path": "config.toml",
+  "rtt_values": [
+    0.001,
+    0.002
+  ],
+  "bandwidth_values": [
+    77491947438.08
+  ],
+  "bert_model_path": "",
+  "sd_model_path": "",
+  "gpt_model_path": "",
+  "rtts": {
+    "cxl-1000": 0.0002,
+    "cxl-200": 0.0002,
+    "cxl-40": 0.0002,
+    "rdma-inrack-200": 0.005,
+    "rdma-inrack-40": 0.005,
+    "rdma-inrack-10": 0.005,
+    "rdma-middle-200": 0.01,
+    "rdma-middle-40": 0.01,
+    "rdma-middle-10": 0.01
+  },
+  "bandwidths": {
+    "cxl-1000": 1073741824000,
+    "cxl-200": 214748364800,
+    "cxl-40": 42949672960,
+    "rdma-inrack-200": 214748364800,
+    "rdma-inrack-40": 42949672960,
+    "rdma-inrack-10": 10737418240,
+    "rdma-middle-200": 214748364800,
+    "rdma-middle-40": 42949672960,
+    "rdma-middle-10": 10737418240
+  }
+}

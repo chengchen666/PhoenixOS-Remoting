@@ -1,15 +1,29 @@
 #!/bin/bash
-setups=("cxl-1000") # you can choose the setups, which can be defined manually in rtts and bandwidths part
-output_dir="output-dir" # output path under tests/performace directory
-# "BERT" "ResNet18_Cifar10_95.46" "gpt2" "STABLEDIFFUSION-v1-4"
-models=("BERT" "ResNet18_Cifar10_95.46" "gpt2" "STABLEDIFFUSION-v1-4")
-# if you download the model, you can set model path here
-bert_model_path=""
-sd_model_path=""
-gpt_model_path=""
-# config file, using default path
-config_path="config.toml"
+default_config_file="default_infer.json"
+if [ $# -eq 2 ]; then
+  config_file="$2"
+else
+  config_file="$default_config_file"
+fi
 
+readarray -t setups < <(jq -r '.setups[]' "$config_file")
+output_dir=$(jq -r '.output_dir' "$config_file")
+readarray -t models < <(jq -r '.models[]' "$config_file")
+
+bert_model_path=$(jq -r '.bert_model_path' "$config_file")
+sd_model_path=$(jq -r '.sd_model_path' "$config_file")
+gpt_model_path=$(jq -r '.gpt_model_path' "$config_file")
+config_path=$(jq -r '.config_path' "$config_file")
+
+declare -A rtts
+while IFS="=" read -r key value; do
+  rtts[$key]=$value
+done < <(jq -r '.rtts | to_entries | .[] | "\(.key)=\(.value)"' "$config_file")
+
+declare -A bandwidths
+while IFS="=" read -r key value; do
+  bandwidths[$key]=$value
+done < <(jq -r '.bandwidths | to_entries | .[] | "\(.key)=\(.value)"' "$config_file")
 
 set -e
 cd ${BASH_SOURCE[0]%/*}
@@ -19,7 +33,7 @@ cd ../.. || {
 }
 
 if [ $# -eq 0 ]; then
-    echo "usage: $0 [opt|raw]"
+    echo "usage: $0 [opt|raw] ([config_file])"
     exit 1
 fi
 
@@ -39,28 +53,6 @@ model_params["ResNet18_Cifar10_95.46"]="1 64"
 model_params["STABLEDIFFUSION-v1-4"]="1 1 ${sd_model_path}"
 model_params["gpt2"]="1 512 ${gpt_model_path}"
 
-# rtt in ms
-declare -A rtts
-rtts["cxl-1000"]=0.0002
-rtts["cxl-200"]=0.0002
-rtts["cxl-40"]=0.0002
-rtts["rdma-inrack-200"]=0.005
-rtts["rdma-inrack-40"]=0.005
-rtts["rdma-inrack-10"]=0.005
-rtts["rdma-middle-200"]=0.01
-rtts["rdma-middle-40"]=0.01
-rtts["rdma-middle-10"]=0.01
-# bandwidth in bps
-declare -A bandwidths
-bandwidths["cxl-1000"]=1073741824000
-bandwidths["cxl-200"]=214748364800
-bandwidths["cxl-40"]=42949672960
-bandwidths["rdma-inrack-200"]=214748364800
-bandwidths["rdma-inrack-40"]=42949672960
-bandwidths["rdma-inrack-10"]=10737418240
-bandwidths["rdma-middle-200"]=214748364800
-bandwidths["rdma-middle-40"]=42949672960
-bandwidths["rdma-middle-10"]=10737418240
 cargo build --release ${OPT_FLAG}
 
 for model in "${models[@]}"; do
@@ -86,10 +78,11 @@ for model in "${models[@]}"; do
             echo "Failed to change directory to tests/apps"
             exit 1
         }
-        if [ ! -d "../../tests/performance/${output_dir}" ]; then
-            mkdir -p "../../tests/performance/${output_dir}"
+        if [ ! -d "../../${output_dir}" ]; then
+            mkdir -p "../../${output_dir}"
         fi
-        NETWORK_CONFIG=../../config.toml RUST_LOG=warn ./run.sh infer/${model}/inference.py ${params} >"../../tests/performance/${output_dir}/${model}_infer_($1)_${rtt}_${bandwidth}.log" 2>&1
+        echo "params: $params"
+        NETWORK_CONFIG=../../${config_path} RUST_LOG=warn ./run.sh infer/${model}/inference.py ${params} >"../../${output_dir}/${model}_infer_($1)_${rtt}_${bandwidth}.log" 2>&1
         cd ../..
 
         echo "done ---"

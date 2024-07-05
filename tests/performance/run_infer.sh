@@ -1,15 +1,20 @@
 #!/bin/bash
-rtt_values=(0.001 0.002) # list of rtts
-bandwidth_values=(77491947438.08) # list of bandwidths
-output_dir="output-dir" 
-# "BERT" "ResNet18_Cifar10_95.46" "gpt2" "STABLEDIFFUSION-v1-4"
-models=("BERT" "ResNet18_Cifar10_95.46" "gpt2" "STABLEDIFFUSION-v1-4")
-# if you download the model, you can set model path here, otherwise the program will use online model
-bert_model_path=""
-sd_model_path=""
-gpt_model_path=""
-# config file, using default path
-config_path="config.toml"
+default_config_file="default_infer.json"
+if [ $# -eq 2 ]; then
+  config_file="$2"
+else
+  config_file="$default_config_file"
+fi
+
+readarray -t rtt_values < <(jq -r '.rtt_values[]' "$config_file")
+readarray -t bandwidth_values < <(jq -r '.bandwidth_values[]' "$config_file")
+output_dir=$(jq -r '.output_dir' "$config_file")
+readarray -t models < <(jq -r '.models[]' "$config_file")
+
+bert_model_path=$(jq -r '.bert_model_path' "$config_file")
+sd_model_path=$(jq -r '.sd_model_path' "$config_file")
+gpt_model_path=$(jq -r '.gpt_model_path' "$config_file")
+config_path=$(jq -r '.config_path' "$config_file")
 
 
 set -e
@@ -20,7 +25,7 @@ cd ../.. || {
     exit 1
 }
 if [ $# -eq 0 ]; then
-  echo "usage: $0 [opt|raw]"
+  echo "usage: $0 [opt|raw] ([config_file])"
   exit 1
 fi
 
@@ -64,7 +69,10 @@ for rtt in "${rtt_values[@]}"; do
         echo "Failed to change directory to tests/apps"
         exit 1
       }
-      NETWORK_CONFIG=../../config.toml RUST_LOG=warn ./run.sh infer/${model}/inference.py ${params} >"../../tests/performance/${output_dir}/${model}_infer_($1)_${batch_size}_${rtt}_${bandwidth}.log" 2>&1
+      if [ ! -d "../../${output_dir}" ]; then
+            mkdir -p "../../${output_dir}"
+      fi
+      NETWORK_CONFIG=../../${config_path} RUST_LOG=warn ./run.sh infer/${model}/inference.py ${params} >"../../${output_dir}/${model}_infer_($1)_${batch_size}_${rtt}_${bandwidth}.log" 2>&1
       cd ../..
 
       echo "done ---"

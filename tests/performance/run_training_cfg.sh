@@ -1,10 +1,26 @@
 #!/bin/bash
-setups=("cxl-1000") # you can choose the setups, which can be defined manually in rtts and bandwidths part
-output_dir="output-dir" # output path under tests/performace directory
-# "BERT-pytorch" "ResNet18_Cifar10_95.46" "naifu-diffusion"
-models=("BERT-pytorch" "ResNet18_Cifar10_95.46" "naifu-diffusion")
-# config file, using default path
-config_path="config.toml"
+default_config_file="default_train.json"
+if [ $# -eq 2 ]; then
+  config_file="$2"
+else
+  config_file="$default_config_file"
+fi
+
+readarray -t setups < <(jq -r '.setups[]' "$config_file")
+output_dir=$(jq -r '.output_dir' "$config_file")
+readarray -t models < <(jq -r '.models[]' "$config_file")
+config_path=$(jq -r '.config_path' "$config_file")
+
+declare -A rtts
+while IFS="=" read -r key value; do
+  rtts[$key]=$value
+done < <(jq -r '.rtts | to_entries | .[] | "\(.key)=\(.value)"' "$config_file")
+
+declare -A bandwidths
+while IFS="=" read -r key value; do
+  bandwidths[$key]=$value
+done < <(jq -r '.bandwidths | to_entries | .[] | "\(.key)=\(.value)"' "$config_file")
+
 
 
 set -e
@@ -15,7 +31,7 @@ cd ../.. || {
 }
 
 if [ $# -eq 0 ]; then
-    echo "usage: $0 [opt|raw]"
+    echo "usage: $0 [opt|raw] ([config_file])"
     exit 1
 fi
 
@@ -34,28 +50,6 @@ model_params["BERT-pytorch"]="1 64"
 model_params["ResNet18_Cifar10_95.46"]="1 64"
 model_params["naifu-diffusion"]="1 1"
 
-# rtt in ms
-declare -A rtts
-rtts["cxl-1000"]=0.0002
-rtts["cxl-200"]=0.0002
-rtts["cxl-40"]=0.0002
-rtts["rdma-inrack-200"]=0.005
-rtts["rdma-inrack-40"]=0.005
-rtts["rdma-inrack-10"]=0.005
-rtts["rdma-middle-200"]=0.01
-rtts["rdma-middle-40"]=0.01
-rtts["rdma-middle-10"]=0.01
-# bandwidth in bps
-declare -A bandwidths
-bandwidths["cxl-1000"]=1073741824000
-bandwidths["cxl-200"]=214748364800
-bandwidths["cxl-40"]=42949672960
-bandwidths["rdma-inrack-200"]=214748364800
-bandwidths["rdma-inrack-40"]=42949672960
-bandwidths["rdma-inrack-10"]=10737418240
-bandwidths["rdma-middle-200"]=214748364800
-bandwidths["rdma-middle-40"]=42949672960
-bandwidths["rdma-middle-10"]=10737418240
 cargo build --release ${OPT_FLAG}
 
 for model in "${models[@]}"; do
@@ -82,10 +76,10 @@ for model in "${models[@]}"; do
             echo "Failed to change directory to tests/apps"
             exit 1
         }
-        if [ ! -d "../../tests/performance/${output_dir}" ]; then
-            mkdir -p "../../tests/performance/${output_dir}"
+        if [ ! -d "../../${output_dir}" ]; then
+            mkdir -p "../../${output_dir}"
         fi
-        NETWORK_CONFIG=../../config.toml RUST_LOG=warn ./run.sh train/${model}/train.py ${params} >"../../tests/performance/${output_dir}/${model}_train_($1)_${rtt}_${bandwidth}.log" 2>&1
+        NETWORK_CONFIG=../../config.toml RUST_LOG=warn ./run.sh train/${model}/train.py ${params} >"../../${output_dir}/${model}_train_($1)_${rtt}_${bandwidth}.log" 2>&1
         cd ../..
 
         echo "done ---"
