@@ -21,3 +21,9 @@ data
 
 *.sqlite
 *.nsys-rep
+
+cublas_unimplement.rs
+cuda_unimplement.rs
+cudart_unimplement.rs
+cudnn_unimplement.rs
+nvml_unimplement.rs
