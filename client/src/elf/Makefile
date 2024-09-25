@@ -2,7 +2,7 @@
 .PHONY: all clean
 
 CC = gcc
-CFLAGS = -lelf -lz -O2
+CFLAGS = -lelf -lz -O2 -I/usr/include/tirpc
 SRC = $(wildcard *.c)
 OBJ = $(patsubst %.c, %.o, $(SRC))
 LIB = libelfctrl.a
