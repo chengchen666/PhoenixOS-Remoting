@@ -658,6 +658,7 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
             #exec_statement
             #( #send_statements )*
             #result_name.send(channel_sender).unwrap();
+            channel_sender.flush_out().unwrap();
         }
     };
 
