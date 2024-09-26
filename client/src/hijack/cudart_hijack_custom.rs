@@ -249,7 +249,7 @@ pub extern "C" fn cudaMallocManaged(
     result
 }
 
-
+#[no_mangle]
 pub extern "C" fn cudaHostAlloc(
     pHost: *mut *mut ::std::os::raw::c_void,
     size: size_t,
