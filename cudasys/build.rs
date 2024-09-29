@@ -202,7 +202,7 @@ fn write(content: &str, output: &str) {
 
 fn bind_gen(
     paths: &[PathBuf],
-    library: &str,
+    library_header: &str,
     output: &str,
     allowlist_types: &[&str],
     allowlist_vars: &[&str],
@@ -211,7 +211,9 @@ fn bind_gen(
     // find the library header path
     let mut header_path = None;
     for path in paths {
-        let header = path.join(format!("include/{}.h", library));
+        let mut header = path.clone();
+        header.push("include");
+        header.push(library_header);
         if header.is_file() {
             header_path = Some(header);
             break;
@@ -377,16 +379,16 @@ fn main() {
     // Use bindgen to automatically generate the FFI (in `src/bindings`).
     bind_gen(
         &cuda_paths,
-        "cuda_runtime",
+        "cudart_wrapper.hpp",
         "cudart",
         &["^cuda.*", "^surfaceReference", "^textureReference"],
-        &["^cuda.*"],
-        &["^cuda.*"],
+        &["^cuda.*", "CUDART_VERSION"],
+        &["^cuda.*", "__cuda[A-Za-z]+"],
     );
 
     bind_gen(
         &cuda_paths,
-        "cuda_wrapper",
+        "cuda_wrapper.h",
         "cuda",
         &[
             "^CU.*",
@@ -402,7 +404,7 @@ fn main() {
 
     bind_gen(
         &cuda_paths,
-        "nvml",
+        "nvml.h",
         "nvml",
         &[],
         &[],
@@ -411,7 +413,7 @@ fn main() {
 
     bind_gen(
         &cuda_paths,
-        "cudnn",
+        "cudnn.h",
         "cudnn",
         &["^cudnn.*", "^CUDNN.*"],
         &["^CUDNN.*", "^cudnn.*"],
@@ -420,7 +422,7 @@ fn main() {
 
     bind_gen(
         &cuda_paths,
-        "cublas",
+        "cublas.h",
         "cublas",
         &["^cublas.*", "^CUBLAS.*"],
         &["^CUBLAS.*", "^cublas.*"],

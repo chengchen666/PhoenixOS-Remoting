@@ -327,3 +327,62 @@ pub extern "C" fn cudaGetErrorString(
     let result = CString::new(result).unwrap();
     ERROR_STRINGS.with_borrow_mut(|m| m.entry(cudaError).or_insert(result).as_ptr())
 }
+
+struct CallConfiguration {
+    gridDim: dim3,
+    blockDim: dim3,
+    sharedMem: size_t,
+    stream: MemPtr,
+}
+
+thread_local! {
+    static CALL_CONFIGURATIONS: RefCell<Vec<CallConfiguration>> = const { RefCell::new(Vec::new()) };
+}
+
+#[no_mangle]
+pub extern "C" fn __cudaPushCallConfiguration(
+    gridDim: dim3,
+    blockDim: dim3,
+    sharedMem: size_t,
+    stream: MemPtr,
+) -> cudaError_t {
+    info!(
+        "[{}:{}] __cudaPushCallConfiguration",
+        std::file!(),
+        std::line!()
+    );
+    CALL_CONFIGURATIONS.with_borrow_mut(|v| {
+        v.push(CallConfiguration {
+            gridDim,
+            blockDim,
+            sharedMem,
+            stream,
+        });
+    });
+    cudaError_t::cudaSuccess
+}
+
+#[no_mangle]
+pub extern "C" fn __cudaPopCallConfiguration(
+    gridDim: *mut dim3,
+    blockDim: *mut dim3,
+    sharedMem: *mut size_t,
+    stream: *mut MemPtr,
+) -> cudaError_t {
+    info!(
+        "[{}:{}] __cudaPopCallConfiguration",
+        std::file!(),
+        std::line!()
+    );
+    if let Some(config) = CALL_CONFIGURATIONS.with_borrow_mut(Vec::pop) {
+        unsafe {
+            *gridDim = config.gridDim;
+            *blockDim = config.blockDim;
+            *sharedMem = config.sharedMem;
+            *stream = config.stream;
+        }
+        cudaError_t::cudaSuccess
+    } else {
+        cudaError_t::cudaErrorMissingConfiguration
+    }
+}
