@@ -1,4 +1,3 @@
-#[allow(non_snake_case)]
 extern crate network;
 
 use network::{

@@ -1,5 +1,4 @@
-#![allow(non_snake_case)]
-#![allow(unused_variables)]
+#![expect(non_snake_case)]
 use super::*;
 use cudasys::cudart::*;
 use std::os::raw::*;
@@ -58,13 +57,11 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
     if cudaMemcpyKind::cudaMemcpyDeviceToHost == kind {
         let data = unsafe { std::slice::from_raw_parts(data_buf as *const u8, count) };
         data.send(channel_sender).unwrap();
-        #[cfg(feature = "async_api")]
-        {
+        if cfg!(feature = "async_api") {
             channel_sender.flush_out().unwrap();
         }
     }
-    #[cfg(not(feature = "async_api"))]
-    {
+    if cfg!(not(feature = "async_api")) {
         result.send(channel_sender).unwrap();
         channel_sender.flush_out().unwrap();
     }
@@ -104,8 +101,7 @@ pub fn cudaFreeExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mu
     }
     let result: cudaError_t = unsafe { cudaFree(param1 as *mut ::std::os::raw::c_void) };
 
-    #[cfg(not(feature = "async_api"))]
-    {
+    if cfg!(not(feature = "async_api")) {
         result.send(channel_sender).unwrap();
         channel_sender.flush_out().unwrap();
     }
@@ -159,8 +155,7 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
         )
     };
 
-    #[cfg(not(feature = "async_api"))]
-    {
+    if cfg!(not(feature = "async_api")) {
         result.send(channel_sender).unwrap();
         channel_sender.flush_out().unwrap();
     }
@@ -293,8 +288,7 @@ pub fn cudaMemsetAsyncExe<T: CommChannel>(channel_sender: &mut T, channel_receiv
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
     let result = unsafe { cudaMemsetAsync(devPtr as *mut std::os::raw::c_void, value, count, stream) };
-    #[cfg(not(feature = "async_api"))]
-    {
+    if cfg!(not(feature = "async_api")) {
         result.send(channel_sender).unwrap();
         channel_sender.flush_out().unwrap();
     }

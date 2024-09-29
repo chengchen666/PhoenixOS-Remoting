@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![expect(dead_code)]
 extern crate log;
 mod dispatcher;
 
@@ -18,14 +18,14 @@ use dispatcher::dispatch;
 #[cfg(feature = "emulator")]
 use network::ringbufferchannel::EmulatorChannel;
 
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 use network::{
     ringbufferchannel::{RDMAChannel, SHMChannel},
     type_impl::MemPtr,
     Channel, CommChannel, CommChannelError, Transportable, CONFIG,
 };
 
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 use log::{debug, error, info, log_enabled, Level};
 
 extern crate lazy_static;

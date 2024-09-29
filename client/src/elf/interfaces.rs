@@ -1,7 +1,7 @@
-#![allow(improper_ctypes)]
-#![allow(non_camel_case_types)]
+#![expect(improper_ctypes)]
+#![expect(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![allow(non_upper_case_globals)]
+#![expect(non_upper_case_globals)]
 
 pub const _STRING_H: u32 = 1;
 pub const _FEATURES_H: u32 = 1;

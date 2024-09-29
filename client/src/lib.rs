@@ -5,10 +5,10 @@ extern crate cudasys;
 extern crate network;
 
 extern crate log;
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 use log::{debug, error, info, log_enabled, Level};
 
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 use network::{
     ringbufferchannel::{EmulatorChannel, RDMAChannel, SHMChannel},
     type_impl::MemPtr,

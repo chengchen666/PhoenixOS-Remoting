@@ -1,6 +1,4 @@
-#![allow(non_snake_case)]
-#![allow(unused_variables)]
-#![allow(unused_mut)]
+#![expect(non_snake_case)]
 use super::*;
 use cudasys::types::cudart::*;
 use ::std::os::raw::*;
@@ -79,12 +77,9 @@ pub extern "C" fn cudaMemcpy(
         }
     }
 
-    #[cfg(feature = "async_api")]
-    {
+    if cfg!(feature = "async_api") {
         return cudaError_t::cudaSuccess;
-    }
-    #[cfg(not(feature = "async_api"))]
-    {
+    } else {
         match result.recv(channel_receiver) {
             Ok(()) => {}
             Err(e) => panic!("failed to receive result: {:?}", e),
@@ -184,12 +179,9 @@ pub extern "C" fn cudaLaunchKernel(
         Err(e) => panic!("failed to send: {:?}", e),
     }
 
-    #[cfg(feature = "async_api")]
-    {
+    if cfg!(feature = "async_api") {
         return cudaError_t::cudaSuccess;
-    }
-    #[cfg(not(feature = "async_api"))]
-    {
+    } else {
         match result.recv(channel_receiver) {
             Ok(()) => {}
             Err(e) => panic!("failed to receive result: {:?}", e),

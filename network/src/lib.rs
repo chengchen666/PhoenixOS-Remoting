@@ -1,4 +1,4 @@
-#![allow(incomplete_features)]
+#![expect(incomplete_features)]
 #![feature(generic_const_exprs)]
 use serde::Deserialize;
 use std::error::Error;
