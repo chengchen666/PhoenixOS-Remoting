@@ -3,11 +3,29 @@ members = [
     "client",
     "codegen",
     "cudasys",
+    "measure",
     "network",
     "server",
 ]
 
 resolver = "2"
 
-[profile.release]
-opt-level = "z"
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace.dependencies]
+codegen = { path = "codegen" }
+cudasys = { path = "cudasys" }
+measure = { path = "measure" }
+network = { path = "network" }
+core_affinity = "0.8.1"
+env_logger = "0.9"
+lazy_static = "1.4.0"
+log = "0.4.0"
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full", "extra-traits"] }
+
+[workspace.lints.rust]
+rust-2018-idioms = "warn"
