@@ -8,9 +8,9 @@ use syn::__private::ToTokens;
 use std::{
     collections::{VecDeque, HashMap},
     env,
-    fs::{File, OpenOptions},
-    io::{BufRead, BufReader, Write},
-    path::PathBuf,
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
 };
 extern crate toml;
 extern crate serde;
@@ -19,7 +19,7 @@ use serde::Deserialize;
 pub fn read_env() -> Vec<PathBuf> {
     if let Ok(path) = env::var("CUDA_LIBRARY_PATH") {
         let split_char = ":";
-        path.split(split_char).map(|s| PathBuf::from(s)).collect()
+        path.split(split_char).map(PathBuf::from).collect()
     } else {
         vec![]
     }
@@ -28,6 +28,7 @@ pub fn read_env() -> Vec<PathBuf> {
 // output (candidates, valid_path)
 pub fn find_cuda() -> (Vec<PathBuf>, Vec<PathBuf>) {
     let mut candidates = read_env();
+    candidates.push(PathBuf::from(".")); // bindgen wrapper headers
     candidates.push(PathBuf::from("/opt/cuda"));
     candidates.push(PathBuf::from("/usr/local/cuda"));
     candidates.push(PathBuf::from("/usr"));
@@ -39,7 +40,7 @@ pub fn find_cuda() -> (Vec<PathBuf>, Vec<PathBuf>) {
 
     let mut valid_paths = vec![];
     for base in &candidates {
-        let lib = PathBuf::from(base).join("lib64");
+        let lib = base.join("lib64");
         if lib.is_dir() {
             valid_paths.push(lib.clone());
             valid_paths.push(lib.join("stubs"));
@@ -51,7 +52,7 @@ pub fn find_cuda() -> (Vec<PathBuf>, Vec<PathBuf>) {
             valid_paths.push(base.join("lib/stubs"));
         }
         // cudnn
-        let cudnn_lib = PathBuf::from(base).join("include/x86_64-linux-gnu");
+        let cudnn_lib = base.join("include/x86_64-linux-gnu");
         if cudnn_lib.is_dir() {
             valid_paths.push(cudnn_lib);
         }
@@ -60,23 +61,19 @@ pub fn find_cuda() -> (Vec<PathBuf>, Vec<PathBuf>) {
     (candidates, valid_paths)
 }
 
-fn decorate(file_path: PathBuf) {
-    // Read the file.
-    let file = File::open(&file_path).expect(format!("Failed to open file {:?}", file_path).as_str());
-    let reader = BufReader::new(file);
+fn decorate(reader: &str) -> String {
     let mut cache: VecDeque<String> = VecDeque::new();
 
-    let mut decorated_buf = String::new();
+    let mut decorated_buf = String::with_capacity(reader.len() * 2);
     let mut emit = |line: &str| {
         decorated_buf.push_str(line);
-        decorated_buf.push_str("\n");
+        decorated_buf.push('\n');
     };
 
     // Process in line level.
     for line in reader.lines() {
-        let line = line.expect("Failed to read line");
         if line.starts_with("#[derive(") {
-            cache.push_back(line);
+            cache.push_back(line.to_owned());
             // No emitting.
         } else if line.starts_with("pub enum") {
             // sanity check
@@ -101,7 +98,7 @@ fn decorate(file_path: PathBuf) {
         } else if line.starts_with("pub type") && line.contains('*') {
             let index = line.find('*').unwrap();
             // sanity check
-            if 0 != cache.len() {
+            if !cache.is_empty() {
                 panic!("Cache is not empty: {:?}", cache);
             }
             // = *[mut, const] Struct;
@@ -110,31 +107,21 @@ fn decorate(file_path: PathBuf) {
             emit(&line);
         } else {
             // sanity check
-            if 0 != cache.len() {
+            if !cache.is_empty() {
                 panic!("Cache is not empty: {:?}", cache);
             }
             emit(&line);
         }
     }
 
-    // Overwrite the original file with decorated contents.
-    let mut file = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .open(&file_path)
-        .expect("Failed to open bindings for writing");
-    file.write_all(decorated_buf.as_bytes())
-        .expect("Failed to write modified content");
+    decorated_buf
 }
 
 /// Read the file, split it into two parts: one with the types and the other with the functions.
 /// Remove the original file.
-fn split(file_path: PathBuf, types_file: PathBuf, funcs_file: PathBuf) {
-    // Read the file.
-    let content = std::fs::read_to_string(&file_path).expect(format!("Failed to read file {:?}", file_path).as_str());
-
+fn split(content: &str, types_file: &Path, funcs_file: &Path) {
     // regex to match `extern "C" { ... }`
-    let re = Regex::new(r#"(?s)extern "C" \{.*?\}"#).unwrap();
+    let re = Regex::new(r#"(?s)extern "C" \{.*?\}\n"#).unwrap();
 
     // Extract all blocks that match the regex
     let funcs: Vec<_> = re.find_iter(&content).map(|mat| mat.as_str()).collect();
@@ -142,18 +129,18 @@ fn split(file_path: PathBuf, types_file: PathBuf, funcs_file: PathBuf) {
 
     // Write the types and functions to separate files.
     if let Some(parent) = types_file.parent() {
-        std::fs::create_dir_all(parent).expect(format!("Failed to create directory {:?}", parent).as_str());
+        std::fs::create_dir_all(parent).unwrap_or_else(|e| panic!("Failed to create directory {parent:?}: {e}"));
     }
-    let mut types_file = File::create(types_file.clone()).expect(format!("Failed to create file {:?}", types_file).as_str());
+    let mut types_file = File::create(types_file).unwrap_or_else(|e| panic!("Failed to create file {types_file:?}: {e}"));
     writeln!(types_file, "{}", types).expect("Failed to write types");
 
     if let Some(parent) = funcs_file.parent() {
-        std::fs::create_dir_all(parent).expect(format!("Failed to create directory {:?}", parent).as_str());
+        std::fs::create_dir_all(parent).unwrap_or_else(|e| panic!("Failed to create directory {parent:?}: {e}"));
     }
-    let mut funcs_file = File::create(funcs_file.clone()).expect(format!("Failed to create file {:?}", funcs_file).as_str());
+    let mut funcs_file = File::create(funcs_file).unwrap_or_else(|e| panic!("Failed to create file {funcs_file:?}: {e}"));
 
     for f in funcs {
-        writeln!(funcs_file, "{}\n", f).expect("Failed to write function");
+        write!(funcs_file, "{f}").expect("Failed to write function");
     }
 }
 
@@ -175,11 +162,11 @@ struct UserHook {
     cublas: HashMap<String, HookConfig>
 }
 
-fn write(file_path: PathBuf, output: &str) {
-    let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
+fn write(content: &str, output: &str) {
+    // Write to client crate
 
-    let hook_path = root.join("../client/hook.toml");
-    let hook_content = std::fs::read_to_string(&hook_path).expect(format!("Failed to read file {:?}", hook_path).as_str());
+    let hook_path = Path::new("../client/hook.toml");
+    let hook_content = std::fs::read_to_string(&hook_path).unwrap_or_else(|e| panic!("Failed to read file {hook_path:?}: {e}"));
     let user_hooks: UserHook = toml::from_str(&hook_content).expect("Failed to parse hook.toml file");
     let user_hook = match output {
         "cuda" => &user_hooks.cuda,
@@ -190,17 +177,16 @@ fn write(file_path: PathBuf, output: &str) {
         &_ => todo!(),
     };
 
-    let content = std::fs::read_to_string(&file_path).expect(format!("Failed to read file {:?}", file_path).as_str());
     let re = Regex::new(r#"(?s)extern "C" \{.*?\}"#).unwrap();
     let funcs: Vec<_> = re.find_iter(&content).map(|mat| mat.as_str()).collect();
 
     let header = format!("#![allow(non_snake_case)]\nuse super::*;\nuse cudasys::types::{}::*;", output);
 
-    let unimplemented_file = root.join("../client/src/hijack").join(format!("{}_unimplement.rs", output));
+    let unimplemented_file = PathBuf::from(format!("../client/src/hijack/{output}_unimplement.rs"));
     if let Some(parent) = unimplemented_file.parent() {
-        std::fs::create_dir_all(parent).expect(format!("Failed to create directory {:?}", parent).as_str());
+        std::fs::create_dir_all(parent).unwrap_or_else(|e| panic!("Failed to create directory {parent:?}: {e}"));
     }
-    let mut unimplemented_file = File::create(unimplemented_file.clone()).expect(format!("Failed to create file {:?}", unimplemented_file).as_str());
+    let mut unimplemented_file = File::create(&unimplemented_file).unwrap_or_else(|e| panic!("Failed to create file {unimplemented_file:?}: {e}"));
     writeln!(unimplemented_file, "{}\n", header).expect("Failed to write header");
 
     for f in funcs {
@@ -215,12 +201,12 @@ fn write(file_path: PathBuf, output: &str) {
 }
 
 fn bind_gen(
-    paths: &Vec<PathBuf>,
+    paths: &[PathBuf],
     library: &str,
     output: &str,
-    allowlist_types: Vec<&str>,
-    allowlist_vars: Vec<&str>,
-    allowlist_funcs: Vec<&str>,
+    allowlist_types: &[&str],
+    allowlist_vars: &[&str],
+    allowlist_funcs: &[&str],
 ) {
     // find the library header path
     let mut header_path = None;
@@ -229,14 +215,6 @@ fn bind_gen(
         if header.is_file() {
             header_path = Some(header);
             break;
-        }
-    }
-    // find in this directory
-    if header_path.is_none() {
-        let header = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap())
-            .join(format!("include/{}.h", library));
-        if header.is_file() {
-            header_path = Some(header);
         }
     }
     let header_path = header_path.expect("Could not find CUDA header file");
@@ -282,26 +260,18 @@ fn bind_gen(
         // Unwrap the Result and panic on failure.
         .expect("Unable to generate bindings");
 
-    // Write the bindings to the `$CARGO_MANIFEST_DIR/src/library.rs`.
-    let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
-    let out_file = root.join("src/bindings").join(format!("{}.rs", output));
-    bindings
-        .write_to_file(out_file.clone())
-        .expect("Couldn't write bindings!");
+    let root = env::var("CARGO_MANIFEST_DIR").unwrap();
 
     // Format the generated bindings for our purposes.
-    decorate(out_file.clone());
+    let out_file = decorate(&bindings.to_string());
 
     // Split the file into two parts: one with the types and the other with the functions.
-    let types_file = root.join("src/bindings/types").join(format!("{}.rs", output));
-    let funcs_file = root.join("src/bindings/funcs").join(format!("{}.rs", output));
-    split(out_file.clone(), types_file, funcs_file);
+    let types_file = PathBuf::from(format!("{root}/src/bindings/types/{output}.rs"));
+    let funcs_file = PathBuf::from(format!("{root}/src/bindings/funcs/{output}.rs"));
+    split(&out_file, &types_file, &funcs_file);
 
     // write gen_xxx macro to client/src/hijack folder, with name output_xxx
-    write(out_file.clone(), output);
-
-    // Remove the original file.
-    std::fs::remove_file(out_file.clone()).expect(format!("Failed to remove file {:?}", out_file).as_str());
+    write(&out_file, output);
 }
 
 struct SigParser {
@@ -333,12 +303,12 @@ fn parse_sig(input: &str) -> SigParser {
     };
     let input = input.trim_start_matches("pub ").trim_end_matches(";");
 
-    let sig = parse_str::<Signature>(input).expect(format!("Failed to parse {}", input).as_str());
+    let sig = parse_str::<Signature>(input).unwrap_or_else(|e| panic!("Failed to parse {input:?}: {e}"));
 
     let func_name = sig.ident.to_string();
 
     let result_ty = match &sig.output {
-        syn::ReturnType::Type(_, pat_ty) => type_to_string(&pat_ty),
+        syn::ReturnType::Type(_, pat_ty) => type_to_string(pat_ty),
         _ => String::from(""),
     };
 
@@ -378,7 +348,7 @@ fn type_to_string(ty: &Type) -> String {
             ty.into_token_stream().to_string().replace(" ", "")
         }
         _ => {
-            panic!("Unimplemented type {:#?}", ty);
+            panic!("Unimplemented type {}", ty.into_token_stream());
         }
     }
 }
@@ -399,25 +369,26 @@ fn main() {
     println!("cargo:rustc-link-lib=dylib=cudnn");
     println!("cargo:rustc-link-lib=dylib=cublas");
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=include");
     println!("cargo:rerun-if-env-changed=CUDA_LIBRARY_PATH");
-    println!("CUDA paths: {:?}", cuda_paths);
-    println!("CUDA libs: {:?}", cuda_libs);
+    eprintln!("CUDA paths: {:?}", cuda_paths);
+    eprintln!("CUDA libs: {:?}", cuda_libs);
 
     // Use bindgen to automatically generate the FFI (in `src/bindings`).
     bind_gen(
         &cuda_paths,
         "cuda_runtime",
         "cudart",
-        vec!["^cuda.*", "^surfaceReference", "^textureReference"],
-        vec!["^cuda.*"],
-        vec!["^cuda.*"],
+        &["^cuda.*", "^surfaceReference", "^textureReference"],
+        &["^cuda.*"],
+        &["^cuda.*"],
     );
 
     bind_gen(
         &cuda_paths,
         "cuda_wrapper",
         "cuda",
-        vec![
+        &[
             "^CU.*",
             "^cuuint(32|64)_t",
             "^cudaError_enum",
@@ -425,34 +396,34 @@ fn main() {
             "^cuda.*",
             "^libraryPropertyType.*",
         ],
-        vec!["^CU.*"],
-        vec!["^cu.*"],
+        &["^CU.*"],
+        &["^cu.*"],
     );
 
     bind_gen(
         &cuda_paths,
         "nvml",
         "nvml",
-        vec![],
-        vec![],
-        vec![],
+        &[],
+        &[],
+        &[],
     );
-    
+
     bind_gen(
         &cuda_paths,
         "cudnn",
         "cudnn",
-        vec!["^cudnn.*", "^CUDNN.*"],
-        vec!["^CUDNN.*", "^cudnn.*"],
-        vec!["^cudnn.*"],
+        &["^cudnn.*", "^CUDNN.*"],
+        &["^CUDNN.*", "^cudnn.*"],
+        &["^cudnn.*"],
     );
 
     bind_gen(
         &cuda_paths,
         "cublas",
         "cublas",
-        vec!["^cublas.*", "^CUBLAS.*"],
-        vec!["^CUBLAS.*", "^cublas.*"],
-        vec!["^cublas.*"],
+        &["^cublas.*", "^CUBLAS.*"],
+        &["^CUBLAS.*", "^cublas.*"],
+        &["^cublas.*"],
     );
 }
