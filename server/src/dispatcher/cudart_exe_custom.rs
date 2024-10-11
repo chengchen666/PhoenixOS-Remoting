@@ -1,11 +1,7 @@
 #![expect(non_snake_case)]
 use super::*;
 use cudasys::cudart::*;
-use std::os::raw::*;
-use std::{
-    alloc::{alloc, dealloc, Layout},
-    ptr::null_mut,
-};
+use std::alloc::{alloc, dealloc, Layout};
 
 pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
     info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
@@ -161,44 +157,6 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
     }
 }
 
-pub fn cudaMallocManagedExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cudaMallocManaged", std::file!(), std::line!());
-    let mut size: size_t = Default::default();
-    let mut flags: c_uint = Default::default();
-    match size.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => {
-            error!("failed to receiving size: {:?}", e);
-        }
-    }
-    match flags.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => {
-            error!("failed to receiving flags: {:?}", e);
-        }
-    }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    let mut devPtr: *mut c_void = null_mut();
-    let result = unsafe { cudaMallocManaged(&mut devPtr, size, flags) };
-    let devPtr = devPtr as MemPtr;
-    match devPtr.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => {
-            error!("failed to sending devPtr: {:?}", e);
-        }
-    }
-    match result.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => {
-            error!("failed to sending result: {:?}", e);
-        }
-    }
-    channel_sender.flush_out().unwrap();
-}
-
 pub fn cudaPointerGetAttributesExe<T: CommChannel>(
     channel_sender: &mut T,
     channel_receiver: &mut T,
@@ -223,33 +181,6 @@ pub fn cudaPointerGetAttributesExe<T: CommChannel>(
     };
     attributes.send(channel_sender).unwrap();
     result.send(channel_sender).unwrap();
-    channel_sender.flush_out().unwrap();
-}
-
-pub fn cudaHostAllocExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cudaHostAlloc", std::file!(), std::line!());
-    let mut pHost: *mut ::std::os::raw::c_void = null_mut();
-    let mut size: size_t = Default::default();
-    let mut flags: c_uint = Default::default();
-    if let Err(e) = size.recv(channel_receiver) {
-        error!("failed to receive size: {:?}", e);
-    }
-    if let Err(e) = flags.recv(channel_receiver) {
-        error!("failed to receive flags: {:?}", e);
-    }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    let result = unsafe { cudaHostAlloc(&mut pHost, size, flags) };
-    // send back pHost as MemPtr
-    let pHost_ = pHost as MemPtr;
-    if let Err(e) = pHost_.send(channel_sender) {
-        error!("failed to send pHost: {:?}", e);
-    }
-    if let Err(e) = result.send(channel_sender) {
-        error!("failed to send result: {:?}", e);
-    }
     channel_sender.flush_out().unwrap();
 }
 

@@ -5,6 +5,7 @@ use ::std::os::raw::*;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::ffi::CString;
+use std::alloc::{alloc, Layout};
 
 #[no_mangle]
 pub extern "C" fn cudaMemcpy(
@@ -15,6 +16,8 @@ pub extern "C" fn cudaMemcpy(
 ) -> cudaError_t {
     assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
+
+    assert_ne!(kind, cudaMemcpyKind::cudaMemcpyDefault, "cudaMemcpyDefault is not supported yet");
 
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
@@ -195,53 +198,6 @@ pub extern "C" fn cudaLaunchKernel(
 }
 
 #[no_mangle]
-pub extern "C" fn cudaMallocManaged(
-    devPtr: MemPtr, // void**
-    size: size_t,
-    flags: c_uint,
-) -> cudaError_t{
-    // should update devPtr
-    info!(
-        "[{}:{}] cudaMallocManaged",
-        std::file!(),
-        std::line!()
-    );
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
-    let proc_id = 11;
-    let mut result: cudaError_t = Default::default();
-    match proc_id.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send proc_id: {:?}", e),
-    }
-    match size.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send size: {:?}", e),
-    }
-    match flags.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send flags: {:?}", e),
-    }
-    channel_sender.flush_out().unwrap();
-    let mut devPtr_: MemPtr = Default::default();
-    match devPtr_.recv(channel_receiver) {
-        Ok(()) => {
-            unsafe{*(devPtr as *mut MemPtr) = devPtr_};
-        }
-        Err(e) => panic!("failed to send devPtr: {:?}", e),
-    }
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
-    }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
-}
-
-#[no_mangle]
 pub extern "C" fn cudaHostAlloc(
     pHost: *mut *mut ::std::os::raw::c_void,
     size: size_t,
@@ -252,39 +208,19 @@ pub extern "C" fn cudaHostAlloc(
         std::file!(),
         std::line!()
     );
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
-    let proc_id = 13;
-    let mut result: cudaError_t = Default::default();
-    match proc_id.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send proc_id: {:?}", e),
-    }
-    match size.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send size: {:?}", e),
-    }
-    match flags.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send flags: {:?}", e),
-    }
-    channel_sender.flush_out().unwrap();
-    let mut pHost_: MemPtr = Default::default();
-    match pHost_.recv(channel_receiver) {
-        Ok(()) => {
-            unsafe{*(pHost as *mut MemPtr) = pHost_};
+    assert_eq!(flags, cudaHostAllocDefault);
+    let Ok(layout) = Layout::from_size_align(size as _, 1) else {
+        return cudaError_t::cudaErrorInvalidValue;
+    };
+    // TODO: handle pinned memory at server side in a better way
+    unsafe {
+        let ptr = alloc(layout);
+        if ptr.is_null() {
+            return cudaError_t::cudaErrorMemoryAllocation;
         }
-        Err(e) => panic!("failed to send pHost: {:?}", e),
+        *pHost = ptr as _;
     }
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
-    }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
+    cudaError_t::cudaSuccess
 }
 
 thread_local! {

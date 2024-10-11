@@ -2,8 +2,6 @@
 cuDevicePrimaryCtxGetState = { default = true }
 cuInit = { default = true }
 cuDriverGetVersion = { default = true }
-cuGetExportTable = { default = false, client_hook = "todo", server_hook = "todo" } 
-cuGetProcAddress = { default = false, client_hook = "todo", server_hook = "todo" }
 
 [cudart]
 __cudaPushCallConfiguration = { default = false }
@@ -26,7 +24,6 @@ cudaGetDeviceProperties = { default = true }
 cudaMemcpy = { default = false, client_hook = "todo", server_hook = "todo" }
 cudaMemcpyAsync = { default = false, client_hook = "todo", server_hook = "todo" }
 cudaLaunchKernel = { default = false, client_hook = "todo", server_hook = "todo" }
-cudaMallocManaged = { default = false, client_hook = "todo", server_hook = "todo" }
 cudaHostAlloc = { default = false, client_hook = "todo", server_hook = "todo" }
 cudaPointerGetAttributes = { default = true }
 cudaFuncGetAttributes = { default = false }
