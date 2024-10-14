@@ -96,10 +96,6 @@ fn decorate(file_path: PathBuf) {
             // -> #[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq, codegen::Transportable)]
             let mut prev = cache.pop_front().unwrap();
             prev = prev.replace(")]", ", codegen::Transportable)]");
-            // if not contains `Default`
-            // if !prev.contains("Default") {
-            //     prev = prev.replace(")]", ", codegen::ZeroDefault)]");
-            // }
             emit(&prev);
             emit(&line);
         } else if line.starts_with("pub type") && line.contains('*') {

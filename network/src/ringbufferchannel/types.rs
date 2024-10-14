@@ -1,46 +1,5 @@
 use crate::{RawMemory, Transportable};
 use std::time::UNIX_EPOCH;
-#[derive(Debug, Default, Clone)]
-pub struct Request {
-    pub timestamp: NsTimestamp,
-    pub proc_id: i32,
-    pub data: Vec<u8>,
-}
-
-impl Request {
-    pub fn new(proc_id: i32, data: Vec<u8>) -> Request {
-        Request {
-            timestamp: NsTimestamp::new(),
-            proc_id,
-            data,
-        }
-    }
-}
-
-impl Transportable for Request {
-    fn emulate_send<T: crate::CommChannel>(&self, channel: &mut T) -> Result<(), crate::CommChannelError> {
-        self.timestamp.emulate_send(channel)?;
-        self.proc_id.emulate_send(channel)?;
-        self.data.emulate_send(channel)
-    }
-    fn send<T: crate::CommChannel>(
-        &self,
-        channel: &mut T,
-    ) -> Result<(), crate::CommChannelError> {
-        self.timestamp.send(channel)?;
-        self.proc_id.send(channel)?;
-        self.data.send(channel)
-    }
-
-    fn recv<T: crate::CommChannel>(
-        &mut self,
-        channel: &mut T,
-    ) -> Result<(), crate::CommChannelError> {
-        self.timestamp.recv(channel)?;
-        self.proc_id.recv(channel)?;
-        self.data.recv(channel)
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct NsTimestamp {

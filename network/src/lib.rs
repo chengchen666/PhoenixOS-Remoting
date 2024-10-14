@@ -8,9 +8,6 @@ use std::fmt;
 #[macro_use]
 extern crate lazy_static;
 
-pub mod buffer;
-pub use buffer::{BufferError, RawBuffer};
-
 pub mod ringbufferchannel;
 pub mod type_impl;
 
