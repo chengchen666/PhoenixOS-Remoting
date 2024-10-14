@@ -156,3 +156,11 @@ gen_hijack!(
     "*mut size_t", 
     "*mut size_t"
 );
+
+gen_hijack!(
+    18,
+    "cudaGetDeviceProperties_v2",
+    "cudaError_t",
+    "*mut cudaDeviceProp",
+    "::std::os::raw::c_int"
+);

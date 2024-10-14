@@ -15,18 +15,15 @@ extern crate network;
 use network::{RawMemory, RawMemoryMut, CommChannel, CommChannelError, Transportable};
 extern crate codegen;
 
-// The type definitions extarcted from the bindings.
+// Type definitions extracted from the bindings.
 pub mod types;
 
 pub mod cuda;
-
 pub mod cudart;
-
 pub mod nvml;
-
 pub mod cudnn;
-
 pub mod cublas;
+pub mod cublasLt;
 
 #[cfg(test)]
 mod tests {

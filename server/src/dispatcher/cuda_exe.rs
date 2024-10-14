@@ -21,3 +21,5 @@ gen_exe!(
     "CUresult",
     "::std::os::raw::c_uint"
 );
+
+gen_exe!("cuCtxGetCurrent", "CUresult", "*mut CUcontext");

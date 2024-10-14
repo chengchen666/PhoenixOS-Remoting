@@ -24,3 +24,5 @@ gen_hijack!(
     "CUresult",
     "::std::os::raw::c_uint"
 );
+
+gen_hijack!(504, "cuCtxGetCurrent", "CUresult", "*mut CUcontext");

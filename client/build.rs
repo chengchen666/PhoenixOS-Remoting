@@ -52,9 +52,14 @@ fn create_cuda_symlinks() {
     for lib in [
         "libcuda.so.1",
         "libcudart.so.11.0",
+        "libcudart.so.12",
         "libnvidia-ml.so.1",
         "libcudnn.so.8",
+        "libcudnn.so.9",
         "libcublas.so.11",
+        "libcublas.so.12",
+        "libcublasLt.so.11",
+        "libcublasLt.so.12",
     ] {
         let _ = std::os::unix::fs::symlink("../libclient.so", symlink_dir.join(lib));
     }

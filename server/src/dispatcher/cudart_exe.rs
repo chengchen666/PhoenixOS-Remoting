@@ -28,6 +28,7 @@ gen_exe!(
     "cudaStream_t",
     "*mut cudaStreamCaptureStatus"
 );
+#[cfg(not(cuda_version = "12"))]
 gen_exe!(
     "cudaGetDeviceProperties",
     "cudaError_t",
@@ -88,4 +89,11 @@ gen_exe!(
     "cudaError_t",
     "*mut ::std::os::raw::c_int",
     "*mut ::std::os::raw::c_int"
+);
+#[cfg(cuda_version = "12")]
+gen_exe!(
+    "cudaGetDeviceProperties_v2",
+    "cudaError_t",
+    "*mut cudaDeviceProp",
+    "::std::os::raw::c_int"
 );

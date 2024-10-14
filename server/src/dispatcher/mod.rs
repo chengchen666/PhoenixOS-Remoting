@@ -34,6 +34,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         7 => cudaMemcpyExe(channel_sender, channel_receiver),
         8 => cudaFreeExe(channel_sender, channel_receiver),
         9 => cudaStreamIsCapturingExe(channel_sender, channel_receiver),
+        #[cfg(not(cuda_version = "12"))]
         10 => cudaGetDevicePropertiesExe(channel_sender, channel_receiver),
         11 => unimplemented!("cudaMallocManaged"),
         12 => cudaPointerGetAttributesExe(channel_sender, channel_receiver),
@@ -42,6 +43,8 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         15 => cudaDeviceGetStreamPriorityRangeExe(channel_sender, channel_receiver),
         16 => cudaMemsetAsyncExe(channel_sender, channel_receiver),
         17 => cudaGetErrorStringExe(channel_sender, channel_receiver),
+        #[cfg(cuda_version = "12")]
+        18 => cudaGetDeviceProperties_v2Exe(channel_sender, channel_receiver),
         100 => __cudaRegisterFatBinaryExe(channel_sender, channel_receiver),
         101 => __cudaUnregisterFatBinaryExe(channel_sender, channel_receiver),
         102 => __cudaRegisterFunctionExe(channel_sender, channel_receiver),
@@ -52,6 +55,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         501 => cuDriverGetVersionExe(channel_sender, channel_receiver),
         502 => cuInitExe(channel_sender, channel_receiver),
         503 => unimplemented!("cuGetExportTable"),
+        504 => cuCtxGetCurrentExe(channel_sender, channel_receiver),
         1000 => nvmlInit_v2Exe(channel_sender, channel_receiver),
         1001 => nvmlDeviceGetCount_v2Exe(channel_sender, channel_receiver),
         1002 => nvmlInitWithFlagsExe(channel_sender, channel_receiver),
@@ -100,6 +104,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         2006 => cublasGetMathModeExe(channel_sender, channel_receiver), 
         2007 => cublasGemmExExe(channel_sender, channel_receiver), 
         2008 => cublasGemmStridedBatchedExExe(channel_sender, channel_receiver),
+        2009 => cublasSetWorkspace_v2Exe(channel_sender, channel_receiver),
         other => {
             error!(
                 "[{}:{}] invalid proc_id: {}",

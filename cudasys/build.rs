@@ -174,6 +174,7 @@ fn write(content: &str, output: &str) {
         "nvml" => &user_hooks.nvml,
         "cudnn" => &user_hooks.cudnn,
         "cublas" => &user_hooks.cublas,
+        "cublasLt" => &user_hooks.cublas, // This will be refactored soon
         &_ => todo!(),
     };
 
@@ -430,5 +431,15 @@ fn main() {
         &["^CUBLAS.*", "^cublas.*"],
         &["^cublas.*"],
         "dylib=cublas",
+    );
+
+    bind_gen(
+        &cuda_paths,
+        "cublasLt.h",
+        "cublasLt",
+        &["cublasLt.*"],
+        &["cublasLt.*"],
+        &["cublasLt.*"],
+        "dylib=cublasLt",
     );
 }

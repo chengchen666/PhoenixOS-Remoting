@@ -69,3 +69,5 @@ gen_exe!(
 //     "cublasComputeType_t",
 //     "cublasGemmAlgo_t"
 // );
+
+gen_exe!("cublasSetWorkspace_v2", "cublasStatus_t", "cublasHandle_t", "MemPtr", "size_t");

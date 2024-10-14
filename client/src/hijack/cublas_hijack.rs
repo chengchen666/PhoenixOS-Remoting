@@ -75,3 +75,5 @@ gen_hijack!(
 //     "cublasComputeType_t",
 //     "cublasGemmAlgo_t"
 // );
+
+gen_hijack!(2009, "cublasSetWorkspace_v2", "cublasStatus_t", "cublasHandle_t", "MemPtr", "size_t");
