@@ -1,6 +1,3 @@
-extern crate log;
-extern crate network;
-extern crate server;
 use server::*;
 use std::{
     env,

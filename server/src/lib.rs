@@ -1,10 +1,5 @@
 #![expect(dead_code)]
-extern crate log;
 mod dispatcher;
-
-extern crate codegen;
-extern crate cudasys;
-extern crate network;
 
 use codegen::gen_exe;
 #[cfg(feature = "async_api")]
@@ -28,7 +23,6 @@ use network::{
 #[expect(unused_imports)]
 use log::{debug, error, info, log_enabled, Level};
 
-extern crate lazy_static;
 use lazy_static::lazy_static;
 use std::boxed::Box;
 use std::collections::HashMap;

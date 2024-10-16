@@ -2,10 +2,8 @@ use std::arch::asm;
 use std::fs::File;
 use std::io::{self, Write};
 
-#[macro_use]
-extern crate lazy_static;
+use lazy_static::lazy_static;
 
-extern crate log;
 
 pub const MEASURE_START: usize = 0;
 pub const MEASURE_CSER: usize = 1;

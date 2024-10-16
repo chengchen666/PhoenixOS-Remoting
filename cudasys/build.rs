@@ -1,8 +1,5 @@
-extern crate glob;
 use glob::glob;
-extern crate regex;
 use regex::Regex;
-extern crate syn;
 use syn::{Signature, Type, parse_str};
 use syn::__private::ToTokens;
 use std::{
@@ -12,8 +9,6 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-extern crate toml;
-extern crate serde;
 use serde::Deserialize;
 
 pub fn read_env() -> Vec<PathBuf> {

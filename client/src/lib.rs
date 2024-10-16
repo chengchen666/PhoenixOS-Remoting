@@ -1,10 +1,5 @@
-#[macro_use]
-extern crate lazy_static;
+use lazy_static::lazy_static;
 
-extern crate cudasys;
-extern crate network;
-
-extern crate log;
 #[expect(unused_imports)]
 use log::{debug, error, info, log_enabled, Level};
 
@@ -15,7 +10,6 @@ use network::{
     Channel, CommChannel, CommChannelInner, Transportable, CONFIG,
 };
 
-extern crate codegen;
 use codegen::gen_hijack;
 #[cfg(feature = "async_api")]
 use codegen::gen_hijack_async;

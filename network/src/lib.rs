@@ -5,14 +5,10 @@ use std::error::Error;
 use std::boxed::Box;
 use std::fmt;
 
-#[macro_use]
-extern crate lazy_static;
+use lazy_static::lazy_static;
 
 pub mod ringbufferchannel;
 pub mod type_impl;
-
-extern crate codegen;
-extern crate measure;
 
 pub use ringbufferchannel::types::NsTimestamp;
 

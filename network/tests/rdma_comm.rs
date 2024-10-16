@@ -1,5 +1,3 @@
-extern crate network;
-
 use network::{
     ringbufferchannel::RDMAChannel, Channel, CommChannel, CommChannelInnerIO, RawMemory, RawMemoryMut,
 };

@@ -1,5 +1,3 @@
-extern crate network;
-
 use network::{ringbufferchannel::LocalChannel, CommChannelInnerIO, RawMemory, RawMemoryMut};
 
 use std::sync::{Arc, Barrier};
