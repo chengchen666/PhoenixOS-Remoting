@@ -207,7 +207,10 @@ fn bind_gen(
     allowlist_types: &[&str],
     allowlist_vars: &[&str],
     allowlist_funcs: &[&str],
+    link_lib: &str,
 ) {
+    println!("cargo:rustc-link-lib={link_lib}");
+
     // find the library header path
     let mut header_path = None;
     for path in paths {
@@ -365,11 +368,6 @@ fn main() {
         println!("cargo:rustc-link-search=native={}", path.display());
     }
 
-    println!("cargo:rustc-link-lib=dylib=cuda");
-    println!("cargo:rustc-link-lib=dylib=cudart");
-    println!("cargo:rustc-link-lib=dylib=nvidia-ml");
-    println!("cargo:rustc-link-lib=dylib=cudnn");
-    println!("cargo:rustc-link-lib=dylib=cublas");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=include");
     println!("cargo:rerun-if-env-changed=CUDA_LIBRARY_PATH");
@@ -384,6 +382,7 @@ fn main() {
         &["^cuda.*", "^surfaceReference", "^textureReference"],
         &["^cuda.*", "CUDART_VERSION"],
         &["^cuda.*", "__cuda[A-Za-z]+"],
+        "dylib=cudart",
     );
 
     bind_gen(
@@ -400,6 +399,7 @@ fn main() {
         ],
         &["^CU.*"],
         &["^cu.*"],
+        "dylib=cuda",
     );
 
     bind_gen(
@@ -409,6 +409,7 @@ fn main() {
         &[],
         &[],
         &[],
+        "dylib=nvidia-ml",
     );
 
     bind_gen(
@@ -418,6 +419,7 @@ fn main() {
         &["^cudnn.*", "^CUDNN.*"],
         &["^CUDNN.*", "^cudnn.*"],
         &["^cudnn.*"],
+        "dylib=cudnn",
     );
 
     bind_gen(
@@ -427,5 +429,6 @@ fn main() {
         &["^cublas.*", "^CUBLAS.*"],
         &["^CUBLAS.*", "^cublas.*"],
         &["^cublas.*"],
+        "dylib=cublas",
     );
 }
