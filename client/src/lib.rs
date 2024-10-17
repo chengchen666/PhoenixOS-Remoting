@@ -83,13 +83,6 @@ lazy_static! {
     };
 
     static ref ELF_CONTROLLER: ElfController = ElfController::new();
-    static ref ENABLE_LOG: bool = {
-        if std::env::var("RUST_LOG").is_err() {
-            std::env::set_var("RUST_LOG", "debug");
-        }
-        env_logger::init();
-        true
-    };
 
     static ref RESOURCE_IDX: Mutex<usize> = Mutex::new(0);
 
@@ -106,7 +99,12 @@ fn get_local_info(proc_id: usize) -> Option<usize> {
     LOCAL_INFO.lock().unwrap().get(&proc_id).cloned()
 }
 
-// #[ctor]
-// fn init() {
+#[ctor::ctor]
+fn init() {
 //     core_affinity::set_for_current(1);
-// }
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "debug");
+    }
+    env_logger::init();
+    info!("[{}:{}] client init", std::file!(), std::line!());
+}

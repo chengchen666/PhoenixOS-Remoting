@@ -32,7 +32,6 @@ lazy_static! {
 
 #[no_mangle]
 pub extern "C" fn dlopen(filename: *const std::os::raw::c_char, flags: std::os::raw::c_int) -> *mut std::ffi::c_void {
-    assert_eq!(true, *ENABLE_LOG);
     // use the original dlopen to load the library
     if filename.is_null() {
         return DLOPEN_ORIG(filename, flags);
@@ -55,7 +54,6 @@ pub extern "C" fn dlopen(filename: *const std::os::raw::c_char, flags: std::os::
 
 #[no_mangle]
 pub extern "C" fn dlclose(handle: *mut std::ffi::c_void) -> std::os::raw::c_int {
-    assert_eq!(true, *ENABLE_LOG);
     let self_handles = SELF_HANDLES.lock().unwrap();
     if self_handles.contains(&(handle as usize)) {
         // if the handle is the client handle, return 0

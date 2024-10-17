@@ -120,7 +120,6 @@ pub fn transportable_derive(input: TokenStream) -> TokenStream {
 /// ```ignore
 /// #[no_mangle]
 /// pub extern "C" fn cudaGetDevice(param1: *mut ::std::os::raw::c_int) -> cudaError_t {
-///     assert_eq!(true, *ENABLE_LOG);
 ///     info!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
 ///     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
 ///     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
@@ -225,7 +224,6 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
     let gen_fn = quote! {
         #[no_mangle]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
-            assert_eq!(true, *ENABLE_LOG);
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
@@ -316,7 +314,6 @@ pub fn gen_hijack_async(input: TokenStream) -> TokenStream {
     let gen_fn = quote! {
         #[no_mangle]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
-            assert_eq!(true, *ENABLE_LOG);
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
@@ -433,7 +430,6 @@ pub fn gen_hijack_local(input: TokenStream) -> TokenStream {
     let gen_fn = quote! {
         #[no_mangle]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
-            assert_eq!(true, *ENABLE_LOG);
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());

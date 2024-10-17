@@ -826,7 +826,6 @@ pub extern "C" fn cudnnConvolutionForward(
     yDesc: cudnnTensorDescriptor_t,
     y: MemPtr,
 ) -> cudnnStatus_t {
-    assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] cudnnConvolutionForward", std::file!(), std::line!());
 
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());

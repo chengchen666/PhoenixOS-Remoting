@@ -5,7 +5,6 @@ use std::ffi::CStr;
 
 #[no_mangle]
 pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_void) -> MemPtr {
-    assert_eq!(true, *ENABLE_LOG);
     info!(
         "[{}:{}] __cudaRegisterFatBinary",
         std::file!(),
@@ -67,7 +66,6 @@ pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_voi
 
 #[no_mangle]
 pub extern "C" fn __cudaUnregisterFatBinary(fatCubinHandle: MemPtr) {
-    assert_eq!(true, *ENABLE_LOG);
     info!(
         "[{}:{}] __cudaUnregisterFatBinary",
         std::file!(),
@@ -107,7 +105,6 @@ pub extern "C" fn __cudaUnregisterFatBinary(fatCubinHandle: MemPtr) {
 
 #[no_mangle]
 pub extern "C" fn __cudaRegisterFatBinaryEnd(_fatCubinHandle: MemPtr) {
-    assert_eq!(true, *ENABLE_LOG);
     info!(
         "[{}:{}] __cudaRegisterFatBinaryEnd",
         std::file!(),
@@ -129,7 +126,6 @@ pub extern "C" fn __cudaRegisterFunction(
     _gDim: MemPtr,
     _wSize: MemPtr,
 ) {
-    assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] __cudaRegisterFunction", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
@@ -201,7 +197,6 @@ pub extern "C" fn __cudaRegisterVar(
     _constant: ::std::os::raw::c_int,
     _global: ::std::os::raw::c_int,
 ) {
-    assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] __cudaRegisterVar", std::file!(), std::line!());
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
