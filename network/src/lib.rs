@@ -120,9 +120,9 @@ impl fmt::Display for CommChannelError {
 
 impl Error for CommChannelError {}
 
-pub trait CommChannel {
-    fn get_inner(&self) -> &Box<dyn CommChannelInner>;
+pub use CommChannelInner as CommChannel;
 
+impl CommChannelInnerIO for Channel {
     /// Write bytes to the channel
     /// It may flush if the channel has no left space
     fn put_bytes(&self, src: &RawMemory) -> Result<usize, CommChannelError> {
@@ -152,7 +152,9 @@ pub trait CommChannel {
     fn safe_try_get_bytes(&self, dst: &mut RawMemoryMut) -> Result<usize, CommChannelError> {
         self.get_inner().safe_try_get_bytes(dst)
     }
+}
 
+impl CommChannelInner for Channel {
     /// Flush the all the buffered results to the channel
     fn flush_out(&self) -> Result<(), CommChannelError> {
         self.get_inner().flush_out()
@@ -177,9 +179,7 @@ impl Channel {
             inner,
         }
     }
-}
 
-impl CommChannel for Channel {
     fn get_inner(&self) -> &Box<dyn CommChannelInner> {
         &self.inner
     }

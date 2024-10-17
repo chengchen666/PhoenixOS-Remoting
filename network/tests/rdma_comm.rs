@@ -1,7 +1,7 @@
 extern crate network;
 
 use network::{
-    ringbufferchannel::RDMAChannel, Channel, CommChannel, RawMemory, RawMemoryMut,
+    ringbufferchannel::RDMAChannel, Channel, CommChannel, CommChannelInnerIO, RawMemory, RawMemoryMut,
 };
 use std::net::SocketAddr;
 

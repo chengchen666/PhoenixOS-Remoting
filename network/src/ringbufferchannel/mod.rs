@@ -123,14 +123,14 @@ pub trait RingBufferManager: BufferManager {
 }
 
 pub trait RingBufferChannel: RingBufferManager {
-    fn read_at(&self, offset: usize, dst: *mut u8, len: usize) -> usize {
+    unsafe fn read_at(&self, offset: usize, dst: *mut u8, len: usize) -> usize {
         unsafe {
             std::ptr::copy_nonoverlapping(self.get_ptr().add(offset), dst, len);
         }
         len
     }
 
-    fn write_at(&self, offset: usize, src: *const u8, len: usize) -> usize {
+    unsafe fn write_at(&self, offset: usize, src: *const u8, len: usize) -> usize {
         unsafe {
             std::ptr::copy_nonoverlapping(src, self.get_ptr().add(offset), len);
         }
