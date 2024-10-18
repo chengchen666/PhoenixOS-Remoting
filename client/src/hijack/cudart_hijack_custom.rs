@@ -197,7 +197,7 @@ pub extern "C" fn cudaLaunchKernel(
 #[no_mangle]
 pub extern "C" fn cudaHostAlloc(
     pHost: *mut *mut ::std::os::raw::c_void,
-    size: size_t,
+    size: usize,
     flags: c_uint,
 ) -> cudaError_t {
     info!(
@@ -264,7 +264,7 @@ pub extern "C" fn cudaGetErrorString(
 struct CallConfiguration {
     gridDim: dim3,
     blockDim: dim3,
-    sharedMem: size_t,
+    sharedMem: usize,
     stream: MemPtr,
 }
 
@@ -276,7 +276,7 @@ thread_local! {
 pub extern "C" fn __cudaPushCallConfiguration(
     gridDim: dim3,
     blockDim: dim3,
-    sharedMem: size_t,
+    sharedMem: usize,
     stream: MemPtr,
 ) -> cudaError_t {
     info!(
@@ -299,7 +299,7 @@ pub extern "C" fn __cudaPushCallConfiguration(
 pub extern "C" fn __cudaPopCallConfiguration(
     gridDim: *mut dim3,
     blockDim: *mut dim3,
-    sharedMem: *mut size_t,
+    sharedMem: *mut usize,
     stream: *mut MemPtr,
 ) -> cudaError_t {
     info!(

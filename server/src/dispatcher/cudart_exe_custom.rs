@@ -41,7 +41,7 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
         cudaMemcpy(
             dst as *mut std::os::raw::c_void,
             src as *const std::os::raw::c_void,
-            count as size_t,
+            count as usize,
             kind,
         )
     };

@@ -127,6 +127,8 @@ fn split(content: &str, types_file: &Path, funcs_file: &Path) {
         std::fs::create_dir_all(parent).unwrap_or_else(|e| panic!("Failed to create directory {parent:?}: {e}"));
     }
     let mut types_file = File::create(types_file).unwrap_or_else(|e| panic!("Failed to create file {types_file:?}: {e}"));
+    // TODO: remove this type alias after we use usize with the new hook codegen interface
+    writeln!(types_file, "pub type size_t = usize;").unwrap();
     writeln!(types_file, "{}", types).expect("Failed to write types");
 
     if let Some(parent) = funcs_file.parent() {
@@ -223,6 +225,10 @@ fn bind_gen(
     // The bindgen::Builder is the main entry point to bindgen, and lets you build up options for
     // the resulting bindings.
     let mut bindings = bindgen::Builder::default()
+        .layout_tests(false)
+        .formatter(bindgen::Formatter::Prettyplease)
+        // Add CargoCallbacks so build.rs is rerun on header changes
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         // The input header we would like to generate bindings for.
         .header(header_path.to_str().unwrap());
 
@@ -365,7 +371,6 @@ fn main() {
     }
 
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=include");
     println!("cargo:rerun-if-env-changed=CUDA_LIBRARY_PATH");
     eprintln!("CUDA paths: {:?}", cuda_paths);
     eprintln!("CUDA libs: {:?}", cuda_libs);
