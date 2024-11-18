@@ -37,15 +37,22 @@ fn cudaStreamSynchronize(stream: cudaStream_t) -> cudaError_t;
 #[cuda_hook_hijack(proc_id = 6)]
 fn cudaMalloc(devPtr: *mut *mut c_void, size: usize) -> cudaError_t;
 
-// gen_hijack!(
-//     7,
-//     "cudaMemcpy",
-//     "cudaError_t",
-//     "MemPtr",
-//     "MemPtr",
-//     "size_t",
-//     "cudaMemcpyKind"
-// );
+#[cuda_custom_hook] // proc_id = 7
+fn cudaMemcpy(
+    dst: *mut c_void,
+    src: *const c_void,
+    count: usize,
+    kind: cudaMemcpyKind,
+) -> cudaError_t;
+
+#[cuda_custom_hook] // proc_id = 7
+fn cudaMemcpyAsync(
+    dst: *mut c_void,
+    src: *const c_void,
+    count: usize,
+    kind: cudaMemcpyKind,
+    stream: cudaStream_t,
+) -> cudaError_t;
 
 #[cuda_hook_hijack(proc_id = 8, async_api)]
 fn cudaFree(#[device] devPtr: *mut c_void) -> cudaError_t;
@@ -68,63 +75,59 @@ fn cudaPointerGetAttributes(
     #[device] ptr: *const c_void,
 ) -> cudaError_t;
 
+#[cuda_custom_hook] // proc_id = 13
+fn cudaHostAlloc(pHost: *mut *mut c_void, size: usize, flags: c_uint) -> cudaError_t;
+
 #[cuda_hook_hijack(proc_id = 14)]
 fn cudaFuncGetAttributes(
     attr: *mut cudaFuncAttributes,
     #[device] func: *const c_void,
 ) -> cudaError_t;
 
-// gen_hijack!(
-//     100,
-//     "__cudaRegisterFatBinary",
-//     "MemPtr",
-//     "*const ::std::os::raw::c_void"
-// );
-// gen_hijack!(
-//     101,
-//     "__cudaUnregisterFatBinary",
-//     "null",
-//     "MemPtr"
-// );
-// gen_hijack!(
-//     102,
-//     "__cudaRegisterFunction",
-//     "null",
-//     "MemPtr",
-//     "MemPtr",
-//     "*mut ::std::os::raw::c_char",
-//     "*const ::std::os::raw::c_char",
-//     "::std::os::raw::c_int",
-//     "MemPtr",
-//     "MemPtr",
-//     "MemPtr",
-//     "MemPtr",
-//     "MemPtr"
-// );
-// gen_hijack!(
-//     103,
-//     "__cudaRegisterVar",
-//     "null",
-//     "MemPtr",
-//     "MemPtr",
-//     "*const ::std::os::raw::c_char",
-//     "*const ::std::os::raw::c_char",
-//     "::std::os::raw::c_int",
-//     "usize",
-//     "::std::os::raw::c_int",
-//     "::std::os::raw::c_int"
-// );
-// gen_hijack!(
-//     200,
-//     "cudaLaunchKernel",
-//     "cudaError_t",
-//     "*const ::std::os::raw::c_void",
-//     "dim3",
-//     "dim3",
-//     "*mut *mut ::std::os::raw::c_void",
-//     "usize",
-//     "cudaStream_t"
-// );
+#[cuda_custom_hook] // proc_id = 100
+fn __cudaRegisterFatBinary(fatCubin: *mut c_void) -> *mut *mut c_void;
+
+#[cuda_custom_hook] // local
+fn __cudaRegisterFatBinaryEnd(fatCubinHandle: *mut *mut c_void);
+
+#[cuda_custom_hook] // proc_id = 101
+fn __cudaUnregisterFatBinary(fatCubinHandle: *mut *mut c_void);
+
+#[cuda_custom_hook] // proc_id = 102
+fn __cudaRegisterFunction(
+    fatCubinHandle: *mut *mut c_void,
+    hostFun: *const c_char,
+    deviceFun: *mut c_char,
+    deviceName: *const c_char,
+    thread_limit: c_int,
+    tid: *mut uint3,
+    bid: *mut uint3,
+    bDim: *mut dim3,
+    gDim: *mut dim3,
+    wSize: *mut c_int,
+);
+
+#[cuda_custom_hook] // proc_id = 103
+fn __cudaRegisterVar(
+    fatCubinHandle: *mut *mut c_void,
+    hostVar: *mut c_char,
+    deviceAddress: *mut c_char,
+    deviceName: *const c_char,
+    ext: c_int,
+    size: usize,
+    constant: c_int,
+    global: c_int,
+);
+
+#[cuda_custom_hook] // proc_id = 200
+fn cudaLaunchKernel(
+    func: *const c_void,
+    gridDim: dim3,
+    blockDim: dim3,
+    args: *mut *mut c_void,
+    sharedMem: usize,
+    stream: cudaStream_t,
+) -> cudaError_t;
 
 #[cuda_hook_hijack(proc_id = 15)]
 fn cudaDeviceGetStreamPriorityRange(
@@ -140,8 +143,25 @@ fn cudaMemsetAsync(
     stream: cudaStream_t,
 ) -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 17)]
-fn cudaMemGetInfo(free: *mut usize, total: *mut usize) -> cudaError_t;
+// Somehow `cudaMemGetInfo` was also 17 but not registered at server side.
+#[cuda_custom_hook] // proc_id = 17
+fn cudaGetErrorString(error: cudaError_t) -> *const c_char;
+
+#[cuda_custom_hook] // local
+fn __cudaPushCallConfiguration(
+    gridDim: dim3,
+    blockDim: dim3,
+    sharedMem: usize,
+    stream: *mut CUstream_st,
+) -> c_uint;
+
+#[cuda_custom_hook] // local
+fn __cudaPopCallConfiguration(
+    gridDim: *mut dim3,
+    blockDim: *mut dim3,
+    sharedMem: *mut usize,
+    stream: *mut c_void,
+) -> cudaError_t;
 
 #[cuda_hook_hijack(proc_id = 18, min_cuda_version = 12)]
 fn cudaGetDeviceProperties_v2(prop: *mut cudaDeviceProp, device: c_int) -> cudaError_t;
