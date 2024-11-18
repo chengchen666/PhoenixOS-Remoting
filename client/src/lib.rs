@@ -6,16 +6,11 @@ use log::{debug, error, info, log_enabled, Level};
 #[expect(unused_imports)]
 use network::{
     ringbufferchannel::{EmulatorChannel, RDMAChannel, SHMChannel},
-    type_impl::MemPtr,
+    type_impl::{recv_slice_to, send_slice, MemPtr},
     Channel, CommChannel, CommChannelInner, Transportable, CONFIG,
 };
 
-use codegen::gen_hijack;
-#[cfg(feature = "async_api")]
-use codegen::gen_hijack_async;
-#[cfg(feature = "local")]
-use codegen::gen_hijack_local;
-use codegen::gen_unimplement;
+use codegen::cuda_hook_hijack;
 
 pub mod hijack;
 pub use hijack::*;

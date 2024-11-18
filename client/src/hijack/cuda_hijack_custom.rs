@@ -1,4 +1,4 @@
-#![allow(non_snake_case)]
+#![expect(non_snake_case)]
 use super::*;
 use cudasys::types::cuda::*;
 use std::ffi::CStr;
@@ -138,11 +138,9 @@ pub extern "C" fn __cudaRegisterFunction(
         panic!("request to register unknown function: {:?}", deviceName);
     }
     let info = unsafe { &mut *info };
-    let mut deviceName: Vec<u8> = unsafe { std::ffi::CStr::from_ptr(deviceName) }
-        .to_bytes()
+    let deviceName: Vec<u8> = unsafe { std::ffi::CStr::from_ptr(deviceName) }
+        .to_bytes_with_nul()
         .to_vec();
-    // append a null terminator!!!
-    deviceName.push(0);
 
     match proc_id.send(channel_sender) {
         Ok(()) => {}
@@ -204,10 +202,9 @@ pub extern "C" fn __cudaRegisterVar(
     let proc_id = 103;
     let mut result: CUresult = Default::default();
 
-    let mut deviceName: Vec<u8> = unsafe { std::ffi::CStr::from_ptr(deviceName) }
-        .to_bytes()
+    let deviceName: Vec<u8> = unsafe { std::ffi::CStr::from_ptr(deviceName) }
+        .to_bytes_with_nul()
         .to_vec();
-    deviceName.push(0);
 
     match proc_id.send(channel_sender) {
         Ok(()) => {}

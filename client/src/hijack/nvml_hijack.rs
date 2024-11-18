@@ -1,17 +1,12 @@
-#![allow(non_snake_case)]
 use super::*;
 use cudasys::types::nvml::*;
+use std::os::raw::*;
 
-gen_hijack!(1000, "nvmlInit_v2", "nvmlReturn_t");
-gen_hijack!(
-    1001,
-    "nvmlDeviceGetCount_v2",
-    "nvmlReturn_t",
-    "*mut ::std::os::raw::c_uint"
-);
-gen_hijack!(
-    1002,
-    "nvmlInitWithFlags",
-    "nvmlReturn_t",
-    "::std::os::raw::c_uint"
-);
+#[cuda_hook_hijack(proc_id = 1000)]
+fn nvmlInit_v2() -> nvmlReturn_t;
+
+#[cuda_hook_hijack(proc_id = 1001)]
+fn nvmlDeviceGetCount_v2(deviceCount: *mut c_uint) -> nvmlReturn_t;
+
+#[cuda_hook_hijack(proc_id = 1002)]
+fn nvmlInitWithFlags(flags: c_uint) -> nvmlReturn_t;

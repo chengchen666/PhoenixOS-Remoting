@@ -1,28 +1,15 @@
-#![allow(non_snake_case)]
 use super::*;
 use cudasys::types::cuda::*;
+use std::os::raw::*;
 
-gen_hijack!(
-    300,
-    "cuDevicePrimaryCtxGetState",
-    "CUresult",
-    "CUdevice",
-    "*mut ::std::os::raw::c_uint",
-    "*mut ::std::os::raw::c_int"
-);
+#[cuda_hook_hijack(proc_id = 300)]
+fn cuDevicePrimaryCtxGetState(dev: CUdevice, flags: *mut c_uint, active: *mut c_int) -> CUresult;
 
-gen_hijack!(
-    501,
-    "cuDriverGetVersion",
-    "CUresult",
-    "*mut ::std::os::raw::c_int"
-);
+#[cuda_hook_hijack(proc_id = 501)]
+fn cuDriverGetVersion(driverVersion: *mut c_int) -> CUresult;
 
-gen_hijack!(
-    502,
-    "cuInit",
-    "CUresult",
-    "::std::os::raw::c_uint"
-);
+#[cuda_hook_hijack(proc_id = 502)]
+fn cuInit(Flags: c_uint) -> CUresult;
 
-gen_hijack!(504, "cuCtxGetCurrent", "CUresult", "*mut CUcontext");
+#[cuda_hook_hijack(proc_id = 504)]
+fn cuCtxGetCurrent(pctx: *mut CUcontext) -> CUresult;

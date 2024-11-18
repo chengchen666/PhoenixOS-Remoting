@@ -1,32 +1,42 @@
-#![allow(non_snake_case)]
 use super::*;
 use cudasys::types::cudart::*;
+use std::os::raw::*;
 
-#[cfg(feature = "local")]
-gen_hijack_local!(
-    0,
-    "cudaGetDevice",
-    "cudaError_t",
-    "*mut ::std::os::raw::c_int"
-);
-#[cfg(not(feature = "local"))]
-gen_hijack!(
-    0,
-    "cudaGetDevice",
-    "cudaError_t",
-    "*mut ::std::os::raw::c_int"
-);
-gen_hijack!(1, "cudaSetDevice", "cudaError_t", "::std::os::raw::c_int");
-gen_hijack!(
-    2,
-    "cudaGetDeviceCount",
-    "cudaError_t",
-    "*mut ::std::os::raw::c_int"
-);
-gen_hijack!(3, "cudaGetLastError", "cudaError_t");
-gen_hijack!(4, "cudaPeekAtLastError", "cudaError_t");
-gen_hijack!(5, "cudaStreamSynchronize", "cudaError_t", "cudaStream_t");
-gen_hijack!(6, "cudaMalloc", "cudaError_t", "*mut MemPtr", "size_t");
+#[cuda_hook_hijack(proc_id = 0)]
+fn cudaGetDevice(device: *mut c_int) -> cudaError_t {
+    'client_before_send: {
+        #[cfg(feature = "local")]
+        if let Some(val) = get_local_info(proc_id as usize) {
+            unsafe {
+                *device = val as i32;
+            }
+            return cudaError_t::cudaSuccess;
+        }
+    }
+    'client_after_recv: {
+        #[cfg(feature = "local")]
+        add_local_info(proc_id as usize, *device as usize);
+    }
+}
+
+#[cuda_hook_hijack(proc_id = 1)]
+fn cudaSetDevice(device: c_int) -> cudaError_t;
+
+#[cuda_hook_hijack(proc_id = 2)]
+fn cudaGetDeviceCount(count: *mut c_int) -> cudaError_t;
+
+#[cuda_hook_hijack(proc_id = 3)]
+fn cudaGetLastError() -> cudaError_t;
+
+#[cuda_hook_hijack(proc_id = 4)]
+fn cudaPeekAtLastError() -> cudaError_t;
+
+#[cuda_hook_hijack(proc_id = 5)]
+fn cudaStreamSynchronize(stream: cudaStream_t) -> cudaError_t;
+
+#[cuda_hook_hijack(proc_id = 6)]
+fn cudaMalloc(devPtr: *mut *mut c_void, size: usize) -> cudaError_t;
+
 // gen_hijack!(
 //     7,
 //     "cudaMemcpy",
@@ -36,38 +46,34 @@ gen_hijack!(6, "cudaMalloc", "cudaError_t", "*mut MemPtr", "size_t");
 //     "size_t",
 //     "cudaMemcpyKind"
 // );
-#[cfg(feature = "async_api")]
-gen_hijack_async!(8, "cudaFree", "cudaError_t", "MemPtr");
-#[cfg(not(feature = "async_api"))]
-gen_hijack!(8, "cudaFree", "cudaError_t", "MemPtr");
-gen_hijack!(
-    9,
-    "cudaStreamIsCapturing",
-    "cudaError_t",
-    "cudaStream_t",
-    "*mut cudaStreamCaptureStatus"
-);
-gen_hijack!(
-    10,
-    "cudaGetDeviceProperties",
-    "cudaError_t",
-    "*mut cudaDeviceProp",
-    "::std::os::raw::c_int"
-);
-gen_hijack!(
-    12,
-    "cudaPointerGetAttributes", 
-    "cudaError_t", 
-    "*mut cudaPointerAttributes", 
-    "MemPtr"
-);
-gen_hijack!(
-    14,
-    "cudaFuncGetAttributes", 
-    "cudaError_t", 
-    "*mut cudaFuncAttributes", 
-    "MemPtr"
-);
+
+#[cuda_hook_hijack(proc_id = 8, async_api)]
+fn cudaFree(#[device] devPtr: *mut c_void) -> cudaError_t;
+
+#[cuda_hook_hijack(proc_id = 9)]
+fn cudaStreamIsCapturing(
+    stream: cudaStream_t,
+    pCaptureStatus: *mut cudaStreamCaptureStatus,
+) -> cudaError_t;
+
+// This function is hidden and superseded by `cudaGetDeviceProperties_v2` in CUDA 12.
+// The change is that `cudaDeviceProp` grew bigger. We don't hook it in CUDA 12
+// to prevent reading or writing past the end of allocated memory when sending or receiving data.
+#[cuda_hook_hijack(proc_id = 10, max_cuda_version = 11)]
+fn cudaGetDeviceProperties(prop: *mut cudaDeviceProp, device: c_int) -> cudaError_t;
+
+#[cuda_hook_hijack(proc_id = 12)]
+fn cudaPointerGetAttributes(
+    attributes: *mut cudaPointerAttributes,
+    #[device] ptr: *const c_void,
+) -> cudaError_t;
+
+#[cuda_hook_hijack(proc_id = 14)]
+fn cudaFuncGetAttributes(
+    attr: *mut cudaFuncAttributes,
+    #[device] func: *const c_void,
+) -> cudaError_t;
+
 // gen_hijack!(
 //     100,
 //     "__cudaRegisterFatBinary",
@@ -120,47 +126,22 @@ gen_hijack!(
 //     "cudaStream_t"
 // );
 
-gen_hijack!(
-    15,
-    "cudaDeviceGetStreamPriorityRange",
-    "cudaError_t",
-    "*mut ::std::os::raw::c_int",
-    "*mut ::std::os::raw::c_int"
-);
+#[cuda_hook_hijack(proc_id = 15)]
+fn cudaDeviceGetStreamPriorityRange(
+    leastPriority: *mut c_int,
+    greatestPriority: *mut c_int,
+) -> cudaError_t;
 
-#[cfg(feature = "async_api")]
-gen_hijack_async!(
-    16,
-    "cudaMemsetAsync", 
-    "cudaError_t", 
-    "MemPtr", 
-    "::std::os::raw::c_int", 
-    "size_t", 
-    "cudaStream_t"
-);
-#[cfg(not(feature = "async_api"))]
-gen_hijack!(
-    16,
-    "cudaMemsetAsync", 
-    "cudaError_t", 
-    "MemPtr", 
-    "::std::os::raw::c_int", 
-    "size_t", 
-    "cudaStream_t"
-);
+#[cuda_hook_hijack(proc_id = 16, async_api)]
+fn cudaMemsetAsync(
+    #[device] devPtr: *mut c_void,
+    value: c_int,
+    count: usize,
+    stream: cudaStream_t,
+) -> cudaError_t;
 
-gen_hijack!(
-    17,
-    "cudaMemGetInfo", 
-    "cudaError_t", 
-    "*mut size_t", 
-    "*mut size_t"
-);
+#[cuda_hook_hijack(proc_id = 17)]
+fn cudaMemGetInfo(free: *mut usize, total: *mut usize) -> cudaError_t;
 
-gen_hijack!(
-    18,
-    "cudaGetDeviceProperties_v2",
-    "cudaError_t",
-    "*mut cudaDeviceProp",
-    "::std::os::raw::c_int"
-);
+#[cuda_hook_hijack(proc_id = 18, min_cuda_version = 12)]
+fn cudaGetDeviceProperties_v2(prop: *mut cudaDeviceProp, device: c_int) -> cudaError_t;
