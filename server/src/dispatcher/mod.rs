@@ -8,7 +8,6 @@ mod nvml_exe;
 mod cudnn_exe_custom;
 mod cudnn_exe;
 mod cublas_exe;
-mod cublas_exe_custom;
 
 
 use self::cuda_exe::*;
@@ -19,7 +18,6 @@ use self::nvml_exe::*;
 use self::cudnn_exe_custom::*;
 use self::cudnn_exe::*;
 use self::cublas_exe::*;
-use self::cublas_exe_custom::*;
 
 pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_receiver: &mut T) {
     // let start = network::NsTimestamp::now();
@@ -64,7 +62,7 @@ pub fn dispatch<T: CommChannel>(proc_id: i32, channel_sender: &mut T, channel_re
         1502 => cudnnSetTensor4dDescriptorExe(channel_sender, channel_receiver),
         1503 => cudnnCreateActivationDescriptorExe(channel_sender, channel_receiver),
         1504 => cudnnSetActivationDescriptorExe(channel_sender, channel_receiver),
-        1505 => cudnnActivationForwardExe(channel_sender, channel_receiver),
+        1505 => unimplemented!("cudnnActivationForwardExe"),
         1506 => cudnnDestroyExe(channel_sender, channel_receiver),
         1507 => cudnnSetConvolution2dDescriptorExe(channel_sender, channel_receiver),
         1508 => cudnnSetStreamExe(channel_sender, channel_receiver),

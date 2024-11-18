@@ -1,9 +1,9 @@
+#![feature(maybe_uninit_slice)]
+
 #![expect(dead_code)]
 mod dispatcher;
 
-use codegen::gen_exe;
-#[cfg(feature = "async_api")]
-use codegen::gen_exe_async;
+use codegen::cuda_hook_exe;
 use cudasys::{
     cuda::{CUdeviceptr, CUfunction, CUmodule},
     cudart::{cudaDeviceSynchronize, cudaError_t, cudaGetDeviceCount, cudaSetDevice},
@@ -16,7 +16,7 @@ use network::ringbufferchannel::EmulatorChannel;
 #[expect(unused_imports)]
 use network::{
     ringbufferchannel::{RDMAChannel, SHMChannel},
-    type_impl::MemPtr,
+    type_impl::{recv_slice, send_slice, MemPtr},
     Channel, CommChannel, CommChannelError, Transportable, CONFIG,
 };
 

@@ -19,6 +19,7 @@ core_affinity = { workspace = true }
 
 [build-dependencies]
 cudasys = { workspace = true }
+hookgen = { workspace = true }
 
 [lib]
 crate-type = ["cdylib"]

@@ -1,8 +1,8 @@
-use super::*;
-use cudasys::types::cudart::*;
+use crate::types::cudart::*;
+use codegen::{cuda_custom_hook, cuda_hook};
 use std::os::raw::*;
 
-#[cuda_hook_hijack(proc_id = 0)]
+#[cuda_hook(proc_id = 0)]
 fn cudaGetDevice(device: *mut c_int) -> cudaError_t {
     'client_before_send: {
         #[cfg(feature = "local")]
@@ -19,22 +19,22 @@ fn cudaGetDevice(device: *mut c_int) -> cudaError_t {
     }
 }
 
-#[cuda_hook_hijack(proc_id = 1)]
+#[cuda_hook(proc_id = 1)]
 fn cudaSetDevice(device: c_int) -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 2)]
+#[cuda_hook(proc_id = 2)]
 fn cudaGetDeviceCount(count: *mut c_int) -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 3)]
+#[cuda_hook(proc_id = 3)]
 fn cudaGetLastError() -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 4)]
+#[cuda_hook(proc_id = 4)]
 fn cudaPeekAtLastError() -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 5)]
+#[cuda_hook(proc_id = 5)]
 fn cudaStreamSynchronize(stream: cudaStream_t) -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 6)]
+#[cuda_hook(proc_id = 6)]
 fn cudaMalloc(devPtr: *mut *mut c_void, size: usize) -> cudaError_t;
 
 #[cuda_custom_hook] // proc_id = 7
@@ -54,10 +54,10 @@ fn cudaMemcpyAsync(
     stream: cudaStream_t,
 ) -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 8, async_api)]
+#[cuda_hook(proc_id = 8, async_api)]
 fn cudaFree(#[device] devPtr: *mut c_void) -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 9)]
+#[cuda_hook(proc_id = 9)]
 fn cudaStreamIsCapturing(
     stream: cudaStream_t,
     pCaptureStatus: *mut cudaStreamCaptureStatus,
@@ -66,10 +66,10 @@ fn cudaStreamIsCapturing(
 // This function is hidden and superseded by `cudaGetDeviceProperties_v2` in CUDA 12.
 // The change is that `cudaDeviceProp` grew bigger. We don't hook it in CUDA 12
 // to prevent reading or writing past the end of allocated memory when sending or receiving data.
-#[cuda_hook_hijack(proc_id = 10, max_cuda_version = 11)]
+#[cuda_hook(proc_id = 10, max_cuda_version = 11)]
 fn cudaGetDeviceProperties(prop: *mut cudaDeviceProp, device: c_int) -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 12)]
+#[cuda_hook(proc_id = 12)]
 fn cudaPointerGetAttributes(
     attributes: *mut cudaPointerAttributes,
     #[device] ptr: *const c_void,
@@ -78,7 +78,7 @@ fn cudaPointerGetAttributes(
 #[cuda_custom_hook] // proc_id = 13
 fn cudaHostAlloc(pHost: *mut *mut c_void, size: usize, flags: c_uint) -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 14)]
+#[cuda_hook(proc_id = 14)]
 fn cudaFuncGetAttributes(
     attr: *mut cudaFuncAttributes,
     #[device] func: *const c_void,
@@ -129,13 +129,13 @@ fn cudaLaunchKernel(
     stream: cudaStream_t,
 ) -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 15)]
+#[cuda_hook(proc_id = 15)]
 fn cudaDeviceGetStreamPriorityRange(
     leastPriority: *mut c_int,
     greatestPriority: *mut c_int,
 ) -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 16, async_api)]
+#[cuda_hook(proc_id = 16, async_api)]
 fn cudaMemsetAsync(
     #[device] devPtr: *mut c_void,
     value: c_int,
@@ -163,5 +163,5 @@ fn __cudaPopCallConfiguration(
     stream: *mut c_void,
 ) -> cudaError_t;
 
-#[cuda_hook_hijack(proc_id = 18, min_cuda_version = 12)]
+#[cuda_hook(proc_id = 18, min_cuda_version = 12)]
 fn cudaGetDeviceProperties_v2(prop: *mut cudaDeviceProp, device: c_int) -> cudaError_t;

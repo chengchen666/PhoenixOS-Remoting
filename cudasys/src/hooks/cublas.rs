@@ -1,23 +1,23 @@
-use super::*;
-use cudasys::types::cublas::*;
+use crate::types::cublas::*;
+use codegen::cuda_hook;
 use std::os::raw::*;
 
 /// FIXME: void pointer hacking
 type HackedAssumeFloat = f32;
 
-#[cuda_hook_hijack(proc_id = 2000)]
+#[cuda_hook(proc_id = 2000)]
 fn cublasCreate_v2(handle: *mut cublasHandle_t) -> cublasStatus_t;
 
-#[cuda_hook_hijack(proc_id = 2001)]
+#[cuda_hook(proc_id = 2001)]
 fn cublasDestroy_v2(handle: cublasHandle_t) -> cublasStatus_t;
 
-#[cuda_hook_hijack(proc_id = 2002, async_api)]
+#[cuda_hook(proc_id = 2002, async_api)]
 fn cublasSetStream_v2(handle: cublasHandle_t, streamId: cudaStream_t) -> cublasStatus_t;
 
-#[cuda_hook_hijack(proc_id = 2003, async_api)]
+#[cuda_hook(proc_id = 2003, async_api)]
 fn cublasSetMathMode(handle: cublasHandle_t, mode: cublasMath_t) -> cublasStatus_t;
 
-#[cuda_hook_hijack(proc_id = 2004, async_api)]
+#[cuda_hook(proc_id = 2004, async_api)]
 fn cublasSgemm_v2(
     handle: cublasHandle_t,
     transa: cublasOperation_t,
@@ -35,7 +35,7 @@ fn cublasSgemm_v2(
     ldc: c_int,
 ) -> cublasStatus_t;
 
-#[cuda_hook_hijack(proc_id = 2005, async_api)]
+#[cuda_hook(proc_id = 2005, async_api)]
 fn cublasSgemmStridedBatched(
     handle: cublasHandle_t,
     transa: cublasOperation_t,
@@ -57,10 +57,10 @@ fn cublasSgemmStridedBatched(
     batchCount: c_int,
 ) -> cublasStatus_t;
 
-#[cuda_hook_hijack(proc_id = 2006)]
+#[cuda_hook(proc_id = 2006)]
 fn cublasGetMathMode(handle: cublasHandle_t, mode: *mut cublasMath_t) -> cublasStatus_t;
 
-#[cuda_hook_hijack(proc_id = 2007, async_api)]
+#[cuda_hook(proc_id = 2007, async_api)]
 fn cublasGemmEx(
     handle: cublasHandle_t,
     transa: cublasOperation_t,
@@ -83,7 +83,7 @@ fn cublasGemmEx(
     algo: cublasGemmAlgo_t,
 ) -> cublasStatus_t;
 
-#[cuda_hook_hijack(proc_id = 2008, async_api)]
+#[cuda_hook(proc_id = 2008, async_api)]
 fn cublasGemmStridedBatchedEx(
     handle: cublasHandle_t,
     transa: cublasOperation_t,
@@ -110,7 +110,7 @@ fn cublasGemmStridedBatchedEx(
     algo: cublasGemmAlgo_t,
 ) -> cublasStatus_t;
 
-#[cuda_hook_hijack(proc_id = 2009)]
+#[cuda_hook(proc_id = 2009)]
 fn cublasSetWorkspace_v2(
     handle: cublasHandle_t,
     #[device] workspace: *mut c_void,

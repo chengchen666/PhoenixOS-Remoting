@@ -35,6 +35,13 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", find_std_lib());
 
     create_cuda_symlinks();
+    hookgen::generate_impls(
+        "../cudasys/src/hooks/{}.rs",
+        "../cudasys/src/bindings/funcs",
+        "./src/hijack/{}_hijack.rs",
+        Some("./src/hijack/{}_unimplement.rs"),
+        (cudasys::cuda::CUDA_VERSION / 1000) as u8,
+    );
 
     println!("cargo:rerun-if-changed=build.rs");
 }

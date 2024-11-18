@@ -6,5 +6,11 @@ fn main() {
 
     println!("cargo:rerun-if-changed=build.rs");
 
-    // TODO: use bindgen (or cuda_hook) to automatically generate the FFI
+    hookgen::generate_impls(
+        "../cudasys/src/hooks/{}.rs",
+        "../cudasys/src/bindings/funcs",
+        "./src/dispatcher/{}_exe.rs",
+        None,
+        (cudasys::cuda::CUDA_VERSION / 1000) as u8,
+    );
 }

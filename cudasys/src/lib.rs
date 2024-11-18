@@ -21,6 +21,8 @@ pub mod cudnn;
 pub mod cublas;
 pub mod cublasLt;
 
+mod hooks;
+
 #[cfg(test)]
 mod tests {
     use super::*;
