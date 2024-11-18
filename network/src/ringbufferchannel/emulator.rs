@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::{
     CONFIG, CommChannelInner, CommChannelInnerIO, CommChannelError,
-    RawMemory, RawMemoryMut,
+    RawMemory, RawMemoryMut, Transportable
 };
 use super::types::*;
 
@@ -53,23 +53,6 @@ impl EmulatorChannel {
         NsTimestamp {
             sec_timestamp: sec,
             ns_timestamp: ns,
-        }
-    }
-
-    fn send<T>(&self, src: T) -> Result<(), CommChannelError> {
-        let memory = RawMemory::new(&src, std::mem::size_of::<T>());
-        match self.manager.put_bytes(&memory)? == std::mem::size_of::<T>() {
-            true => {
-                Ok(())},
-            false => Err(CommChannelError::IoError),
-        }
-    }
-
-    fn recv<T>(&self, dst: &mut T) -> Result<(), CommChannelError> {
-        let mut memory = RawMemoryMut::new(dst, std::mem::size_of::<T>());
-        match self.manager.get_bytes(&mut memory)? == std::mem::size_of::<T>() {
-            true => {Ok(())},
-            false => Err(CommChannelError::IoError),
         }
     }
 
@@ -150,8 +133,8 @@ impl CommChannelInner for EmulatorChannel {
             self.set_start(None);
         }
         let ts = self.calculate_ts(self.get_byte_cnt());
-        let _ = self.send(ts);
-        let _ = self.manager.flush_out();
+        ts.send(self)?;
+        self.manager.flush_out()?;
         self.set_byte_cnt(0);
         self.set_last_timestamp(ts);
         Ok(())
@@ -159,7 +142,7 @@ impl CommChannelInner for EmulatorChannel {
 
     fn recv_ts(&self) -> Result<(), crate::CommChannelError> {
         let mut timestamp: NsTimestamp = Default::default();
-        let _ = self.recv(&mut timestamp);
+        timestamp.recv(self)?;
         while NsTimestamp::now() < timestamp {
             // Busy-waiting
         }

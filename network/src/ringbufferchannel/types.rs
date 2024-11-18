@@ -1,32 +1,15 @@
-use crate::{RawMemory, Transportable};
+use crate::TransportableMarker;
 use std::time::UNIX_EPOCH;
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 pub struct NsTimestamp {
     pub sec_timestamp: i64,
     pub ns_timestamp: u32,
 }
-impl PartialEq for NsTimestamp {
-    fn eq(&self, other: &Self) -> bool {
-        self.sec_timestamp == other.sec_timestamp && self.ns_timestamp == other.ns_timestamp
-    }
-}
-
-impl PartialOrd for NsTimestamp {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match self.sec_timestamp.cmp(&other.sec_timestamp) {
-            std::cmp::Ordering::Equal => self.ns_timestamp.partial_cmp(&other.ns_timestamp),
-            other_order => Some(other_order),
-        }
-    }
-}
 
 impl NsTimestamp {
     pub fn new() -> NsTimestamp {
-        NsTimestamp {
-            sec_timestamp: 0,
-            ns_timestamp: 0,
-        }
+        Self::default()
     }
     pub fn now() -> NsTimestamp {
         let now_time = std::time::SystemTime::now();
@@ -40,35 +23,4 @@ impl NsTimestamp {
     }
 }
 
-impl NsTimestamp {
-    pub fn to_raw_memory(&self) -> RawMemory {
-        let mut data = [0u8; std::mem::size_of::<NsTimestamp>()];
-        // 0-7 bytes for sec_timestamp
-        data[0..8].copy_from_slice(&self.sec_timestamp.to_le_bytes());
-        // 8-11 bytes for ms_timestamp
-        data[8..12].copy_from_slice(&self.ns_timestamp.to_le_bytes());
-        RawMemory::from_ptr(data.as_ptr(), data.len())
-    }
-}
-
-impl Transportable for NsTimestamp {
-    fn emulate_send<T: crate::CommChannel>(&self, channel: &mut T) -> Result<(), crate::CommChannelError> {
-        self.sec_timestamp.emulate_send(channel)?;
-        self.ns_timestamp.emulate_send(channel)
-    }
-    fn send<T: crate::CommChannel>(
-        &self,
-        channel: &mut T,
-    ) -> Result<(), crate::CommChannelError> {
-        self.sec_timestamp.send(channel)?;
-        self.ns_timestamp.send(channel)
-    }
-
-    fn recv<T: crate::CommChannel>(
-        &mut self,
-        channel: &mut T,
-    ) -> Result<(), crate::CommChannelError> {
-        self.sec_timestamp.recv(channel)?;
-        self.ns_timestamp.recv(channel)
-    }
-}
+impl TransportableMarker for NsTimestamp {}

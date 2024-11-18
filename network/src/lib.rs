@@ -207,9 +207,9 @@ pub trait CommChannelInnerIO {
 ///
 /// Every type wanted to be transfered should implement this trait.
 pub trait Transportable {
-    fn emulate_send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError>;
+    fn send<C: CommChannel>(&self, channel: &C) -> Result<(), CommChannelError>;
 
-    fn send<T: CommChannel>(&self, channel: &mut T) -> Result<(), CommChannelError>;
-
-    fn recv<T: CommChannel>(&mut self, channel: &mut T) -> Result<(), CommChannelError>;
+    fn recv<C: CommChannel>(&mut self, channel: &C) -> Result<(), CommChannelError>;
 }
+
+pub trait TransportableMarker: Copy {}
