@@ -1,14 +1,34 @@
+#![feature(proc_macro_diagnostic)]
+
+use hookdef::{is_hacked_type, CustomHookFn, HookInjections};
 use proc_macro::TokenStream;
-use quote::{format_ident, quote};
-use syn::{parse_macro_input, parse_str, Ident, Type};
+use quote::{format_ident, quote, quote_each_token_spanned, quote_spanned};
+use syn::parse::Nothing;
+use syn::spanned::Spanned as _;
+use syn::{parse_macro_input, Type};
 
 mod utils;
-use utils::{
-    Element, ElementMode, ExeParser, HijackParser, UnimplementParser,
-    get_success_status
-};
-#[cfg(feature = "shadow_desc")]
-use utils::SHADOW_DESC_TYPES;
+use utils::{is_shadow_desc_type, is_void_ptr, ElementMode, PassBy};
+
+mod hook_fn;
+use hook_fn::HookFn;
+
+/// Basic checks on a hook declaration
+#[proc_macro_attribute]
+pub fn cuda_hook(args: TokenStream, input: TokenStream) -> TokenStream {
+    match HookFn::parse(args.into(), input.into()) {
+        Ok(func) => func.into_plain_fn().into(),
+        Err(err) => err.to_compile_error().into(),
+    }
+}
+
+#[proc_macro_attribute]
+pub fn cuda_custom_hook(args: TokenStream, input: TokenStream) -> TokenStream {
+    parse_macro_input!(args as Nothing);
+    parse_macro_input!(input as CustomHookFn)
+        .to_plain_fn()
+        .into()
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// The derive macros for auto trait impl.
@@ -46,9 +66,6 @@ pub fn transportable_derive(input: TokenStream) -> TokenStream {
 
 /// The procedural macro to generate hijack functions for client intercepting application calls.
 ///
-/// To use this macro, annotate a call to `gen_hijack` with specified proc_id and the desired function name,
-/// followed by the types of the return and parameters as string literals.
-///
 /// ### Example
 /// We have a function `cudaGetDevice` with the following signature:
 ///
@@ -59,71 +76,25 @@ pub fn transportable_derive(input: TokenStream) -> TokenStream {
 /// To use this macro generating a hijack function for interception, we can write:
 ///
 /// ```ignore
-/// gen_hijack!("0", "cudaGetDevice", "cudaError_t", "*mut ::std::os::raw::c_int");
+/// #[cuda_hook_hijack(proc_id = 0)]
+/// fn cudaGetDevice(device: *mut ::std::os::raw::c_int) -> cudaError_t;
 /// ```
 ///
 /// This invocation generates a function `cudaGetDevice` with the same signature as the original function,
 /// which will intercept the call to `cudaGetDevice` and send the parameters to the server then wait for the result.
-///
-/// Specifically, the function is expanded as:
-///
-/// ```ignore
-/// #[no_mangle]
-/// pub extern "C" fn cudaGetDevice(param1: *mut ::std::os::raw::c_int) -> cudaError_t {
-///     info!("[{}:{}] cudaGetDevice", std::file!(), std::line!());
-///     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-///     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
-///     let proc_id = 0;
-///     let mut var1: ::std::os::raw::c_int = Default::default();
-///     let mut result: cudaError_t = Default::default();
-
-///     match proc_id.send(channel_sender) {
-///         Ok(()) => {}
-///         Err(e) => panic!("failed to send proc_id: {:?}", e),
-///     }
-///     match channel_sender.flush_out() {
-///         Ok(()) => {}
-///         Err(e) => panic!("failed to send: {:?}", e),
-///     }
-
-///     match var1.recv(channel_receiver) {
-///         Ok(()) => {}
-///         Err(e) => panic!("failed to receive var1: {:?}", e),
-///     }
-///     match result.recv(channel_receiver) {
-///         Ok(()) => {}
-///         Err(e) => panic!("failed to receive result: {:?}", e),
-///     }
-///     unsafe {
-///         *param1 = var1;
-///     }
-///     return result;
-/// }
-/// ```
-///
-#[proc_macro]
-pub fn gen_hijack(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as HijackParser);
+#[proc_macro_attribute]
+pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
+    let input = match HookFn::parse(args.into(), input.into()) {
+        Ok(func) => func,
+        Err(err) => return err.to_compile_error().into(),
+    };
 
     let (proc_id, func, result, params) = (input.proc_id, input.func, input.result, input.params);
 
-    let vars: Vec<Element> = params
+    let vars: Box<_> = params
         .iter()
         .filter(|param| param.mode == ElementMode::Output)
-        .enumerate()
-        .map(|(i, param)| Element {
-            name: format_ident!("var{}", i + 1),
-            ty: param.ty.clone(),
-            mode: ElementMode::Output,
-        })
         .collect();
-
-    // definition statements
-    let def_statements = vars.iter().map(|var| {
-        let name = &var.name;
-        let ty = &var.ty;
-        quote! { let mut #name: #ty = Default::default(); }
-    });
 
     // send parameters
     let send_statements = params
@@ -131,10 +102,43 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
         .filter(|param| param.mode == ElementMode::Input)
         .map(|param| {
             let name = &param.name;
-            quote! {
+            let deref = match &param.pass_by {
+                PassBy::InputValue => Default::default(),
+                PassBy::SinglePtr => {
+                    if is_hacked_type(&param.ty) {
+                        quote! { let #name = unsafe { std::ptr::read_unaligned(#name) }; }
+                    } else {
+                        quote! { let #name = unsafe { *#name }; }
+                    }
+                }
+                PassBy::ArrayPtr { len, .. } => {
+                    let Type::Ptr(ty) = &param.ty else { panic!() };
+                    let ptr = if is_void_ptr(ty) {
+                        quote!(#name as *const u8)
+                    } else {
+                        quote!(#name)
+                    };
+                    let len_ident = format_ident!("{}_len", name);
+                    let mut tokens = quote_spanned! {len.span()=>
+                        let #len_ident = usize::try_from((#len).clone()).unwrap();
+                    };
+                    let span = name.span();
+                    quote_each_token_spanned! {tokens span
+                        let #name = unsafe { std::slice::from_raw_parts(#ptr, #len_ident) };
+                        match send_slice(#name, channel_sender) {
+                            Ok(()) => {}
+                            Err(e) => panic!("failed to send {}: {}", stringify!(#name), e),
+                        }
+                    };
+                    return tokens;
+                }
+            };
+            quote_spanned! {name.span()=>
+                #deref
+                log::debug!("(input) {} = {:?}", stringify!(#name), #name);
                 match #name.send(channel_sender) {
                     Ok(()) => {}
-                    Err(e) => panic!("failed to send #name: {:?}", e),
+                    Err(e) => panic!("failed to send {}: {}", stringify!(#name), e),
                 }
             }
         });
@@ -142,274 +146,126 @@ pub fn gen_hijack(input: TokenStream) -> TokenStream {
     // receive vars
     let recv_statements = vars.iter().map(|var| {
         let name = &var.name;
-        quote! {
+        let deref = match &var.pass_by {
+            PassBy::InputValue => unreachable!(),
+            PassBy::SinglePtr => quote! { let #name = unsafe { &mut *#name }; },
+            PassBy::ArrayPtr { len, .. } => {
+                let Type::Ptr(ty) = &var.ty else { panic!() };
+                let ptr = if is_void_ptr(ty) {
+                    quote!(#name as *mut u8)
+                } else {
+                    quote!(#name)
+                };
+                let len_ident = format_ident!("{}_len", name);
+                let mut tokens = quote_spanned! {len.span()=>
+                    let #len_ident = usize::try_from((#len).clone()).unwrap();
+                };
+                let span = name.span();
+                quote_each_token_spanned! {tokens span
+                    let #name = unsafe { std::slice::from_raw_parts_mut(#ptr, #len_ident) };
+                    match recv_slice_to(#name, channel_receiver) {
+                        Ok(()) => {}
+                        Err(e) => panic!("failed to send {}: {}", stringify!(#name), e),
+                    }
+                };
+                return tokens;
+            }
+        };
+        quote_spanned! {name.span()=>
+            // FIXME: allocate space for null pointers
+            #deref
             match #name.recv(channel_receiver) {
                 Ok(()) => {}
-                Err(e) => panic!("failed to receive #name: {:?}", e),
+                Err(e) => panic!("failed to receive {}: {}", stringify!(#name), e),
             }
+            log::debug!("(output) {} = {:?}", stringify!(#name), #name);
         }
     });
-
-    // assign vars to params
-    let assign_statements = params
-        .iter()
-        .filter(|param| param.mode == ElementMode::Output)
-        .zip(vars.iter())
-        .map(|(param, var)| {
-            let param_name = &param.name;
-            let var_name = &var.name;
-            quote! { unsafe { *#param_name = #var_name; } }
-        });
 
     let params = params.iter().map(|param| {
         let name = &param.name;
         let ty = &param.ty;
-        match param.mode {
-            ElementMode::Input => quote! { #name: #ty },
-            ElementMode::Output => quote! { #name: *mut #ty },
-        }
+        quote! { #name: #ty }
     });
     let result_name = &result.name;
     let result_ty = &result.ty;
+
+    let async_api_return = if input.is_async_api {
+        quote! {
+            if cfg!(feature = "async_api") {
+                return #result_name;
+            }
+        }
+    } else {
+        Default::default()
+    };
+
+    let (shadow_desc_send, shadow_desc_return) = if input.is_create_shadow_desc {
+        let name = &vars[0].name;
+        let shadow_desc_send = quote_spanned! {name.span()=>
+            if cfg!(feature = "shadow_desc") {
+                let resource_idx = *RESOURCE_IDX.lock().unwrap();
+                unsafe {
+                    *#name = resource_idx;
+                }
+                *RESOURCE_IDX.lock().unwrap() += 1;
+                match resource_idx.send(channel_sender) {
+                    Ok(()) => {}
+                    Err(e) => panic!("failed to send {}: {}", stringify!(#name), e),
+                }
+            }
+        };
+        let shadow_desc_return = quote! {
+            if cfg!(feature = "shadow_desc") {
+                return #result_name;
+            }
+        };
+        (shadow_desc_send, shadow_desc_return)
+    } else {
+        Default::default()
+    };
+
+    let HookInjections { client_before_send, client_after_recv } = input.injections;
+
     let gen_fn = quote! {
         #[no_mangle]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
             let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
-            let proc_id = #proc_id;
-            #( #def_statements )*
+            let proc_id: i32 = #proc_id;
             let mut #result_name: #result_ty = Default::default();
-            
+
+            #client_before_send
+
             match proc_id.send(channel_sender) {
                 Ok(()) => {}
-                Err(e) => panic!("failed to send proc_id: {:?}", e),
+                Err(e) => panic!("failed to send {}: {}", "proc_id", e),
             }
             #( #send_statements )*
+            #shadow_desc_send
 
             match channel_sender.flush_out() {
                 Ok(()) => {}
-                Err(e) => panic!("failed to flush_out: {:?}", e),
+                Err(e) => panic!("failed to flush_out: {}", e),
             }
 
+            #shadow_desc_return
+            #async_api_return
+
             #( #recv_statements )*
-            #( #assign_statements )*
             match #result_name.recv(channel_receiver) {
                 Ok(()) => {}
-                Err(e) => panic!("failed to receive #result_name: {:?}", e),
+                Err(e) => panic!("failed to receive {}: {}", stringify!(#result_name), e),
             }
             match channel_receiver.recv_ts() {
                 Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
+                Err(e) => panic!("failed to receive {}: {}", "timestamp", e),
             }
-            return #result_name;
-        }
-    };
-
-    gen_fn.into()
-}
-
-#[proc_macro]
-pub fn gen_hijack_async(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as HijackParser);
-
-    let (proc_id, func, result, params) = (input.proc_id, input.func, input.result, input.params);
-
-    let vars: Vec<Element> = params
-        .iter()
-        .filter(|param| param.mode == ElementMode::Output)
-        .enumerate()
-        .map(|(i, param)| Element {
-            name: format_ident!("var{}", i + 1),
-            ty: param.ty.clone(),
-            mode: ElementMode::Output,
-        })
-        .collect();
-
-    // definition statements
-    let def_statements = vars.iter().map(|var| {
-        let name = &var.name;
-        let ty = &var.ty;
-        quote! { let mut #name: #ty = Default::default(); }
-    });
-
-    // send parameters
-    let send_statements = params
-        .iter()
-        .filter(|param| param.mode == ElementMode::Input)
-        .map(|param| {
-            let name = &param.name;
-            quote! {
-                match #name.send(channel_sender) {
-                    Ok(()) => {}
-                    Err(e) => panic!("failed to send #name: {:?}", e),
-                }
+            if #result_name != Default::default() {
+                log::warn!("{} returned error: {:?}", stringify!(#func), #result_name);
             }
-        });
-
-    let params = params.iter().map(|param| {
-        let name = &param.name;
-        let ty = &param.ty;
-        match param.mode {
-            ElementMode::Input => quote! { #name: #ty },
-            ElementMode::Output => quote! { #name: *mut #ty },
-        }
-    });
-    let result_ty = &result.ty;
-    let result_ty_str = quote!(#result_ty).to_string();
-    let tmp = result_ty_str.clone();
-    let success_status = get_success_status(tmp.as_str());
-    let result = result_ty_str + "::" + success_status;
-    let result: Type = parse_str(&result).unwrap();
-    let gen_fn = quote! {
-        #[no_mangle]
-        pub extern "C" fn #func(#(#params),*) -> #result_ty {
-            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
-            let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-            let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
-            let proc_id = #proc_id;
-            #( #def_statements )*
-            
-            match proc_id.send(channel_sender) {
-                Ok(()) => {}
-                Err(e) => panic!("failed to send proc_id: {:?}", e),
-            }
-            #( #send_statements )*
-            match channel_sender.flush_out() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to flush_out: {:?}", e),
-            }
-            return #result;
-        }
-    };
-
-    gen_fn.into()
-}
-
-#[proc_macro]
-pub fn gen_hijack_local(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as HijackParser);
-
-    let (proc_id, func, result, params) = (input.proc_id, input.func, input.result, input.params);
-
-    let vars: Vec<Element> = params
-        .iter()
-        .filter(|param| param.mode == ElementMode::Output)
-        .enumerate()
-        .map(|(i, param)| Element {
-            name: format_ident!("var{}", i + 1),
-            ty: param.ty.clone(),
-            mode: ElementMode::Output,
-        })
-        .collect();
-    
-    assert!(vars.len() == 1);
-
-    // definition statements
-    let def_statements = vars.iter().map(|var| {
-        let name = &var.name;
-        let ty = &var.ty;
-        quote! { let mut #name: #ty = Default::default(); }
-    });
-
-    // send parameters
-    let send_statements = params
-        .iter()
-        .filter(|param| param.mode == ElementMode::Input)
-        .map(|param| {
-            let name = &param.name;
-            quote! {
-                match #name.send(channel_sender) {
-                    Ok(()) => {}
-                    Err(e) => panic!("failed to send #name: {:?}", e),
-                }
-            }
-        });
-
-    // receive vars
-    let recv_statements = vars.iter().map(|var| {
-        let name = &var.name;
-        quote! {
-            match #name.recv(channel_receiver) {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive #name: {:?}", e),
-            }
-        }
-    });
-
-    let get_statements = params
-        .iter()
-        .filter(|param| param.mode == ElementMode::Output).map(|param| {
-            let name = &param.name;
-            quote! {
-                if let Some(val) = get_local_info(proc_id as usize) {
-                    unsafe { *#name = val as i32; }
-                    return cudaError_t::cudaSuccess;
-                }
-            }
-        });
-
-    let add_statements = vars.iter().map(|var| {
-        let name = &var.name;
-        quote! {
-            add_local_info(proc_id as usize, #name as usize);
-        }
-    });
-
-    // assign vars to params
-    let assign_statements = params
-        .iter()
-        .filter(|param| param.mode == ElementMode::Output)
-        .zip(vars.iter())
-        .map(|(param, var)| {
-            let param_name = &param.name;
-            let var_name = &var.name;
-            quote! { unsafe { *#param_name = #var_name; } }
-        });
-
-    let params = params.iter().map(|param| {
-        let name = &param.name;
-        let ty = &param.ty;
-        match param.mode {
-            ElementMode::Input => quote! { #name: #ty },
-            ElementMode::Output => quote! { #name: *mut #ty },
-        }
-    });
-    let result_name = &result.name;
-    let result_ty = &result.ty;
-    let gen_fn = quote! {
-        #[no_mangle]
-        pub extern "C" fn #func(#(#params),*) -> #result_ty {
-            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
-            let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-            let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
-            let proc_id = #proc_id;
-            #( #def_statements )*
-            let mut #result_name: #result_ty = Default::default();
-
-            #( #get_statements )*
-            
-            match proc_id.send(channel_sender) {
-                Ok(()) => {}
-                Err(e) => panic!("failed to send proc_id: {:?}", e),
-            }
-            #( #send_statements )*
-            match channel_sender.flush_out() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to flush_out: {:?}", e),
-            }
-
-            #( #recv_statements )*
-            #( #assign_statements )*
-            match #result_name.recv(channel_receiver) {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive #result_name: {:?}", e),
-            }
-            match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e),
-            }
-            #( #add_statements )*
+            #client_after_recv
             return #result_name;
         }
     };
@@ -423,9 +279,6 @@ pub fn gen_hijack_local(input: TokenStream) -> TokenStream {
 
 /// The procedural macro to generate execution functions for the server dispatcher.
 ///
-/// To use this macro, annotate a call to `gen_exe` with the desired function name as the first
-/// string literal argument, followed by the types of the return and parameters as string literals.
-///
 /// ### Example
 /// We have a function `cudaSetDevice` with the following signature:
 ///
@@ -436,38 +289,60 @@ pub fn gen_hijack_local(input: TokenStream) -> TokenStream {
 /// To use this macro generating a helper function for the server dispatcher, we can write:
 ///
 /// ```ignore
-/// gen_exe!("cudaSetDevice", "cudaError_t", "::std::os::raw::c_int");
+/// #[cuda_hook_exe(proc_id = 1)]
+/// fn cudaSetDevice(device: ::std::os::raw::c_int) -> cudaError_t;
 /// ```
 ///
 /// This invocation generates a function `cudaSetDeviceExe` with `channel_sender` and `channel_receiver` for communication.
 /// `cudaSetDeviceExe` will be called by the server dispatcher to execute the native `cudaSetDevice` function and send the result back to the client.
-///
-/// Specifically, the function is expanded as:
-///
-/// ```ignore
-/// pub fn cudaSetDeviceExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-///     info!("[{}:{}] cudaSetDevice", std::file!(), std::line!());
-///     let mut param1: ::std::os::raw::c_int = Default::default();
-///     param1.recv(channel_receiver).unwrap();
-///     let result = unsafe { cudaSetDevice(param1) };
-///     result.send(channel_sender).unwrap();
-///     channel_sender.flush_out().unwrap();
-/// }
-/// ```
-///
-#[proc_macro]
-pub fn gen_exe(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as ExeParser);
+#[proc_macro_attribute]
+pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
+    let input = match HookFn::parse(args.into(), input.into()) {
+        Ok(func) => func,
+        Err(err) => return err.to_compile_error().into(),
+    };
 
     let (func, result, params) = (input.func, input.result, input.params);
-    let func_exe = Ident::new(&format!("{}Exe", func), func.span());
+    let func_exe = format_ident!("{}Exe", func);
 
     // definition statements
     let def_statements = params.iter().map(|param| {
+        if param.mode == ElementMode::Input {
+            return Default::default();
+        }
         let name = &param.name;
         let ty = &param.ty;
-        quote! { let mut #name: #ty = Default::default(); }
+        let Type::Ptr(ptr) = ty else { panic!() };
+        let ty = ptr.elem.as_ref();
+        match &param.pass_by {
+            PassBy::InputValue => unreachable!(),
+            PassBy::SinglePtr => quote_spanned! {name.span()=>
+                let mut #name = std::mem::MaybeUninit::<#ty>::uninit();
+            },
+            PassBy::ArrayPtr { len, cap } => {
+                let cap = cap.as_ref().unwrap_or(len);
+                let cap_ident = format_ident!("{}_cap", name);
+                let mut tokens = quote_spanned! {cap.span()=>
+                    let #cap_ident = usize::try_from((#cap).clone()).unwrap();
+                };
+                let span = name.span();
+                quote_each_token_spanned! {tokens span
+                    let mut #name = Box::<[#ty]>::new_uninit_slice(#cap_ident);
+                };
+                tokens
+            }
+        }
     });
+    let assume_init = params
+        .iter()
+        .filter(|param| param.mode == ElementMode::Output)
+        .map(|param| {
+            let name = &param.name;
+            quote_spanned! {name.span()=>
+                let #name = unsafe { #name.assume_init() };
+                log::debug!("(output) {} = {:?}", stringify!(#name), #name);
+            }
+        });
 
     // receive parameters
     let recv_statements = params
@@ -475,37 +350,56 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
         .filter(|param| param.mode == ElementMode::Input)
         .map(|param| {
             let name = &param.name;
-            quote! { #name.recv(channel_receiver).unwrap(); }
+            let ty = match &param.pass_by {
+                PassBy::InputValue => &param.ty,
+                PassBy::SinglePtr => {
+                    let Type::Ptr(ptr) = &param.ty else { panic!() };
+                    ptr.elem.as_ref()
+                }
+                PassBy::ArrayPtr { .. } => {
+                    let Type::Ptr(ptr) = &param.ty else { panic!() };
+                    let ty = ptr.elem.as_ref();
+                    return quote_spanned! {name.span()=>
+                        let #name = match recv_slice::<#ty, _>(channel_receiver) {
+                            Ok(slice) => slice,
+                            Err(e) => panic!("failed to receive {}: {}", stringify!(#name), e),
+                        };
+                    };
+                }
+            };
+            quote_spanned! {name.span()=>
+                let mut #name = std::mem::MaybeUninit::<#ty>::uninit();
+                match #name.recv(channel_receiver) {
+                    Ok(()) => {}
+                    Err(e) => panic!("failed to receive {}: {}", stringify!(#name), e),
+                }
+                let #name = unsafe { #name.assume_init() };
+                log::debug!("(input) {} = {:?}", stringify!(#name), #name);
+            }
         });
 
-    #[cfg(feature = "shadow_desc")]
-    let (mut is_destroy, mut resource_str) = (false, String::new());
-    #[cfg(feature = "shadow_desc")]
-    {
-        let func_name = quote!{#func}.to_string();
-        let parts: Vec<_> = func_name.split("Destroy").collect();
-        if parts.len() == 2 {
-            (is_destroy, resource_str) = (true, parts[1].to_string());
-        }
-    }
+    let is_destroy = func.to_string().contains("Destroy");
 
     // get resource when SR
-    #[cfg(feature = "shadow_desc")]
     let get_resource_statements = params
         .iter()
         .filter(|param| {
             let ty = &param.ty;
-            let ty_str = quote!{#ty}.to_string();
-            SHADOW_DESC_TYPES.contains(&ty_str)
+            param.mode == ElementMode::Input && is_shadow_desc_type(ty)
         })
         .map(|param| {
             let name = &param.name;
-            let ty = &param.ty;
-            let ty_str = quote!{#ty}.to_string();
-            if is_destroy && ty_str.contains(&resource_str) {
-                quote! { let mut #name = remove_resource(#name as usize); }
+            if is_destroy {
+                assert_eq!(params.len(), 1);
+                quote! {
+                    #[cfg(feature = "shadow_desc")]
+                    let #name = remove_resource(#name as usize);
+                }
             } else {
-                quote! { let mut #name = get_resource(#name as usize); }
+                quote! {
+                    #[cfg(feature = "shadow_desc")]
+                    let #name = get_resource(#name as usize);
+                }
             }
         });
 
@@ -515,9 +409,24 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
         let result_ty = &result.ty;
         let params = params.iter().map(|param| {
             let name = &param.name;
-            match param.mode {
-                ElementMode::Input => quote! { #name },
-                ElementMode::Output => quote! { &mut #name },
+            let arg = match param.mode {
+                ElementMode::Input => match &param.pass_by {
+                    PassBy::InputValue => quote!(#name),
+                    PassBy::SinglePtr => quote_spanned!(name.span()=> &raw const #name),
+                    PassBy::ArrayPtr { .. } => quote_spanned!(name.span()=> #name.as_ptr()),
+                },
+                ElementMode::Output => match &param.pass_by {
+                    PassBy::InputValue => unreachable!(),
+                    PassBy::SinglePtr => quote_spanned!(name.span()=> #name.as_mut_ptr()),
+                    PassBy::ArrayPtr { .. } => quote_spanned! {name.span()=>
+                        std::mem::MaybeUninit::slice_as_mut_ptr(&mut #name)
+                    },
+                },
+            };
+            if is_hacked_type(&param.ty) {
+                quote_spanned!(name.span()=> std::mem::transmute(#arg))
+            } else {
+                arg
             }
         });
         quote! { let #result_name: #result_ty = unsafe { #func(#(#params),*) }; }
@@ -529,157 +438,92 @@ pub fn gen_exe(input: TokenStream) -> TokenStream {
         .filter(|param| param.mode == ElementMode::Output)
         .map(|param| {
             let name = &param.name;
-            quote! { #name.send(channel_sender).unwrap(); }
+            let send = match &param.pass_by {
+                PassBy::InputValue => unreachable!(),
+                PassBy::SinglePtr => quote! { #name.send(channel_sender) },
+                PassBy::ArrayPtr { len, .. } => {
+                    let len_ident = format_ident!("{}_len", name);
+                    let mut tokens = quote_spanned! {len.span()=>
+                        let #len_ident = usize::try_from((#len).clone()).unwrap();
+                    };
+                    let span = name.span();
+                    quote_each_token_spanned! {tokens span
+                        send_slice(&#name[..#len_ident], channel_sender)
+                    };
+                    tokens
+                }
+            };
+            quote_spanned! {name.span()=>
+                match { #send } {
+                    Ok(()) => {}
+                    Err(e) => panic!("failed to send {}: {}", stringify!(#name), e),
+                }
+            }
         });
 
-    #[cfg(feature = "shadow_desc")]
+    let (shadow_desc_recv, shadow_desc_return) = if input.is_create_shadow_desc {
+        let name = &params[0].name;
+        let shadow_desc_recv = quote_spanned! {name.span()=>
+            #[cfg(feature = "shadow_desc")]
+            let mut resource_idx = 0usize;
+            #[cfg(feature = "shadow_desc")]
+            match resource_idx.recv(channel_receiver) {
+                Ok(()) => {}
+                Err(e) => panic!("failed to receive {}: {}", stringify!(#name), e),
+            }
+        };
+        let shadow_desc_return = quote_spanned! {name.span()=>
+            #[cfg(feature = "shadow_desc")]
+            add_resource(resource_idx, #name as usize);
+            if cfg!(feature = "shadow_desc") {
+                return;
+            }
+        };
+        (shadow_desc_recv, shadow_desc_return)
+    } else {
+        Default::default()
+    };
+
+    let async_api_return = if input.is_async_api {
+        quote! {
+            if cfg!(feature = "async_api") {
+                return;
+            }
+        }
+    } else {
+        Default::default()
+    };
+
     let gen_fn = quote! {
+        #[allow(non_snake_case)]
         pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
             info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
-            #( #def_statements )*
             #( #recv_statements )*
             #( #get_resource_statements )*
+            #shadow_desc_recv
             match channel_receiver.recv_ts() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive timestamp: {:?}", e)
             }
-            #exec_statement
-            #( #send_statements )*
-            #result_name.send(channel_sender).unwrap();
-            channel_sender.flush_out().unwrap();
-        }
-    };
-    #[cfg(not(feature = "shadow_desc"))]
-    let gen_fn = quote! {
-        pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
             #( #def_statements )*
-            #( #recv_statements )*
-            match channel_receiver.recv_ts() {
-                Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e)
+            #exec_statement
+            #( #assume_init )*
+
+            if #result_name != Default::default() {
+                log::warn!("{} returned error: {:?}", stringify!(#func), #result_name);
             }
 
-            #exec_statement
+            #shadow_desc_return
+            #async_api_return
             #( #send_statements )*
-            #result_name.send(channel_sender).unwrap();
-            channel_sender.flush_out().unwrap();
-        }
-    };
-
-    gen_fn.into()
-}
-
-#[proc_macro]
-pub fn gen_exe_async(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as ExeParser);
-
-    let (func, result, params) = (input.func, input.result, input.params);
-    let func_exe = Ident::new(&format!("{}Exe", func), func.span());
-
-    // definition statements
-    let def_statements = params.iter().map(|param| {
-        let name = &param.name;
-        let ty = &param.ty;
-        quote! { let mut #name: #ty = Default::default(); }
-    });
-
-    // receive parameters
-    let recv_statements = params
-        .iter()
-        .filter(|param| param.mode == ElementMode::Input)
-        .map(|param| {
-            let name = &param.name;
-            quote! { #name.recv(channel_receiver).unwrap(); }
-        });
-
-    #[cfg(feature = "shadow_desc")]
-    let (mut is_destroy, mut resource_str) = (false, String::new());
-    #[cfg(feature = "shadow_desc")]
-    {
-        let func_name = quote!{#func}.to_string();
-        let parts: Vec<_> = func_name.split("Destroy").collect();
-        if parts.len() == 2 {
-            (is_destroy, resource_str) = (true, parts[1].to_string());
-        }
-    }
-
-    // get resource when SR
-    #[cfg(feature = "shadow_desc")]
-    let get_resource_statements = params
-        .iter()
-        .filter(|param| {
-            let ty = &param.ty;
-            let ty_str = quote!{#ty}.to_string();
-            SHADOW_DESC_TYPES.contains(&ty_str)
-        })
-        .map(|param| {
-            let name = &param.name;
-            let ty = &param.ty;
-            let ty_str = quote!{#ty}.to_string();
-            if is_destroy && ty_str.contains(&resource_str) {
-                quote! { let mut #name = remove_resource(#name as usize); }
-            } else {
-                quote! { let mut #name = get_resource(#name as usize); }
-            }
-        });
-    #[cfg(not(feature = "shadow_desc"))]
-    let get_resource_statements = params.iter().filter(|_| false).map(|_| quote! {;});
-
-    // execution statement
-    let result_name = &result.name;
-    let exec_statement = {
-        let result_ty = &result.ty;
-        let params = params.iter().map(|param| {
-            let name = &param.name;
-            match param.mode {
-                ElementMode::Input => quote! { #name },
-                ElementMode::Output => quote! { &mut #name },
-            }
-        });
-        quote! { let #result_name: #result_ty = unsafe { #func(#(#params),*) }; }
-    };
-
-    assert!(params.iter().filter(|param| param.mode == ElementMode::Output).count() == 0);
-    let gen_fn = quote! {
-        pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
-            #( #def_statements )*
-            #( #recv_statements )*
-            #( #get_resource_statements )*
-            match channel_receiver.recv_ts() {
+            match #result_name.send(channel_sender) {
                 Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e)
+                Err(e) => panic!("failed to send {}: {}", stringify!(#result_name), e),
             }
-            #exec_statement
-        }
-    };
-    gen_fn.into()
-}
-
-#[proc_macro]
-pub fn gen_unimplement(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as UnimplementParser);
-
-    let (func, result, params) = (input.func, input.result, input.params);
-
-    let func_str = func.to_string();
-
-    let result_ty = &result.ty;
-
-    let params = params.iter().map(|param| {
-        let name = &param.name;
-        let ty = &param.ty;
-        match param.mode {
-            ElementMode::Input => quote! { #name: #ty },
-            ElementMode::Output => quote! { #name: *mut #ty },
-        }
-    });
-
-    let gen_fn = quote! {
-        #[no_mangle]
-        pub extern "C" fn #func(#(#params),*) -> #result_ty {
-            unimplemented!("{}", #func_str);
+            match channel_sender.flush_out() {
+                Ok(()) => {}
+                Err(e) => panic!("failed to flush_out: {}", e),
+            }
         }
     };
 

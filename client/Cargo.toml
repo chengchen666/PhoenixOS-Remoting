@@ -17,6 +17,9 @@ lazy_static = { workspace = true }
 ctor = "0.2"
 core_affinity = { workspace = true }
 
+[build-dependencies]
+cudasys = { workspace = true }
+
 [lib]
 crate-type = ["cdylib"]
 

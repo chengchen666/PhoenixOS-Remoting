@@ -84,7 +84,7 @@ pub fn send_slice<T: TransportableMarker, C: CommChannel>(
 ) -> Result<(), CommChannelError> {
     let len = data.len();
     len.send(channel)?;
-    let bytes = len * size_of::<T>();
+    let bytes = size_of_val(data);
     let memory = RawMemory::from_ptr(data.as_ptr() as *const u8, bytes);
     match channel.put_bytes(&memory)? == bytes {
         true => Ok(()),
