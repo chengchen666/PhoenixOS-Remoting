@@ -1,5 +1,3 @@
-use std::boxed::Box;
-use super::*;
 pub use crate::types::cudart::*;
 include!("bindings/funcs/cudart.rs");
 
@@ -12,7 +10,7 @@ mod tests{
     use crate::FromPrimitive;
     use network::{
         ringbufferchannel::{META_AREA, LocalChannel},
-        Channel,
+        Channel, Transportable,
     };
 
     #[test]
