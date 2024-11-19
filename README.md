@@ -87,10 +87,10 @@ Launch two terminals, one for server and the other for client.
 - server side:
 
 ```shell
-cargo run [--features shm,rdma] server
+cargo run [--features rdma] server
 ```
 
-You should use `features` to decide what communication methods will be compiled. For example: if you do not want rdma communication method to be compiled, run with `cargo run --features shm server`.
+You should use `features` to decide what communication methods will be compiled. SHM is always compiled.
 
 - client side:
 

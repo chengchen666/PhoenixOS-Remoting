@@ -1,6 +1,5 @@
 #![feature(maybe_uninit_slice)]
 
-#![expect(dead_code)]
 mod dispatcher;
 
 use codegen::cuda_hook_exe;
@@ -10,81 +9,57 @@ use cudasys::{
 };
 use dispatcher::dispatch;
 
-#[cfg(feature = "emulator")]
-use network::ringbufferchannel::EmulatorChannel;
+#[cfg(feature = "rdma")]
+use network::ringbufferchannel::RDMAChannel;
 
-#[expect(unused_imports)]
 use network::{
-    ringbufferchannel::{RDMAChannel, SHMChannel},
+    ringbufferchannel::{EmulatorChannel, SHMChannel},
     type_impl::{recv_slice, send_slice, MemPtr},
-    Channel, CommChannel, CommChannelError, Transportable, CONFIG,
+    Channel, CommChannel, CommChannelError, Transportable, NetworkConfig,
 };
 
-#[expect(unused_imports)]
-use log::{debug, error, info, log_enabled, Level};
+use log::{error, info};
 
-use lazy_static::lazy_static;
-use std::boxed::Box;
-use std::collections::HashMap;
-use std::sync::Mutex;
+use std::collections::BTreeMap;
 
-lazy_static! {
+struct ServerWorker<C> {
+    pub id: i32,
+    pub channel_sender: C,
+    pub channel_receiver: C,
     // client_address -> module
-    static ref MODULES: Mutex<HashMap<MemPtr, CUmodule>> = Mutex::new(HashMap::new());
+    pub modules: BTreeMap<MemPtr, CUmodule>,
     // host_func -> device_func
-    static ref FUNCTIONS: Mutex<HashMap<MemPtr, CUfunction>> = Mutex::new(HashMap::new());
+    pub functions: BTreeMap<MemPtr, CUfunction>,
     // host_var -> device_var
-    static ref VARIABLES: Mutex<HashMap<MemPtr, CUdeviceptr>> = Mutex::new(HashMap::new());
-
-    static ref RESOURCES: Mutex<HashMap<usize, usize>> = Mutex::new(HashMap::new());
+    pub variables: BTreeMap<MemPtr, CUdeviceptr>,
+    #[cfg(feature = "shadow_desc")]
+    pub resources: BTreeMap<usize, usize>,
 }
 
-fn add_module(client_address: MemPtr, module: CUmodule) {
-    MODULES.lock().unwrap().insert(client_address, module);
+impl<C> Drop for ServerWorker<C> {
+    fn drop(&mut self) {
+        for (_, module) in self.modules.iter() {
+            unsafe {
+                cudasys::cuda::cuModuleUnload(*module);
+            }
+        }
+    }
 }
 
-fn get_module(client_address: MemPtr) -> Option<CUmodule> {
-    MODULES.lock().unwrap().get(&client_address).cloned()
-}
-
-fn add_function(host_func: MemPtr, device_func: CUfunction) {
-    FUNCTIONS.lock().unwrap().insert(host_func, device_func);
-}
-
-fn get_function(host_func: MemPtr) -> Option<CUfunction> {
-    FUNCTIONS.lock().unwrap().get(&host_func).cloned()
-}
-
-fn add_variable(host_var: MemPtr, device_var: CUdeviceptr) {
-    VARIABLES.lock().unwrap().insert(host_var, device_var);
-}
-
-fn get_variable(host_var: MemPtr) -> Option<CUdeviceptr> {
-    VARIABLES.lock().unwrap().get(&host_var).cloned()
-}
-
-fn add_resource(id: usize, res: usize) {
-    RESOURCES.lock().unwrap().insert(id, res);
-}
-
-fn get_resource(id: usize) -> usize {
-    RESOURCES.lock().unwrap().get(&id).cloned().unwrap()
-}
-
-fn remove_resource(id: usize) -> usize {
-    RESOURCES.lock().unwrap().remove(&id).unwrap()
-}
-
-#[cfg(not(feature = "emulator"))]
-fn create_buffer() -> (Channel, Channel) {
+fn create_buffer(#[expect(non_snake_case)] CONFIG: &NetworkConfig, id: i32) -> (Channel, Channel) {
     // Use features when compiling to decide what arm(s) will be supported.
     // In the server side, the sender's name is stoc_channel_name,
     // receiver's name is ctos_channel_name.
     match CONFIG.comm_type.as_str() {
-        #[cfg(feature = "shm")]
         "shm" => {
-            let sender = SHMChannel::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap();
-            let receiver = SHMChannel::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap();
+            let sender = SHMChannel::new_server_with_id(&CONFIG.stoc_channel_name, id, CONFIG.buf_size).unwrap();
+            let receiver = SHMChannel::new_server_with_id(&CONFIG.ctos_channel_name, id, CONFIG.buf_size).unwrap();
+            if cfg!(feature = "emulator") {
+                return (
+                    Channel::new(Box::new(EmulatorChannel::new(Box::new(sender)))),
+                    Channel::new(Box::new(EmulatorChannel::new(Box::new(receiver)))),
+                );
+            }
             (Channel::new(Box::new(sender)), Channel::new(Box::new(receiver)))
         }
         #[cfg(feature = "rdma")]
@@ -106,16 +81,6 @@ fn create_buffer() -> (Channel, Channel) {
     }
 }
 
-#[cfg(feature = "emulator")]
-fn create_buffer() -> (Channel, Channel) {
-    let sender = SHMChannel::new_server(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap();
-    let receiver = SHMChannel::new_server(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap();
-    (
-        Channel::new(Box::new(EmulatorChannel::new(Box::new(sender)))),
-        Channel::new(Box::new(EmulatorChannel::new(Box::new(receiver)))),
-    )
-}
-
 fn receive_request<T: CommChannel>(channel_receiver: &mut T) -> Result<i32, CommChannelError> {
     let mut proc_id = 0;
     if let Ok(()) = proc_id.recv(channel_receiver) {
@@ -125,8 +90,8 @@ fn receive_request<T: CommChannel>(channel_receiver: &mut T) -> Result<i32, Comm
     }
 }
 
-pub fn launch_server() {
-    let (mut channel_sender, mut channel_receiver) = create_buffer();
+pub fn launch_server(#[expect(non_snake_case)] CONFIG: &NetworkConfig, id: i32, tcp: Option<std::net::TcpStream>) {
+    let (channel_sender, channel_receiver) = create_buffer(CONFIG, id);
     info!(
         "[{}:{}] {} buffer created",
         std::file!(),
@@ -176,9 +141,28 @@ pub fn launch_server() {
         panic!();
     }
 
+    let mut server = ServerWorker {
+        id,
+        channel_sender,
+        channel_receiver,
+        modules: Default::default(),
+        functions: Default::default(),
+        variables: Default::default(),
+        #[cfg(feature = "shadow_desc")]
+        resources: Default::default(),
+    };
+
+    if let Some(mut stream) = tcp {
+        use std::io::Write as _;
+        stream.write_all(&id.to_be_bytes()).unwrap();
+    }
+
     loop {
-        if let Ok(proc_id) = receive_request(&mut channel_receiver) {
-            dispatch(proc_id, &mut channel_sender, &mut channel_receiver);
+        if let Ok(proc_id) = receive_request(&mut server.channel_receiver) {
+            if proc_id == -1 {
+                break;
+            }
+            dispatch(proc_id, &mut server);
         } else {
             error!(
                 "[{}:{}] failed to receive request",

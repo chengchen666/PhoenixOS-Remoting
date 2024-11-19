@@ -3,7 +3,8 @@ use super::*;
 use cudasys::cudart::*;
 use std::alloc::{alloc, dealloc, Layout};
 
-pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+pub fn cudaMemcpyExe<C: CommChannel>(server: &mut ServerWorker<C>) {
+    let ServerWorker { channel_sender, channel_receiver, .. } = server;
     info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
 
     let mut dst: MemPtr = Default::default();
@@ -66,7 +67,8 @@ pub fn cudaMemcpyExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &
     }
 }
 
-pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+pub fn cudaLaunchKernelExe<C: CommChannel>(server: &mut ServerWorker<C>) {
+    let ServerWorker { channel_sender, channel_receiver, .. } = server;
     info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
 
     let mut func: MemPtr = Default::default();
@@ -96,7 +98,7 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
 
-    let device_func = get_function(func).unwrap();
+    let device_func = *server.functions.get(&func).unwrap();
 
     let result = unsafe {
         cudasys::cuda::cuLaunchKernel(
@@ -120,7 +122,8 @@ pub fn cudaLaunchKernelExe<T: CommChannel>(channel_sender: &mut T, channel_recei
     }
 }
 
-pub fn cudaGetErrorStringExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
+pub fn cudaGetErrorStringExe<C: CommChannel>(server: &mut ServerWorker<C>) {
+    let ServerWorker { channel_sender, channel_receiver, .. } = server;
     info!("[{}:{}] cudaGetErrorString", std::file!(), std::line!());
     let mut error: cudaError_t = Default::default();
     error.recv(channel_receiver).unwrap();

@@ -8,6 +8,7 @@ use std::ffi::CString;
 use std::alloc::{alloc, Layout};
 
 #[no_mangle]
+#[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
 pub extern "C" fn cudaMemcpy(
     dst: MemPtr,
     src: MemPtr,
@@ -18,8 +19,7 @@ pub extern "C" fn cudaMemcpy(
 
     assert_ne!(kind, cudaMemcpyKind::cudaMemcpyDefault, "cudaMemcpyDefault is not supported yet");
 
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let ClientThread { channel_sender, channel_receiver, .. } = client;
 
     if cudaMemcpyKind::cudaMemcpyHostToHost == kind {
         unsafe {
@@ -108,6 +108,7 @@ pub extern "C" fn cudaMemcpyAsync(
 }
 
 #[no_mangle]
+#[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
 pub extern "C" fn cudaLaunchKernel(
     func: MemPtr,
     gridDim: dim3,
@@ -118,8 +119,7 @@ pub extern "C" fn cudaLaunchKernel(
 ) -> cudaError_t {
     info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
 
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let ClientThread { channel_sender, channel_receiver, .. } = client;
 
     let proc_id = 200;
     let mut result: cudaError_t = Default::default();
@@ -225,6 +225,7 @@ thread_local! {
 }
 
 #[no_mangle]
+#[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
 pub extern "C" fn cudaGetErrorString(
     cudaError: cudaError_t,
 ) -> *const ::std::os::raw::c_char {
@@ -236,8 +237,7 @@ pub extern "C" fn cudaGetErrorString(
         std::file!(),
         std::line!()
     );
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let ClientThread { channel_sender, channel_receiver, .. } = client;
     let proc_id = 17;
     let mut result:Vec<u8>  = Default::default();
     match proc_id.send(channel_sender) {

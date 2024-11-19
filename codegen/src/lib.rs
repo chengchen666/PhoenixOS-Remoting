@@ -13,6 +13,8 @@ use utils::{is_shadow_desc_type, is_void_ptr, ElementMode, PassBy};
 mod hook_fn;
 use hook_fn::HookFn;
 
+mod use_thread_local;
+
 /// Basic checks on a hook declaration
 #[proc_macro_attribute]
 pub fn cuda_hook(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -204,11 +206,11 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
         let name = &vars[0].name;
         let shadow_desc_send = quote_spanned! {name.span()=>
             if cfg!(feature = "shadow_desc") {
-                let resource_idx = *RESOURCE_IDX.lock().unwrap();
+                let resource_idx = client.resource_idx;
                 unsafe {
                     *#name = resource_idx;
                 }
-                *RESOURCE_IDX.lock().unwrap() += 1;
+                client.resource_idx += 1;
                 match resource_idx.send(channel_sender) {
                     Ok(()) => {}
                     Err(e) => panic!("failed to send {}: {}", stringify!(#name), e),
@@ -229,10 +231,10 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let gen_fn = quote! {
         #[no_mangle]
+        #[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
-            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
-            let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-            let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+            info!("[#{}] [{}:{}] {}", client.id, std::file!(), std::line!(), stringify!(#func));
+            let ClientThread { channel_sender, channel_receiver, .. } = client;
             let proc_id: i32 = #proc_id;
             let mut #result_name: #result_ty = Default::default();
 
@@ -271,6 +273,11 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     gen_fn.into()
+}
+
+#[proc_macro_attribute]
+pub fn use_thread_local(args: TokenStream, input: TokenStream) -> TokenStream {
+    use_thread_local::use_thread_local(args.into(), input.into()).into()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -393,12 +400,12 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
                 assert_eq!(params.len(), 1);
                 quote! {
                     #[cfg(feature = "shadow_desc")]
-                    let #name = remove_resource(#name as usize);
+                    let #name = server.resources.remove(&(#name as usize)).unwrap();
                 }
             } else {
                 quote! {
                     #[cfg(feature = "shadow_desc")]
-                    let #name = get_resource(#name as usize);
+                    let #name = *server.resources.get(&(#name as usize)).unwrap();
                 }
             }
         });
@@ -474,7 +481,7 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
         };
         let shadow_desc_return = quote_spanned! {name.span()=>
             #[cfg(feature = "shadow_desc")]
-            add_resource(resource_idx, #name as usize);
+            server.resources.insert(resource_idx, #name as usize);
             if cfg!(feature = "shadow_desc") {
                 return;
             }
@@ -496,8 +503,9 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let gen_fn = quote! {
         #[allow(non_snake_case)]
-        pub fn #func_exe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-            info!("[{}:{}] {}", std::file!(), std::line!(), stringify!(#func));
+        pub fn #func_exe<C: CommChannel>(server: &mut ServerWorker<C>) {
+            let ServerWorker { channel_sender, channel_receiver, .. } = server;
+            info!("[#{}] [{}:{}] {}", server.id, std::file!(), std::line!(), stringify!(#func));
             #( #recv_statements )*
             #( #get_resource_statements )*
             #shadow_desc_recv

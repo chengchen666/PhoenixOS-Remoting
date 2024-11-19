@@ -3,10 +3,10 @@
 use super::*;
 use cudasys::cudnn::*;
 
-pub fn cudnnGetErrorStringExe<T: CommChannel>(
-    channel_sender: &mut T,
-    channel_receiver: &mut T,
+pub fn cudnnGetErrorStringExe<C: CommChannel>(
+    server: &mut ServerWorker<C>,
 ) {
+    let ServerWorker { channel_sender, channel_receiver, .. } = server;
     info!("[{}:{}] cudnnGetErrorString", std::file!(), std::line!());
     let mut status: cudnnStatus_t = Default::default();
     if let Err(e) = status.recv(channel_receiver) {

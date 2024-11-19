@@ -13,7 +13,6 @@ network = { workspace = true }
 codegen = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
-lazy_static = { workspace = true }
 core_affinity = { workspace = true }
 
 [build-dependencies]
@@ -22,12 +21,9 @@ hookgen = { workspace = true }
 
 [features]
 # default = ["rdma"]
-default = ["shm", "emulator"]
-# default = ["shm"]
-shm = []
+# default = ["emulator"]
 rdma = []
 emulator = []
-log_rperf = []
 async_api = []
 shadow_desc = []
 

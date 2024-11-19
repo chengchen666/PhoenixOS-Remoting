@@ -4,14 +4,14 @@ use cudasys::types::cuda::*;
 use std::ffi::CStr;
 
 #[no_mangle]
+#[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
 pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_void) -> MemPtr {
     info!(
         "[{}:{}] __cudaRegisterFatBinary",
         std::file!(),
         std::line!()
     );
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let ClientThread { channel_sender, channel_receiver, .. } = client;
 
     let proc_id = 100;
     let mut result: CUresult = Default::default();
@@ -65,42 +65,14 @@ pub extern "C" fn __cudaRegisterFatBinary(fatCubin: *const ::std::os::raw::c_voi
 }
 
 #[no_mangle]
-pub extern "C" fn __cudaUnregisterFatBinary(fatCubinHandle: MemPtr) {
+pub extern "C" fn __cudaUnregisterFatBinary(_fatCubinHandle: MemPtr) {
     info!(
         "[{}:{}] __cudaUnregisterFatBinary",
         std::file!(),
         std::line!()
     );
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
-
-    let proc_id = 101;
-    let mut result: CUresult = Default::default();
-
-    match proc_id.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send proc_id: {:?}", e),
-    }
-    match fatCubinHandle.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send fatCubinHandle: {:?}", e),
-    }
-    match channel_sender.flush_out() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send: {:?}", e),
-    }
-
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
-    }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    if CUresult::CUDA_SUCCESS != result {
-        panic!("error unregistering fatbin: {:?}", result);
-    }
+    // This is called when the client process exits, when the thread local storage is already dropped.
+    // Therefore, we implement this at the server side.
 }
 
 #[no_mangle]
@@ -114,6 +86,7 @@ pub extern "C" fn __cudaRegisterFatBinaryEnd(_fatCubinHandle: MemPtr) {
 }
 
 #[no_mangle]
+#[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
 pub extern "C" fn __cudaRegisterFunction(
     fatCubinHandle: MemPtr,
     hostFun: MemPtr,
@@ -127,8 +100,7 @@ pub extern "C" fn __cudaRegisterFunction(
     _wSize: MemPtr,
 ) {
     info!("[{}:{}] __cudaRegisterFunction", std::file!(), std::line!());
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let ClientThread { channel_sender, channel_receiver, .. } = client;
 
     let proc_id = 102;
     let mut result: CUresult = Default::default();
@@ -185,6 +157,7 @@ pub extern "C" fn __cudaRegisterFunction(
 }
 
 #[no_mangle]
+#[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
 pub extern "C" fn __cudaRegisterVar(
     fatCubinHandle: MemPtr,
     hostVar: MemPtr,
@@ -196,8 +169,7 @@ pub extern "C" fn __cudaRegisterVar(
     _global: ::std::os::raw::c_int,
 ) {
     info!("[{}:{}] __cudaRegisterVar", std::file!(), std::line!());
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let ClientThread { channel_sender, channel_receiver, .. } = client;
 
     let proc_id = 103;
     let mut result: CUresult = Default::default();

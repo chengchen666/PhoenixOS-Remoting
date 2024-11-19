@@ -3,6 +3,7 @@ use cudasys::types::cudnn::*;
 use std::os::raw::*;
 
 #[no_mangle]
+#[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
 pub extern "C" fn cudnnGetErrorString(
     error_status: cudnnStatus_t,
 ) -> *const c_char {
@@ -11,8 +12,7 @@ pub extern "C" fn cudnnGetErrorString(
         std::file!(),
         std::line!()
     );
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
+    let ClientThread { channel_sender, channel_receiver, .. } = client;
     let proc_id = 1535;
     let mut result: Vec<u8> = Default::default();
     if let Err(e) = proc_id.send(channel_sender) {

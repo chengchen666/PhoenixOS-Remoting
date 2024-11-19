@@ -6,16 +6,18 @@ use std::os::raw::*;
 fn cudaGetDevice(device: *mut c_int) -> cudaError_t {
     'client_before_send: {
         #[cfg(feature = "local")]
-        if let Some(val) = get_local_info(proc_id as usize) {
+        if let Some(val) = client.cuda_device {
             unsafe {
-                *device = val as i32;
+                *device = val;
             }
             return cudaError_t::cudaSuccess;
         }
     }
     'client_after_recv: {
         #[cfg(feature = "local")]
-        add_local_info(proc_id as usize, *device as usize);
+        {
+            client.cuda_device = Some(*device);
+        }
     }
 }
 
@@ -90,7 +92,7 @@ fn __cudaRegisterFatBinary(fatCubin: *mut c_void) -> *mut *mut c_void;
 #[cuda_custom_hook] // local
 fn __cudaRegisterFatBinaryEnd(fatCubinHandle: *mut *mut c_void);
 
-#[cuda_custom_hook] // proc_id = 101
+#[cuda_custom_hook] // local, proc_id was 101
 fn __cudaUnregisterFatBinary(fatCubinHandle: *mut *mut c_void);
 
 #[cuda_custom_hook] // proc_id = 102
