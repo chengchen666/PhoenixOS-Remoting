@@ -1,12 +1,11 @@
-#![allow(non_snake_case)]
-#![allow(unused_variables)]
-#![allow(unused_mut)]
+#![expect(non_snake_case)]
 use super::*;
 use cudasys::types::cudart::*;
 use ::std::os::raw::*;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::ffi::CString;
+use std::alloc::{alloc, Layout};
 
 #[no_mangle]
 pub extern "C" fn cudaMemcpy(
@@ -15,8 +14,9 @@ pub extern "C" fn cudaMemcpy(
     count: usize,
     kind: cudaMemcpyKind,
 ) -> cudaError_t {
-    assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
+
+    assert_ne!(kind, cudaMemcpyKind::cudaMemcpyDefault, "cudaMemcpyDefault is not supported yet");
 
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
     let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
@@ -79,12 +79,9 @@ pub extern "C" fn cudaMemcpy(
         }
     }
 
-    #[cfg(feature = "async_api")]
-    {
+    if cfg!(feature = "async_api") {
         return cudaError_t::cudaSuccess;
-    }
-    #[cfg(not(feature = "async_api"))]
-    {
+    } else {
         match result.recv(channel_receiver) {
             Ok(()) => {}
             Err(e) => panic!("failed to receive result: {:?}", e),
@@ -106,7 +103,6 @@ pub extern "C" fn cudaMemcpyAsync(
     kind: cudaMemcpyKind,
     _stream: cudaStream_t,
 ) -> cudaError_t {
-    assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] cudaMemcpyAsync", std::file!(), std::line!());
     cudaMemcpy(dst, src, count, kind)
 }
@@ -120,7 +116,6 @@ pub extern "C" fn cudaLaunchKernel(
     sharedMem: usize,
     stream: cudaStream_t,
 ) -> cudaError_t {
-    assert_eq!(true, *ENABLE_LOG);
     info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
 
     let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
@@ -184,12 +179,9 @@ pub extern "C" fn cudaLaunchKernel(
         Err(e) => panic!("failed to send: {:?}", e),
     }
 
-    #[cfg(feature = "async_api")]
-    {
+    if cfg!(feature = "async_api") {
         return cudaError_t::cudaSuccess;
-    }
-    #[cfg(not(feature = "async_api"))]
-    {
+    } else {
         match result.recv(channel_receiver) {
             Ok(()) => {}
             Err(e) => panic!("failed to receive result: {:?}", e),
@@ -203,56 +195,9 @@ pub extern "C" fn cudaLaunchKernel(
 }
 
 #[no_mangle]
-pub extern "C" fn cudaMallocManaged(
-    devPtr: MemPtr, // void**
-    size: size_t,
-    flags: c_uint,
-) -> cudaError_t{
-    // should update devPtr
-    info!(
-        "[{}:{}] cudaMallocManaged",
-        std::file!(),
-        std::line!()
-    );
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
-    let proc_id = 11;
-    let mut result: cudaError_t = Default::default();
-    match proc_id.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send proc_id: {:?}", e),
-    }
-    match size.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send size: {:?}", e),
-    }
-    match flags.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send flags: {:?}", e),
-    }
-    channel_sender.flush_out().unwrap();
-    let mut devPtr_: MemPtr = Default::default();
-    match devPtr_.recv(channel_receiver) {
-        Ok(()) => {
-            unsafe{*(devPtr as *mut MemPtr) = devPtr_};
-        }
-        Err(e) => panic!("failed to send devPtr: {:?}", e),
-    }
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
-    }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
-}
-
-#[no_mangle]
 pub extern "C" fn cudaHostAlloc(
     pHost: *mut *mut ::std::os::raw::c_void,
-    size: size_t,
+    size: usize,
     flags: c_uint,
 ) -> cudaError_t {
     info!(
@@ -260,39 +205,19 @@ pub extern "C" fn cudaHostAlloc(
         std::file!(),
         std::line!()
     );
-    let channel_sender = &mut (*CHANNEL_SENDER.lock().unwrap());
-    let channel_receiver = &mut (*CHANNEL_RECEIVER.lock().unwrap());
-    let proc_id = 13;
-    let mut result: cudaError_t = Default::default();
-    match proc_id.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send proc_id: {:?}", e),
-    }
-    match size.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send size: {:?}", e),
-    }
-    match flags.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send flags: {:?}", e),
-    }
-    channel_sender.flush_out().unwrap();
-    let mut pHost_: MemPtr = Default::default();
-    match pHost_.recv(channel_receiver) {
-        Ok(()) => {
-            unsafe{*(pHost as *mut MemPtr) = pHost_};
+    assert_eq!(flags, cudaHostAllocDefault);
+    let Ok(layout) = Layout::from_size_align(size as _, 1) else {
+        return cudaError_t::cudaErrorInvalidValue;
+    };
+    // TODO: handle pinned memory at server side in a better way
+    unsafe {
+        let ptr = alloc(layout);
+        if ptr.is_null() {
+            return cudaError_t::cudaErrorMemoryAllocation;
         }
-        Err(e) => panic!("failed to send pHost: {:?}", e),
+        *pHost = ptr as _;
     }
-    match result.recv(channel_receiver) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive result: {:?}", e),
-    }
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    result
+    cudaError_t::cudaSuccess
 }
 
 thread_local! {
@@ -334,4 +259,63 @@ pub extern "C" fn cudaGetErrorString(
             }
     let result = CString::new(result).unwrap();
     ERROR_STRINGS.with_borrow_mut(|m| m.entry(cudaError).or_insert(result).as_ptr())
+}
+
+struct CallConfiguration {
+    gridDim: dim3,
+    blockDim: dim3,
+    sharedMem: usize,
+    stream: MemPtr,
+}
+
+thread_local! {
+    static CALL_CONFIGURATIONS: RefCell<Vec<CallConfiguration>> = const { RefCell::new(Vec::new()) };
+}
+
+#[no_mangle]
+pub extern "C" fn __cudaPushCallConfiguration(
+    gridDim: dim3,
+    blockDim: dim3,
+    sharedMem: usize,
+    stream: MemPtr,
+) -> cudaError_t {
+    info!(
+        "[{}:{}] __cudaPushCallConfiguration",
+        std::file!(),
+        std::line!()
+    );
+    CALL_CONFIGURATIONS.with_borrow_mut(|v| {
+        v.push(CallConfiguration {
+            gridDim,
+            blockDim,
+            sharedMem,
+            stream,
+        });
+    });
+    cudaError_t::cudaSuccess
+}
+
+#[no_mangle]
+pub extern "C" fn __cudaPopCallConfiguration(
+    gridDim: *mut dim3,
+    blockDim: *mut dim3,
+    sharedMem: *mut usize,
+    stream: *mut MemPtr,
+) -> cudaError_t {
+    info!(
+        "[{}:{}] __cudaPopCallConfiguration",
+        std::file!(),
+        std::line!()
+    );
+    if let Some(config) = CALL_CONFIGURATIONS.with_borrow_mut(Vec::pop) {
+        unsafe {
+            *gridDim = config.gridDim;
+            *blockDim = config.blockDim;
+            *sharedMem = config.sharedMem;
+            *stream = config.stream;
+        }
+        cudaError_t::cudaSuccess
+    } else {
+        cudaError_t::cudaErrorMissingConfiguration
+    }
 }

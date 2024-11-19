@@ -1,4 +1,4 @@
-#![allow(
+#![expect(
     non_snake_case,
     non_upper_case_globals,
     non_camel_case_types,
@@ -6,27 +6,22 @@
     dead_code
 )]
 
-extern crate num;
 pub use num::FromPrimitive;
-#[macro_use]
-extern crate num_derive;
+use num_derive::FromPrimitive;
 
-extern crate network;
 use network::{RawMemory, RawMemoryMut, CommChannel, CommChannelError, Transportable};
-extern crate codegen;
 
-// The type definitions extarcted from the bindings.
+// Type definitions extracted from the bindings.
 pub mod types;
 
 pub mod cuda;
-
 pub mod cudart;
-
 pub mod nvml;
-
 pub mod cudnn;
-
 pub mod cublas;
+pub mod cublasLt;
+
+mod hooks;
 
 #[cfg(test)]
 mod tests {

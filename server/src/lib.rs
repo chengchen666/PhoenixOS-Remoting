@@ -1,14 +1,9 @@
-#![allow(dead_code)]
-extern crate log;
+#![feature(maybe_uninit_slice)]
+
+#![expect(dead_code)]
 mod dispatcher;
 
-extern crate codegen;
-extern crate cudasys;
-extern crate network;
-
-use codegen::gen_exe;
-#[cfg(feature = "async_api")]
-use codegen::gen_exe_async;
+use codegen::cuda_hook_exe;
 use cudasys::{
     cuda::{CUdeviceptr, CUfunction, CUmodule},
     cudart::{cudaDeviceSynchronize, cudaError_t, cudaGetDeviceCount, cudaSetDevice},
@@ -18,17 +13,16 @@ use dispatcher::dispatch;
 #[cfg(feature = "emulator")]
 use network::ringbufferchannel::EmulatorChannel;
 
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 use network::{
     ringbufferchannel::{RDMAChannel, SHMChannel},
-    type_impl::MemPtr,
+    type_impl::{recv_slice, send_slice, MemPtr},
     Channel, CommChannel, CommChannelError, Transportable, CONFIG,
 };
 
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 use log::{debug, error, info, log_enabled, Level};
 
-extern crate lazy_static;
 use lazy_static::lazy_static;
 use std::boxed::Box;
 use std::collections::HashMap;

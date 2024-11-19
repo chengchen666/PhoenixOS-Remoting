@@ -1,4 +1,4 @@
-use std::{env, path::PathBuf, process::Command, str};
+use std::{env, path::{Path, PathBuf}, process::Command, str};
 
 fn find_std_lib() -> String {
     let start_dir = "/usr/lib/";
@@ -17,7 +17,7 @@ fn find_std_lib() -> String {
 
     let paths = str::from_utf8(&output.stdout).unwrap();
     if let Some(path) = paths.lines().next() {
-        return PathBuf::from(path).parent().unwrap().to_str().unwrap().to_string();
+        return Path::new(path).parent().unwrap().to_str().unwrap().to_owned();
     } else {
         panic!("{} not found", lib_name);
     }
@@ -29,10 +29,45 @@ fn main() {
     println!("cargo:rustc-link-lib=dylib=z");
     println!("cargo:rustc-link-lib=dylib=dl");
 
-    let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
-    let library_dir = root.join("src/elf/");
-    println!("cargo:rustc-link-search=native={}", library_dir.display());
+    let mut library_dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
+    library_dir.push("src/elf/");
+    println!("cargo:rustc-link-search=native={}", library_dir.to_str().unwrap());
     println!("cargo:rustc-link-search=native={}", find_std_lib());
-    
+
+    create_cuda_symlinks();
+    hookgen::generate_impls(
+        "../cudasys/src/hooks/{}.rs",
+        "../cudasys/src/bindings/funcs",
+        "./src/hijack/{}_hijack.rs",
+        Some("./src/hijack/{}_unimplement.rs"),
+        (cudasys::cuda::CUDA_VERSION / 1000) as u8,
+    );
+
     println!("cargo:rerun-if-changed=build.rs");
+}
+
+/// Some `dlopen()` calls escaped our hook in `dl.rs`.
+/// This prevents them from loading local CUDA libs.
+fn create_cuda_symlinks() {
+    let mut symlink_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    while symlink_dir.file_name().unwrap().to_str().unwrap() != "build" {
+        assert!(symlink_dir.pop());
+    }
+    assert!(symlink_dir.pop());
+    symlink_dir.push("cuda-symlinks");
+    let _ = std::fs::create_dir(&symlink_dir);
+    for lib in [
+        "libcuda.so.1",
+        "libcudart.so.11.0",
+        "libcudart.so.12",
+        "libnvidia-ml.so.1",
+        "libcudnn.so.8",
+        "libcudnn.so.9",
+        "libcublas.so.11",
+        "libcublas.so.12",
+        "libcublasLt.so.11",
+        "libcublasLt.so.12",
+    ] {
+        let _ = std::os::unix::fs::symlink("../libclient.so", symlink_dir.join(lib));
+    }
 }

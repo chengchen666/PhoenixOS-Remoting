@@ -1,6 +1,3 @@
-extern crate cudasys;
-extern crate network;
-
 use cudasys::{cudart::cudaError_t, FromPrimitive};
 use network::{ringbufferchannel::SHMChannel, Channel, CommChannel, Transportable};
 

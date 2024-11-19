@@ -1,25 +1,27 @@
 [package]
 name = "network"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-codegen = { path = "../codegen" }
-measure = { path = "../measure" }
+measure = { workspace = true, optional = true }
 libc = "*"
-log = "0.4.0"
+log = { workspace = true }
 errno = "0.2.7" 
 chrono = "0.4.0"
 toml = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
-lazy_static = "1.4.0"
+lazy_static = { workspace = true }
 KRdmaKit = { git = "https://github.com/Gahow/krcore-artifacts.git", branch = "feat/send_mr", features = ["user", "OFED_5_4"] }
 
 [dev-dependencies]
-cudasys = { path = "../cudasys" }
+cudasys = { workspace = true }
 
 [features]
-log_rperf = []
+log_rperf = ["dep:measure"]
+
+[lints]
+workspace = true

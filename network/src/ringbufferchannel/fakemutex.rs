@@ -1,3 +1,5 @@
+#![expect(dead_code)]
+
 use std::cell::UnsafeCell;
 
 pub struct FakeMutex<T> {

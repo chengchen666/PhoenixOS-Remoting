@@ -1,5 +1,4 @@
 #![allow(non_snake_case)]
-use std::ptr::null_mut;
 
 use super::*;
 use cudasys::cuda::*;
@@ -98,7 +97,7 @@ pub fn __cudaRegisterVarExe<T: CommChannel>(channel_sender: &mut T, channel_rece
     }
 
     let mut dptr: CUdeviceptr = Default::default();
-    let mut size: size_t = Default::default();
+    let mut size: usize = Default::default();
 
     let module = get_module(fatCubinHandle).unwrap();
     let result = unsafe {
@@ -111,50 +110,6 @@ pub fn __cudaRegisterVarExe<T: CommChannel>(channel_sender: &mut T, channel_rece
     };
     add_variable(hostVar, dptr);
 
-    result.send(channel_sender).unwrap();
-    channel_sender.flush_out().unwrap();
-}
-
-pub fn cuGetProcAddressExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cuGetProcAddress", std::file!(), std::line!());
-    let mut symbol: Vec<u8> = Default::default();
-    symbol.recv(channel_receiver).unwrap();
-    let mut cudaVersion: ::std::os::raw::c_int = Default::default();
-    cudaVersion.recv(channel_receiver).unwrap();
-    let mut flags: cuuint64_t = Default::default();
-    flags.recv(channel_receiver).unwrap();
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-
-    let mut host_pfn: *mut ::std::os::raw::c_void = null_mut();
-    let result: CUresult = unsafe {
-        cuGetProcAddress(
-            symbol.as_ptr() as *const std::os::raw::c_char,
-            &mut host_pfn,
-            cudaVersion,
-            flags,
-        )
-    };
-    let func_ptr = host_pfn as MemPtr;
-    func_ptr.send(channel_sender).unwrap();
-    result.send(channel_sender).unwrap();
-    channel_sender.flush_out().unwrap();
-}
-
-pub fn cuGetExportTableExe<T: CommChannel>(channel_sender: &mut T, channel_receiver: &mut T) {
-    info!("[{}:{}] cuGetExportTable", std::file!(), std::line!());
-    let mut pExportTableId_: CUuuid = Default::default();
-    pExportTableId_.recv(channel_receiver).unwrap();
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-    let mut ppExportTable_: *const ::std::os::raw::c_void = std::ptr::null();
-    let result: CUresult =
-        unsafe { cuGetExportTable(&mut ppExportTable_, &pExportTableId_ as *const CUuuid) };
-    (ppExportTable_ as MemPtr).send(channel_sender).unwrap();
     result.send(channel_sender).unwrap();
     channel_sender.flush_out().unwrap();
 }

@@ -1,27 +1,16 @@
-#[macro_use]
-extern crate lazy_static;
+use lazy_static::lazy_static;
 
-extern crate cudasys;
-extern crate network;
-
-extern crate log;
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 use log::{debug, error, info, log_enabled, Level};
 
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 use network::{
     ringbufferchannel::{EmulatorChannel, RDMAChannel, SHMChannel},
-    type_impl::MemPtr,
+    type_impl::{recv_slice_to, send_slice, MemPtr},
     Channel, CommChannel, CommChannelInner, Transportable, CONFIG,
 };
 
-extern crate codegen;
-use codegen::gen_hijack;
-#[cfg(feature = "async_api")]
-use codegen::gen_hijack_async;
-#[cfg(feature = "local")]
-use codegen::gen_hijack_local;
-use codegen::gen_unimplement;
+use codegen::cuda_hook_hijack;
 
 pub mod hijack;
 pub use hijack::*;
@@ -83,13 +72,6 @@ lazy_static! {
     };
 
     static ref ELF_CONTROLLER: ElfController = ElfController::new();
-    static ref ENABLE_LOG: bool = {
-        if std::env::var("RUST_LOG").is_err() {
-            std::env::set_var("RUST_LOG", "debug");
-        }
-        env_logger::init();
-        true
-    };
 
     static ref RESOURCE_IDX: Mutex<usize> = Mutex::new(0);
 
@@ -106,7 +88,12 @@ fn get_local_info(proc_id: usize) -> Option<usize> {
     LOCAL_INFO.lock().unwrap().get(&proc_id).cloned()
 }
 
-// #[ctor]
-// fn init() {
+#[ctor::ctor]
+fn init() {
 //     core_affinity::set_for_current(1);
-// }
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "debug");
+    }
+    env_logger::init();
+    info!("[{}:{}] client init", std::file!(), std::line!());
+}

@@ -1,22 +1,24 @@
 [package]
 name = "server"
-version = "0.1.0"
+version.workspace = true
+edition.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 build = "build.rs"
 
 [dependencies]
-cudasys = { path = "../cudasys" }
-network = { path = "../network" }
-codegen = { path = "../codegen" }
-log = "0.4.0"
-env_logger = "0.9"
-lazy_static = "1.4.0"
-core_affinity = "0.8.1"
+cudasys = { workspace = true }
+network = { workspace = true }
+codegen = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+lazy_static = { workspace = true }
+core_affinity = { workspace = true }
 
 [build-dependencies]
-glob = "0.3"
+cudasys = { workspace = true }
+hookgen = { workspace = true }
 
 [features]
 # default = ["rdma"]
@@ -32,3 +34,6 @@ shadow_desc = []
 [[bin]]
 name = "server"
 path = "src/main.rs"
+
+[lints]
+workspace = true
