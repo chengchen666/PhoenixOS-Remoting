@@ -30,6 +30,23 @@ struct ServerWorker<C> {
     pub resources: BTreeMap<usize, usize>,
 }
 
+#[cfg(feature = "phos")]
+mod phos;
+#[cfg(feature = "phos")]
+use phos::*;
+
+pub fn addr_of<T>(var: &T) -> usize {
+    var as *const T as usize
+}
+
+#[cfg(feature = "phos")]
+lazy_static!{
+    pub static ref POS_CUDA_WS: Mutex<POSWorkspace> = {
+        let pos = unsafe { pos_create_workspace_cuda() };
+        Mutex::new(POSWorkspace(pos))
+    };
+}
+
 impl<C> Drop for ServerWorker<C> {
     fn drop(&mut self) {
         for module in &self.modules {
@@ -147,6 +164,13 @@ pub fn launch_server(#[expect(non_snake_case)] CONFIG: &NetworkConfig, id: i32, 
     if let Some(mut stream) = tcp {
         use std::io::Write as _;
         stream.write_all(&id.to_be_bytes()).unwrap();
+    }
+
+    #[cfg(feature = "phos")]
+    {
+        info!("Starting PhOS server ...");
+        let pos_cuda_ws: u64 = POS_CUDA_WS.lock().unwrap().get_ptr() as u64;
+        info!("PhOS daemon is running. You can run a program like \"env $phos python3 train.py \" now");
     }
 
     loop {

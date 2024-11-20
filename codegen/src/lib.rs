@@ -449,7 +449,7 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
         tokens
     } else {
         let result_ty = &result.ty;
-        let params = params.iter().map(|param| {
+        let exec_args = params.iter().map(|param| {
             let name = &param.name;
             let arg = if let PassBy::InputValue = param.pass_by {
                 &name
@@ -462,7 +462,100 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
                 quote!(#arg)
             }
         });
-        quote! { let #result_name: #result_ty = unsafe { #func(#(#params),*) }; }
+        let pos_args = params
+            .iter()
+            .filter(|param| param.mode == ElementMode::Input)
+            .map(|param| {
+                let name = &param.name;
+                let arg = if let PassBy::InputValue = param.pass_by {
+                    &name
+                } else {
+                    &param.get_exe_ptr_ident()
+                };
+                match param.pass_by {
+                    PassBy::ArrayPtr { .. } => quote_spanned![arg.span()=>
+                        #arg as usize,
+                        size_of_val(&#name.as_ref()),
+                    ],
+                    _ => quote_spanned![arg.span()=>
+                        &raw const #name as usize,
+                        size_of_val(&#name),
+                    ],
+                }
+            });
+        let get_pos_ret_data_len = params
+            .iter()
+            .filter(|param| param.mode == ElementMode::Output)
+            .map(|param| {
+                let name = &param.name;
+                match param.pass_by {
+                    PassBy::SinglePtr => quote! {
+                        pos_ret_data_len += size_of_val(&#name);
+                    },
+                    PassBy::ArrayPtr { .. } => quote! {
+                        pos_ret_data_len += size_of_val(&#name.as_ref());
+                    },
+                    _ => unreachable!()
+                }
+            });
+        let copy_pos_output_params = params
+            .iter()
+            .filter(|param| param.mode == ElementMode::Output)
+            .map(|param| {
+                let name = &param.name;
+                let arg = if let PassBy::InputValue = param.pass_by {
+                    &name
+                } else {
+                    &param.get_exe_ptr_ident()
+                };
+                match param.pass_by {
+                    PassBy::SinglePtr => quote! {
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                pos_ret_data[pos_copy_offset..].as_ptr(),
+                                #arg as *mut u8,
+                                size_of_val(&#name)
+                            );
+                        }
+                        pos_copy_offset += size_of_val(&#name);
+                    },
+                    PassBy::ArrayPtr { .. } => quote! {
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                pos_ret_data[pos_copy_offset..].as_ptr(),
+                                #arg as *mut u8,
+                                size_of_val(&#name.as_ref())
+                            );
+                        }
+                        pos_copy_offset += size_of_val(&#name.as_ref());
+                    },
+                    _ => unreachable!()
+                }
+            });
+        #[cfg(not(feature = "phos"))]
+        quote! {
+            let #result_name: #result_ty = unsafe { #func(#(#exec_args),*) };
+        }
+        #[cfg(feature = "phos")]
+        quote! {
+            let mut pos_ret_data_len: usize = 0;
+            #( #get_pos_ret_data_len )*
+            let mut pos_ret_data = vec![0u8; pos_ret_data_len];
+            let pos_ret_data_ptr: u64 = match pos_ret_data_len {
+                0 => 0u64,
+                _ => pos_ret_data.as_mut_ptr() as u64,
+            };
+            let #result_name = #result_ty::from_i32(pos_process(
+                POS_CUDA_WS.lock().unwrap().get_ptr(),
+                proc_id,
+                0u64,
+                &[#(#pos_args)*],
+                pos_ret_data_ptr,
+                pos_ret_data_len as u64,
+            )).expect("Illegal result ID");
+            let mut pos_copy_offset: usize = 0;
+            #( #copy_pos_output_params )*
+        }
     };
 
     // send result
@@ -529,7 +622,7 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
     let server_after_send = input.injections.server_after_send.iter();
 
     let gen_fn = quote! {
-        pub fn #func_exe<C: CommChannel>(server: &mut ServerWorker<C>) {
+        pub fn #func_exe<C: CommChannel>(proc_id: i32, server: &mut ServerWorker<C>) {
             let ServerWorker { channel_sender, channel_receiver, .. } = server;
             log::debug!("[#{}] [{}:{}] {}", server.id, std::file!(), std::line!(), stringify!(#func));
             #( #recv_statements )*

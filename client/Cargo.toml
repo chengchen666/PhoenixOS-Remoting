@@ -35,6 +35,7 @@ async_api = []
 shadow_desc = []
 local = []
 passthrough = ["dep:syn"]
+phos = []
 
 [lints]
 workspace = true

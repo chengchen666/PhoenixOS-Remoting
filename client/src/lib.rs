@@ -19,6 +19,9 @@ use elf::{FatBinaryHeader, KernelParamInfo};
 
 mod dl;
 
+#[cfg(feature = "phos")]
+mod phos;
+
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -46,6 +49,9 @@ impl ClientThread {
     // In the client side, the sender's name is ctos_channel_name,
     // receiver's name is stoc_channel_name.
     fn new() -> Self {
+        #[cfg(feature = "phos")]
+        unsafe { phos::pos_create_agent() };
+
         let config = &*network::CONFIG;
         let (id, channel_sender, channel_receiver) = match config.comm_type.as_str() {
             "shm" => {
