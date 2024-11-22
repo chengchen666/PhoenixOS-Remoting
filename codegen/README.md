@@ -16,3 +16,5 @@ Minor tips: to check the expanded macros, we can use the following:
 cargo expand -p client hijack::cudnn_hijack::cudnnCreate
 cargo expand -p server --lib dispatcher::cudnn_exe::cudnnCreateExe
 ```
+
+or use the [rust-analyzer: Expand macro recursively at caret](https://rust-analyzer.github.io/manual.html#expand-macro-recursively) action.
