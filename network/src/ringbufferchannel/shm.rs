@@ -29,6 +29,10 @@ impl SHMChannel {
         )
     }
 
+    pub fn new_server_with_id(shm_name: &str, index: i32, shm_len: usize) -> IOResult<Self> {
+        Self::new_server(&format!("{}_{}", shm_name, index), shm_len)
+    }
+
     pub fn new_client(shm_name: &str, shm_len: usize) -> IOResult<Self> {
         Self::new_inner(
             shm_name,
@@ -37,6 +41,11 @@ impl SHMChannel {
             (libc::S_IRUSR | libc::S_IWUSR) as _,
         )
     }
+
+    pub fn new_client_with_id(shm_name: &str, index: i32, shm_len: usize) -> IOResult<Self> {
+        Self::new_client(&format!("{}_{}", shm_name, index), shm_len)
+    }
+
     fn new_inner(shm_name: &str, shm_len: usize, oflag: i32, sflag: i32) -> IOResult<Self> {
         let shm_name_c_str = CString::new(shm_name).unwrap();
         let fd: RawFd = unsafe { libc::shm_open(shm_name_c_str.as_ptr(), oflag, sflag as _) };

@@ -13,7 +13,9 @@ pub mod shm;
 #[cfg(target_os = "linux")]
 pub use shm::SHMChannel;
 
+#[cfg(feature = "rdma")]
 pub mod rdma;
+#[cfg(feature = "rdma")]
 pub use rdma::RDMAChannel;
 
 pub mod utils;

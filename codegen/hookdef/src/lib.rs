@@ -107,13 +107,9 @@ impl Parse for HookFnItem {
             return Err(Error::new_spanned(block, "replace empty block with `;`"));
         }
         for stmt in block.stmts {
-            let Stmt::Expr(Expr::Block(ExprBlock { attrs, label: Some(label), block }), None) =
-                stmt
+            let Stmt::Expr(Expr::Block(ExprBlock { attrs, label: Some(label), block }), _) = stmt
             else {
-                return Err(Error::new_spanned(
-                    stmt,
-                    "expected 'section: { ... } (without trailing semicolon)",
-                ));
+                return Err(Error::new_spanned(stmt, "expected 'section: { ... }"));
             };
             check_max_attributes(&attrs, 0)?;
             if block.stmts.is_empty() {

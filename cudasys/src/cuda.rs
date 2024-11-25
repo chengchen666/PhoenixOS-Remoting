@@ -1,4 +1,3 @@
-use super::*;
 pub use crate::types::cuda::*;
 include!("bindings/funcs/cuda.rs");
 
@@ -7,7 +6,7 @@ mod tests{
     use super::*;
     use network::{
         ringbufferchannel::{META_AREA, LocalChannel},
-        Channel,
+        Channel, Transportable,
     };
     use std::boxed::Box;
 

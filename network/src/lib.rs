@@ -17,6 +17,7 @@ pub struct NetworkConfig {
     pub comm_type: String,
     pub sender_socket: String,
     pub receiver_socket: String,
+    pub daemon_socket: String,
     pub stoc_channel_name: String,
     pub ctos_channel_name: String,
     pub buf_size: usize,

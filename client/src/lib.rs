@@ -1,16 +1,17 @@
 use lazy_static::lazy_static;
 
-#[expect(unused_imports)]
-use log::{debug, error, info, log_enabled, Level};
+use log::{error, info};
 
-#[expect(unused_imports)]
+#[cfg(feature = "rdma")]
+use network::ringbufferchannel::RDMAChannel;
+
 use network::{
-    ringbufferchannel::{EmulatorChannel, RDMAChannel, SHMChannel},
+    ringbufferchannel::{EmulatorChannel, SHMChannel},
     type_impl::{recv_slice_to, send_slice, MemPtr},
-    Channel, CommChannel, CommChannelInner, Transportable, CONFIG,
+    Channel, CommChannel, Transportable,
 };
 
-use codegen::cuda_hook_hijack;
+use codegen::{cuda_hook_hijack, use_thread_local};
 
 pub mod hijack;
 pub use hijack::*;
@@ -22,70 +23,99 @@ use elf::ElfController;
 pub mod dl;
 pub use dl::*;
 
-use std::boxed::Box;
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::io::Read as _;
 use std::{
     sync::Mutex,
 };
 
-lazy_static! {
+struct ClientThread {
+    id: i32,
+    channel_sender: Channel,
+    channel_receiver: Channel,
+    resource_idx: usize,
+    #[cfg(feature = "local")]
+    cuda_device: Option<std::ffi::c_int>,
+}
+
+impl ClientThread {
     // Use features when compiling to decide what arm(s) will be supported.
     // In the client side, the sender's name is ctos_channel_name,
     // receiver's name is stoc_channel_name.
-    static ref CHANNEL_SENDER: Mutex<Channel> = {
-        let c: Box<dyn CommChannelInner> = match CONFIG.comm_type.as_str() {
-            #[cfg(feature = "shm")]
+    fn new() -> Self {
+        let config = &*network::CONFIG;
+        let (id, channel_sender, channel_receiver) = match config.comm_type.as_str() {
             "shm" => {
-                Box::new(SHMChannel::new_client(&CONFIG.ctos_channel_name, CONFIG.buf_size).unwrap())
-            },
+                let id = {
+                    let mut stream = std::net::TcpStream::connect(&config.daemon_socket).unwrap();
+                    let mut buf = [0u8; 4];
+                    stream.read_exact(&mut buf).unwrap();
+                    i32::from_be_bytes(buf)
+                };
+                log::warn!("Client id: {id}");
+                let sender =
+                    SHMChannel::new_client_with_id(&config.ctos_channel_name, id, config.buf_size)
+                        .unwrap();
+                let receiver =
+                    SHMChannel::new_client_with_id(&config.stoc_channel_name, id, config.buf_size)
+                        .unwrap();
+                if cfg!(feature = "emulator") {
+                    (
+                        id,
+                        Channel::new(Box::new(EmulatorChannel::new(Box::new(sender)))),
+                        Channel::new(Box::new(EmulatorChannel::new(Box::new(receiver)))),
+                    )
+                } else {
+                    (id, Channel::new(Box::new(sender)), Channel::new(Box::new(receiver)))
+                }
+            }
             #[cfg(feature = "rdma")]
             "rdma" => {
                 // client side sender should connect to server's receiver socket.
-                Box::new(RDMAChannel::new_client(&CONFIG.ctos_channel_name, CONFIG.buf_size, CONFIG.receiver_socket.parse().unwrap(), 1).unwrap())
-            }
-            &_ => panic!("Unsupported communication type in config"),
-        };
-        if cfg!(feature = "emulator") {
-            Mutex::new(Channel::new(Box::new(EmulatorChannel::new(c))))
-        } else {
-            Mutex::new(Channel::new(c))
-        }
-    };
-    static ref CHANNEL_RECEIVER: Mutex<Channel> = {
-        let c: Box<dyn CommChannelInner> = match CONFIG.comm_type.as_str() {
-            #[cfg(feature = "shm")]
-            "shm" => {
-                Box::new(SHMChannel::new_client(&CONFIG.stoc_channel_name, CONFIG.buf_size).unwrap())
-            }
-            #[cfg(feature = "rdma")]
-            "rdma" => {
+                let sender = RDMAChannel::new_client(
+                    &config.ctos_channel_name,
+                    config.buf_size,
+                    config.receiver_socket.parse().unwrap(),
+                    1,
+                )
+                .unwrap();
                 // client side receiver should connect to server's sender socket.
-                Box::new(RDMAChannel::new_client(&CONFIG.stoc_channel_name, CONFIG.buf_size, CONFIG.sender_socket.parse().unwrap(), 1).unwrap())
+                let receiver = RDMAChannel::new_client(
+                    &config.stoc_channel_name,
+                    config.buf_size,
+                    config.sender_socket.parse().unwrap(),
+                    1,
+                )
+                .unwrap();
+                (0, Channel::new(Box::new(sender)), Channel::new(Box::new(receiver)))
             }
             &_ => panic!("Unsupported communication type in config"),
         };
-        if cfg!(feature = "emulator") {
-            Mutex::new(Channel::new(Box::new(EmulatorChannel::new(c))))
-        } else {
-            Mutex::new(Channel::new(c))
+
+        Self {
+            id,
+            channel_sender,
+            channel_receiver,
+            resource_idx: 0,
+            #[cfg(feature = "local")]
+            cuda_device: None,
         }
-    };
+    }
+}
 
+impl Drop for ClientThread {
+    fn drop(&mut self) {
+        let proc_id = -1;
+        proc_id.send(&self.channel_sender).unwrap();
+    }
+}
+
+thread_local! {
+    static CLIENT_THREAD: RefCell<ClientThread> = RefCell::new(ClientThread::new());
+}
+
+lazy_static! {
     static ref ELF_CONTROLLER: ElfController = ElfController::new();
-
-    static ref RESOURCE_IDX: Mutex<usize> = Mutex::new(0);
-
-    static ref LOCAL_INFO: Mutex<HashMap<usize, usize>> = Mutex::new(HashMap::new());
-}
-
-#[cfg(feature = "local")]
-fn add_local_info(proc_id: usize, info: usize) {
-    LOCAL_INFO.lock().unwrap().insert(proc_id, info);
-}
-
-#[cfg(feature = "local")]
-fn get_local_info(proc_id: usize) -> Option<usize> {
-    LOCAL_INFO.lock().unwrap().get(&proc_id).cloned()
 }
 
 #[ctor::ctor]

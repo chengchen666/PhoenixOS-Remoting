@@ -15,13 +15,14 @@ toml = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 lazy_static = { workspace = true }
-KRdmaKit = { git = "https://github.com/Gahow/krcore-artifacts.git", branch = "feat/send_mr", features = ["user", "OFED_5_4"] }
+KRdmaKit = { git = "https://github.com/SJTU-IPADS/krcore-artifacts.git", optional = true, features = ["user", "OFED_5_4"] }
 
 [dev-dependencies]
 cudasys = { workspace = true }
 
 [features]
 log_rperf = ["dep:measure"]
+rdma = ["dep:KRdmaKit"]
 
 [lints]
 workspace = true

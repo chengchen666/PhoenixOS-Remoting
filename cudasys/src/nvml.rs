@@ -1,4 +1,3 @@
-use super::*;
 pub use crate::types::nvml::*;
 include!("bindings/funcs/nvml.rs");
 
@@ -8,7 +7,7 @@ mod tests{
     use crate::FromPrimitive;
     use network::{
         ringbufferchannel::{META_AREA, LocalChannel},
-        Channel,
+        Channel, Transportable,
     };
 
     #[test]
