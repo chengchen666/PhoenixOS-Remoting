@@ -3,7 +3,6 @@ use super::*;
 use cudasys::types::cudart::*;
 use ::std::os::raw::*;
 use std::cell::RefCell;
-use std::collections::BTreeMap;
 use std::ffi::CString;
 use std::alloc::{alloc, Layout};
 
@@ -223,18 +222,11 @@ pub extern "C" fn cudaHostAlloc(
     cudaError_t::cudaSuccess
 }
 
-thread_local! {
-    static ERROR_STRINGS: RefCell<BTreeMap<cudaError_t, CString>> = const { RefCell::new(BTreeMap::new()) };
-}
-
 #[no_mangle]
 #[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
 pub extern "C" fn cudaGetErrorString(
     cudaError: cudaError_t,
 ) -> *const ::std::os::raw::c_char {
-    if let Some(result) = ERROR_STRINGS.with_borrow(|m| m.get(&cudaError).map(|s| s.as_ptr())) {
-        return result;
-    }
     log::debug!(
         "[{}:{}] cudaGetErrorString",
         std::file!(),
@@ -261,7 +253,7 @@ pub extern "C" fn cudaGetErrorString(
                 Err(e) => panic!("failed to receive timestamp: {:?}", e),
             }
     let result = CString::new(result).unwrap();
-    ERROR_STRINGS.with_borrow_mut(|m| m.entry(cudaError).or_insert(result).as_ptr())
+    result.into_raw() // leaking the string as the program is about to fail anyway
 }
 
 struct CallConfiguration {

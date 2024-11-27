@@ -12,7 +12,7 @@ pub fn cudaMemcpyExe<C: CommChannel>(server: &mut ServerWorker<C>) {
     src.recv(channel_receiver).unwrap();
     let mut count: usize = Default::default();
     count.recv(channel_receiver).unwrap();
-    let mut kind: cudaMemcpyKind = Default::default();
+    let mut kind: cudaMemcpyKind = cudaMemcpyKind::cudaMemcpyHostToHost;
     kind.recv(channel_receiver).unwrap();
 
     let mut data_buf = 0 as *mut u8;
@@ -72,9 +72,9 @@ pub fn cudaLaunchKernelExe<C: CommChannel>(server: &mut ServerWorker<C>) {
 
     let mut func: MemPtr = Default::default();
     func.recv(channel_receiver).unwrap();
-    let mut gridDim: dim3 = Default::default();
+    let mut gridDim: dim3 = dim3 { x: 0, y: 0, z: 0 };
     gridDim.recv(channel_receiver).unwrap();
-    let mut blockDim: dim3 = Default::default();
+    let mut blockDim: dim3 = dim3 { x: 0, y: 0, z: 0 };
     blockDim.recv(channel_receiver).unwrap();
     let mut argc: usize = Default::default();
     argc.recv(channel_receiver).unwrap();

@@ -1,7 +1,7 @@
+use bindgen::callbacks::{DeriveInfo, ParseCallbacks};
 use glob::glob;
 use regex::Regex;
 use std::{
-    collections::VecDeque,
     env,
     fs::File,
     io::Write,
@@ -53,71 +53,38 @@ pub fn find_cuda() -> (Vec<PathBuf>, Vec<PathBuf>) {
     (candidates, valid_paths)
 }
 
-fn decorate(reader: &str) -> String {
-    let mut cache: VecDeque<String> = VecDeque::new();
+#[derive(Debug)]
+struct DeriveCallback;
 
-    let mut decorated_buf = String::with_capacity(reader.len() * 2);
-    let mut emit = |line: &str| {
-        decorated_buf.push_str(line);
-        decorated_buf.push('\n');
-    };
-
-    // Process in line level.
-    for line in reader.lines() {
-        if line.starts_with("#[derive(") {
-            cache.push_back(line.to_owned());
-            // No emitting.
-        } else if line.starts_with("pub enum") {
-            // sanity check
-            assert_eq!(1, cache.len());
-            // #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-            // -> #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, FromPrimitive, codegen::Transportable)]
-            let mut prev = cache.pop_front().unwrap();
-            prev = prev.replace(")]", ", Default, FromPrimitive, codegen::Transportable)]");
-            emit(&prev);
-            emit(&line);
-            // #[default]
-            emit("#[default]");
-        } else if line.starts_with("pub struct") || line.starts_with("pub union") {
-            // sanity check
-            assert_eq!(1, cache.len());
-            // #[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-            // -> #[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq, codegen::Transportable)]
-            let mut prev = cache.pop_front().unwrap();
-            prev = prev.replace(")]", ", codegen::Transportable)]");
-            emit(&prev);
-            emit(&line);
-        } else if line.starts_with("pub type") && line.contains('*') {
-            let index = line.find('*').unwrap();
-            // sanity check
-            if !cache.is_empty() {
-                panic!("Cache is not empty: {:?}", cache);
-            }
-            // = *[mut, const] Struct;
-            // -> = usize;
-            let line = line[..index].to_string() + "usize;";
-            emit(&line);
+impl ParseCallbacks for DeriveCallback {
+    fn add_derives(&self, info: &DeriveInfo<'_>) -> Vec<String> {
+        if matches!(
+            info.name,
+            "cudaError_enum"
+                | "cudaError"
+                | "nvmlReturn_enum"
+                | "cudnnStatus_t"
+                | "cublasStatus_t"
+        ) {
+            vec![
+                "num_derive::FromPrimitive".to_owned(),
+                "codegen::Transportable".to_owned(),
+            ]
         } else {
-            // sanity check
-            if !cache.is_empty() {
-                panic!("Cache is not empty: {:?}", cache);
-            }
-            emit(&line);
+            vec!["codegen::Transportable".to_owned()]
         }
     }
-
-    decorated_buf
 }
 
 /// Read the file, split it into two parts: one with the types and the other with the functions.
 /// Remove the original file.
 fn split(content: &str, types_file: &Path, funcs_file: &Path) {
-    // regex to match `extern "C" { ... }`
-    let re = Regex::new(r#"(?s)extern "C" \{.*?\}\n"#).unwrap();
+    // regex to match `unsafe extern "C" { ... }`
+    let re = Regex::new(r#"(?s)unsafe extern "C" \{.*?\}\n"#).unwrap();
 
     // Extract all blocks that match the regex
-    let funcs: Vec<_> = re.find_iter(&content).map(|mat| mat.as_str()).collect();
-    let types = re.replace_all(&content, "");
+    let funcs: Vec<_> = re.find_iter(content).map(|mat| mat.as_str()).collect();
+    let types = re.replace_all(content, "");
 
     // Write the types and functions to separate files.
     if let Some(parent) = types_file.parent() {
@@ -188,11 +155,9 @@ fn bind_gen(
         })
         // Disable documentation comments from being generated
         .generate_comments(false)
-        // Add derives
-        .derive_default(true)
-        .derive_eq(true)
-        .derive_hash(true)
-        .derive_ord(true);
+        .generate_cstr(true)
+        .parse_callbacks(Box::new(DeriveCallback))
+        .opaque_type("FILE");
 
     // Add include paths
     for path in paths {
@@ -207,13 +172,10 @@ fn bind_gen(
 
     let root = env::var("CARGO_MANIFEST_DIR").unwrap();
 
-    // Format the generated bindings for our purposes.
-    let out_file = decorate(&bindings.to_string());
-
     // Split the file into two parts: one with the types and the other with the functions.
     let types_file = PathBuf::from(format!("{root}/src/bindings/types/{output}.rs"));
     let funcs_file = PathBuf::from(format!("{root}/src/bindings/funcs/{output}.rs"));
-    split(&out_file, &types_file, &funcs_file);
+    split(&bindings.to_string(), &types_file, &funcs_file);
 }
 
 fn main() {

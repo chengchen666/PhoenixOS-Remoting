@@ -1,21 +1,41 @@
-#![expect(
-    non_snake_case,
-)]
+#![expect(non_snake_case)]
 
-pub use num::FromPrimitive;
-use num_derive::FromPrimitive;
+pub use num_traits::FromPrimitive;
 
 // Type definitions extracted from the bindings.
 pub mod types;
 
-pub mod cuda;
-pub mod cudart;
-pub mod nvml;
-pub mod cudnn;
-pub mod cublas;
-pub mod cublasLt;
-
 mod hooks;
+
+pub mod cuda {
+    pub use crate::types::cuda::*;
+    include!("bindings/funcs/cuda.rs");
+}
+
+pub mod cudart {
+    pub use crate::types::cudart::*;
+    include!("bindings/funcs/cudart.rs");
+}
+
+pub mod nvml {
+    pub use crate::types::nvml::*;
+    include!("bindings/funcs/nvml.rs");
+}
+
+pub mod cudnn {
+    pub use crate::types::cudnn::*;
+    include!("bindings/funcs/cudnn.rs");
+}
+
+pub mod cublas {
+    pub use crate::types::cublas::*;
+    include!("bindings/funcs/cublas.rs");
+}
+
+pub mod cublasLt {
+    pub use crate::types::cublasLt::*;
+    include!("bindings/funcs/cublasLt.rs");
+}
 
 #[cfg(test)]
 mod tests {
