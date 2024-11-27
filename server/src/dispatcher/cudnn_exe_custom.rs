@@ -1,5 +1,3 @@
-#![expect(non_snake_case)]
-
 use super::*;
 use cudasys::cudnn::*;
 
@@ -7,7 +5,7 @@ pub fn cudnnGetErrorStringExe<C: CommChannel>(
     server: &mut ServerWorker<C>,
 ) {
     let ServerWorker { channel_sender, channel_receiver, .. } = server;
-    info!("[{}:{}] cudnnGetErrorString", std::file!(), std::line!());
+    log::debug!("[{}:{}] cudnnGetErrorString", std::file!(), std::line!());
     let mut status: cudnnStatus_t = Default::default();
     if let Err(e) = status.recv(channel_receiver) {
         error!("Error receiving status: {:?}", e);

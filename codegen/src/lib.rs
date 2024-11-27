@@ -137,7 +137,7 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
             };
             quote_spanned! {name.span()=>
                 #deref
-                log::debug!("(input) {} = {:?}", stringify!(#name), #name);
+                log::trace!("(input) {} = {:?}", stringify!(#name), #name);
                 match #name.send(channel_sender) {
                     Ok(()) => {}
                     Err(e) => panic!("failed to send {}: {}", stringify!(#name), e),
@@ -180,7 +180,7 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive {}: {}", stringify!(#name), e),
             }
-            log::debug!("(output) {} = {:?}", stringify!(#name), #name);
+            log::trace!("(output) {} = {:?}", stringify!(#name), #name);
         }
     });
 
@@ -233,7 +233,7 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
         #[no_mangle]
         #[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
-            info!("[#{}] [{}:{}] {}", client.id, std::file!(), std::line!(), stringify!(#func));
+            log::debug!("[#{}] [{}:{}] {}", client.id, std::file!(), std::line!(), stringify!(#func));
             let ClientThread { channel_sender, channel_receiver, .. } = client;
             let proc_id: i32 = #proc_id;
             let mut #result_name: #result_ty = Default::default();
@@ -265,7 +265,12 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
                 Err(e) => panic!("failed to receive {}: {}", "timestamp", e),
             }
             if #result_name != Default::default() {
-                log::warn!("{} returned error: {:?}", stringify!(#func), #result_name);
+                log::error!(
+                    "{} returned error: {:?}\n{}",
+                    stringify!(#func),
+                    #result_name,
+                    std::backtrace::Backtrace::force_capture(),
+                );
             }
             #client_after_recv
             return #result_name;
@@ -347,7 +352,7 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
             let name = &param.name;
             quote_spanned! {name.span()=>
                 let #name = unsafe { #name.assume_init() };
-                log::debug!("(output) {} = {:?}", stringify!(#name), #name);
+                log::trace!("(output) {} = {:?}", stringify!(#name), #name);
             }
         });
 
@@ -381,7 +386,7 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
                     Err(e) => panic!("failed to receive {}: {}", stringify!(#name), e),
                 }
                 let #name = unsafe { #name.assume_init() };
-                log::debug!("(input) {} = {:?}", stringify!(#name), #name);
+                log::trace!("(input) {} = {:?}", stringify!(#name), #name);
             }
         });
 
@@ -505,20 +510,20 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
         #[allow(non_snake_case)]
         pub fn #func_exe<C: CommChannel>(server: &mut ServerWorker<C>) {
             let ServerWorker { channel_sender, channel_receiver, .. } = server;
-            info!("[#{}] [{}:{}] {}", server.id, std::file!(), std::line!(), stringify!(#func));
+            log::debug!("[#{}] [{}:{}] {}", server.id, std::file!(), std::line!(), stringify!(#func));
             #( #recv_statements )*
             #( #get_resource_statements )*
             #shadow_desc_recv
             match channel_receiver.recv_ts() {
                 Ok(()) => {}
-                Err(e) => panic!("failed to receive timestamp: {:?}", e)
+                Err(e) => panic!("failed to receive {}: {:?}", "timestamp", e),
             }
             #( #def_statements )*
             #exec_statement
             #( #assume_init )*
 
             if #result_name != Default::default() {
-                log::warn!("{} returned error: {:?}", stringify!(#func), #result_name);
+                log::error!("{} returned error: {:?}", stringify!(#func), #result_name);
             }
 
             #shadow_desc_return

@@ -1,11 +1,10 @@
-#![expect(non_snake_case)]
 use super::*;
 use cudasys::cudart::*;
 use std::alloc::{alloc, dealloc, Layout};
 
 pub fn cudaMemcpyExe<C: CommChannel>(server: &mut ServerWorker<C>) {
     let ServerWorker { channel_sender, channel_receiver, .. } = server;
-    info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
+    log::debug!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
 
     let mut dst: MemPtr = Default::default();
     dst.recv(channel_receiver).unwrap();
@@ -69,7 +68,7 @@ pub fn cudaMemcpyExe<C: CommChannel>(server: &mut ServerWorker<C>) {
 
 pub fn cudaLaunchKernelExe<C: CommChannel>(server: &mut ServerWorker<C>) {
     let ServerWorker { channel_sender, channel_receiver, .. } = server;
-    info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
+    log::debug!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
 
     let mut func: MemPtr = Default::default();
     func.recv(channel_receiver).unwrap();
@@ -124,7 +123,7 @@ pub fn cudaLaunchKernelExe<C: CommChannel>(server: &mut ServerWorker<C>) {
 
 pub fn cudaGetErrorStringExe<C: CommChannel>(server: &mut ServerWorker<C>) {
     let ServerWorker { channel_sender, channel_receiver, .. } = server;
-    info!("[{}:{}] cudaGetErrorString", std::file!(), std::line!());
+    log::debug!("[{}:{}] cudaGetErrorString", std::file!(), std::line!());
     let mut error: cudaError_t = Default::default();
     error.recv(channel_receiver).unwrap();
     match channel_receiver.recv_ts() {

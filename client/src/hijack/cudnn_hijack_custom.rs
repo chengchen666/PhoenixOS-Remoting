@@ -7,7 +7,7 @@ use std::os::raw::*;
 pub extern "C" fn cudnnGetErrorString(
     error_status: cudnnStatus_t,
 ) -> *const c_char {
-    info!(
+    log::debug!(
         "[{}:{}] cudnnGetErrorString",
         std::file!(),
         std::line!()

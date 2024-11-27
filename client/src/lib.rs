@@ -52,7 +52,7 @@ impl ClientThread {
                     stream.read_exact(&mut buf).unwrap();
                     i32::from_be_bytes(buf)
                 };
-                log::warn!("Client id: {id}");
+                log::info!("Client id: {id}");
                 let sender =
                     SHMChannel::new_client_with_id(&config.ctos_channel_name, id, config.buf_size)
                         .unwrap();

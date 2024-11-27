@@ -15,7 +15,7 @@ pub extern "C" fn cudaMemcpy(
     count: usize,
     kind: cudaMemcpyKind,
 ) -> cudaError_t {
-    info!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
+    log::debug!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
 
     assert_ne!(kind, cudaMemcpyKind::cudaMemcpyDefault, "cudaMemcpyDefault is not supported yet");
 
@@ -103,7 +103,7 @@ pub extern "C" fn cudaMemcpyAsync(
     kind: cudaMemcpyKind,
     _stream: cudaStream_t,
 ) -> cudaError_t {
-    info!("[{}:{}] cudaMemcpyAsync", std::file!(), std::line!());
+    log::debug!("[{}:{}] cudaMemcpyAsync", std::file!(), std::line!());
     cudaMemcpy(dst, src, count, kind)
 }
 
@@ -117,7 +117,7 @@ pub extern "C" fn cudaLaunchKernel(
     sharedMem: usize,
     stream: cudaStream_t,
 ) -> cudaError_t {
-    info!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
+    log::debug!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
 
     let ClientThread { channel_sender, channel_receiver, .. } = client;
 
@@ -190,6 +190,9 @@ pub extern "C" fn cudaLaunchKernel(
             Ok(()) => {}
             Err(e) => panic!("failed to receive timestamp: {:?}", e),
         }
+        if result != Default::default() {
+            log::error!("{} returned error: {:?}", "cudaLaunchKernel", result);
+        }
         return result;
     }
 }
@@ -200,7 +203,7 @@ pub extern "C" fn cudaHostAlloc(
     size: usize,
     flags: c_uint,
 ) -> cudaError_t {
-    info!(
+    log::debug!(
         "[{}:{}] cudaHostAlloc",
         std::file!(),
         std::line!()
@@ -232,7 +235,7 @@ pub extern "C" fn cudaGetErrorString(
     if let Some(result) = ERROR_STRINGS.with_borrow(|m| m.get(&cudaError).map(|s| s.as_ptr())) {
         return result;
     }
-    info!(
+    log::debug!(
         "[{}:{}] cudaGetErrorString",
         std::file!(),
         std::line!()
@@ -279,11 +282,6 @@ pub extern "C" fn __cudaPushCallConfiguration(
     sharedMem: usize,
     stream: MemPtr,
 ) -> cudaError_t {
-    info!(
-        "[{}:{}] __cudaPushCallConfiguration",
-        std::file!(),
-        std::line!()
-    );
     CALL_CONFIGURATIONS.with_borrow_mut(|v| {
         v.push(CallConfiguration {
             gridDim,
@@ -302,11 +300,6 @@ pub extern "C" fn __cudaPopCallConfiguration(
     sharedMem: *mut usize,
     stream: *mut MemPtr,
 ) -> cudaError_t {
-    info!(
-        "[{}:{}] __cudaPopCallConfiguration",
-        std::file!(),
-        std::line!()
-    );
     if let Some(config) = CALL_CONFIGURATIONS.with_borrow_mut(Vec::pop) {
         unsafe {
             *gridDim = config.gridDim;
