@@ -2,7 +2,6 @@
 
 mod dispatcher;
 
-use codegen::cuda_hook_exe;
 use cudasys::{
     cuda::{CUdeviceptr, CUfunction, CUmodule},
     cudart::{cudaDeviceSynchronize, cudaError_t, cudaGetDeviceCount, cudaSetDevice},
@@ -14,7 +13,7 @@ use network::ringbufferchannel::RDMAChannel;
 
 use network::{
     ringbufferchannel::{EmulatorChannel, SHMChannel},
-    type_impl::{recv_slice, send_slice, MemPtr},
+    type_impl::MemPtr,
     Channel, CommChannel, CommChannelError, Transportable, NetworkConfig,
 };
 

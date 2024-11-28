@@ -1,33 +1,23 @@
 use lazy_static::lazy_static;
 
-use log::{error, info};
-
 #[cfg(feature = "rdma")]
 use network::ringbufferchannel::RDMAChannel;
 
 use network::{
     ringbufferchannel::{EmulatorChannel, SHMChannel},
-    type_impl::{recv_slice_to, send_slice, MemPtr},
-    Channel, CommChannel, Transportable,
+    Channel, Transportable,
 };
 
-use codegen::{cuda_hook_hijack, use_thread_local};
+mod hijack;
 
-pub mod hijack;
-pub use hijack::*;
-
-pub mod elf;
-use elf::interfaces::{fat_header, kernel_info_t};
+#[expect(dead_code)]
+mod elf;
 use elf::ElfController;
 
-pub mod dl;
-pub use dl::*;
+mod dl;
 
 use std::cell::RefCell;
 use std::io::Read as _;
-use std::{
-    sync::Mutex,
-};
 
 struct ClientThread {
     id: i32,
@@ -125,5 +115,13 @@ fn init() {
         std::env::set_var("RUST_LOG", "debug");
     }
     env_logger::init();
-    info!("[{}:{}] client init", std::file!(), std::line!());
+    log::info!("[{}:{}] client init", std::file!(), std::line!());
+    for (i, arg) in std::env::args().enumerate() {
+        log::info!("arg[{i}]: {arg}");
+    }
+    for (key, value) in std::env::vars() {
+        if key.starts_with("LD_") || key.starts_with("RUST_") {
+            log::info!("{key}: {value}");
+        }
+    }
 }
