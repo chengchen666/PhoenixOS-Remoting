@@ -1,14 +1,12 @@
 #![feature(proc_macro_diagnostic)]
 
-use hookdef::{is_hacked_type, CustomHookFn, HookInjections};
+use hookdef::{is_hacked_type, CustomHookAttrs, CustomHookFn};
 use proc_macro::TokenStream;
-use quote::{format_ident, quote, quote_each_token_spanned, quote_spanned};
-use syn::parse::Nothing;
-use syn::spanned::Spanned as _;
+use quote::{format_ident, quote, quote_each_token_spanned, quote_spanned, TokenStreamExt as _};
 use syn::{parse_macro_input, Type};
 
 mod utils;
-use utils::{is_shadow_desc_type, is_void_ptr, ElementMode, PassBy};
+use utils::{define_usize_from, is_shadow_desc_type, ElementMode, PassBy};
 
 mod hook_fn;
 use hook_fn::HookFn;
@@ -26,7 +24,9 @@ pub fn cuda_hook(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn cuda_custom_hook(args: TokenStream, input: TokenStream) -> TokenStream {
-    parse_macro_input!(args as Nothing);
+    if let Err(err) = CustomHookAttrs::from_macro(args.into()) {
+        return err.to_compile_error().into();
+    }
     parse_macro_input!(input as CustomHookFn)
         .to_plain_fn()
         .into()
@@ -114,25 +114,26 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
                     }
                 }
                 PassBy::ArrayPtr { len, .. } => {
-                    let Type::Ptr(ty) = &param.ty else { panic!() };
-                    let ptr = if is_void_ptr(ty) {
-                        quote!(#name as *const u8)
-                    } else {
-                        quote!(#name)
-                    };
                     let len_ident = format_ident!("{}_len", name);
-                    let mut tokens = quote_spanned! {len.span()=>
-                        let #len_ident = usize::try_from((#len).clone()).unwrap();
-                    };
+                    let mut tokens = define_usize_from(&len_ident, len);
                     let span = name.span();
                     quote_each_token_spanned! {tokens span
-                        let #name = unsafe { std::slice::from_raw_parts(#ptr, #len_ident) };
+                        let #name = unsafe { std::slice::from_raw_parts(#name, #len_ident) };
                         match send_slice(#name, channel_sender) {
                             Ok(()) => {}
                             Err(e) => panic!("failed to send {}: {}", stringify!(#name), e),
                         }
                     };
                     return tokens;
+                }
+                PassBy::InputCStr => {
+                    return quote_spanned! {name.span()=>
+                        let #name = unsafe { std::ffi::CStr::from_ptr(#name) };
+                        match send_slice(#name.to_bytes_with_nul(), channel_sender) {
+                            Ok(()) => {}
+                            Err(e) => panic!("failed to send {}: {}", stringify!(#name), e),
+                        }
+                    }
                 }
             };
             quote_spanned! {name.span()=>
@@ -149,22 +150,14 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
     let recv_statements = vars.iter().map(|var| {
         let name = &var.name;
         let deref = match &var.pass_by {
-            PassBy::InputValue => unreachable!(),
+            PassBy::InputValue | PassBy::InputCStr => unreachable!(),
             PassBy::SinglePtr => quote! { let #name = unsafe { &mut *#name }; },
             PassBy::ArrayPtr { len, .. } => {
-                let Type::Ptr(ty) = &var.ty else { panic!() };
-                let ptr = if is_void_ptr(ty) {
-                    quote!(#name as *mut u8)
-                } else {
-                    quote!(#name)
-                };
                 let len_ident = format_ident!("{}_len", name);
-                let mut tokens = quote_spanned! {len.span()=>
-                    let #len_ident = usize::try_from((#len).clone()).unwrap();
-                };
+                let mut tokens = define_usize_from(&len_ident, len);
                 let span = name.span();
                 quote_each_token_spanned! {tokens span
-                    let #name = unsafe { std::slice::from_raw_parts_mut(#ptr, #len_ident) };
+                    let #name = unsafe { std::slice::from_raw_parts_mut(#name, #len_ident) };
                     match recv_slice_to(#name, channel_receiver) {
                         Ok(()) => {}
                         Err(e) => panic!("failed to send {}: {}", stringify!(#name), e),
@@ -208,7 +201,7 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
             if cfg!(feature = "shadow_desc") {
                 let resource_idx = client.resource_idx;
                 unsafe {
-                    *#name = resource_idx;
+                    *#name = resource_idx as _;
                 }
                 client.resource_idx += 1;
                 match resource_idx.send(channel_sender) {
@@ -227,18 +220,23 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
         Default::default()
     };
 
-    let HookInjections { client_before_send, client_after_recv } = input.injections;
+    let client_before_send = input.injections.client_before_send.iter();
+    let client_extra_send = input.injections.client_extra_send.iter();
+    let client_after_recv = input.injections.client_after_recv.iter();
 
     let gen_fn = quote! {
         #[no_mangle]
-        #[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
+        // manually expanded the following macro to work around rust-analyzer bug
+        // otherwise `Expand macro recursively at caret` is bugged
+        // #[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
         pub extern "C" fn #func(#(#params),*) -> #result_ty {
+        CLIENT_THREAD.with_borrow_mut(|client| {
             log::debug!("[#{}] [{}:{}] {}", client.id, std::file!(), std::line!(), stringify!(#func));
             let ClientThread { channel_sender, channel_receiver, .. } = client;
             let proc_id: i32 = #proc_id;
             let mut #result_name: #result_ty = Default::default();
 
-            #client_before_send
+            #( #client_before_send )*
 
             match proc_id.send(channel_sender) {
                 Ok(()) => {}
@@ -246,6 +244,8 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
             }
             #( #send_statements )*
             #shadow_desc_send
+
+            #( #client_extra_send )*
 
             match channel_sender.flush_out() {
                 Ok(()) => {}
@@ -272,8 +272,9 @@ pub fn cuda_hook_hijack(args: TokenStream, input: TokenStream) -> TokenStream {
                     std::backtrace::Backtrace::force_capture(),
                 );
             }
-            #client_after_recv
+            #( #client_after_recv )*
             return #result_name;
+        })
         }
     };
 
@@ -319,27 +320,28 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
 
     // definition statements
     let def_statements = params.iter().map(|param| {
-        if param.mode == ElementMode::Input {
+        if param.mode != ElementMode::Output {
             return Default::default();
         }
         let name = &param.name;
+        let ptr_ident = param.get_exe_ptr_ident();
         let ty = &param.ty;
         let Type::Ptr(ptr) = ty else { panic!() };
         let ty = ptr.elem.as_ref();
         match &param.pass_by {
-            PassBy::InputValue => unreachable!(),
+            PassBy::InputValue | PassBy::InputCStr => unreachable!(),
             PassBy::SinglePtr => quote_spanned! {name.span()=>
                 let mut #name = std::mem::MaybeUninit::<#ty>::uninit();
+                let #ptr_ident = #name.as_mut_ptr();
             },
             PassBy::ArrayPtr { len, cap } => {
                 let cap = cap.as_ref().unwrap_or(len);
                 let cap_ident = format_ident!("{}_cap", name);
-                let mut tokens = quote_spanned! {cap.span()=>
-                    let #cap_ident = usize::try_from((#cap).clone()).unwrap();
-                };
+                let mut tokens = define_usize_from(&cap_ident, cap);
                 let span = name.span();
                 quote_each_token_spanned! {tokens span
                     let mut #name = Box::<[#ty]>::new_uninit_slice(#cap_ident);
+                    let #ptr_ident = std::mem::MaybeUninit::slice_as_mut_ptr(&mut #name);
                 };
                 tokens
             }
@@ -362,31 +364,54 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
         .filter(|param| param.mode == ElementMode::Input)
         .map(|param| {
             let name = &param.name;
-            let ty = match &param.pass_by {
-                PassBy::InputValue => &param.ty,
+            let recv_single = |ty| {
+                quote_spanned! {name.span()=>
+                    let mut #name = std::mem::MaybeUninit::<#ty>::uninit();
+                    match #name.recv(channel_receiver) {
+                        Ok(()) => {}
+                        Err(e) => panic!("failed to receive {}: {}", stringify!(#name), e),
+                    }
+                    let #name = unsafe { #name.assume_init() };
+                    log::trace!("(input) {} = {:?}", stringify!(#name), #name);
+                }
+            };
+            match &param.pass_by {
+                PassBy::InputValue => recv_single(&param.ty),
                 PassBy::SinglePtr => {
                     let Type::Ptr(ptr) = &param.ty else { panic!() };
-                    ptr.elem.as_ref()
+                    let mut tokens = recv_single(ptr.elem.as_ref());
+                    let span = name.span();
+                    let ptr_ident = param.get_exe_ptr_ident();
+                    quote_each_token_spanned! {tokens span
+                        let #ptr_ident = &raw const #name;
+                    }
+                    tokens
                 }
                 PassBy::ArrayPtr { .. } => {
                     let Type::Ptr(ptr) = &param.ty else { panic!() };
                     let ty = ptr.elem.as_ref();
+                    let ptr_ident = param.get_exe_ptr_ident();
                     return quote_spanned! {name.span()=>
                         let #name = match recv_slice::<#ty, _>(channel_receiver) {
                             Ok(slice) => slice,
                             Err(e) => panic!("failed to receive {}: {}", stringify!(#name), e),
                         };
+                        log::trace!("(input) {} = {:p}", stringify!(#name), #name.as_ptr());
+                        let #ptr_ident = #name.as_ptr();
                     };
                 }
-            };
-            quote_spanned! {name.span()=>
-                let mut #name = std::mem::MaybeUninit::<#ty>::uninit();
-                match #name.recv(channel_receiver) {
-                    Ok(()) => {}
-                    Err(e) => panic!("failed to receive {}: {}", stringify!(#name), e),
+                PassBy::InputCStr => {
+                    let ptr_ident = param.get_exe_ptr_ident();
+                    quote_spanned! {name.span()=>
+                        let #name = match recv_slice(channel_receiver) {
+                            Ok(slice) => {
+                                std::ffi::CString::from_vec_with_nul(slice.into_vec()).unwrap()
+                            }
+                            Err(e) => panic!("failed to receive {}: {}", stringify!(#name), e),
+                        };
+                        let #ptr_ident = #name.as_ptr();
+                    }
                 }
-                let #name = unsafe { #name.assume_init() };
-                log::trace!("(input) {} = {:?}", stringify!(#name), #name);
             }
         });
 
@@ -401,44 +426,40 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
         })
         .map(|param| {
             let name = &param.name;
+            let ty = &param.ty;
             if is_destroy {
                 assert_eq!(params.len(), 1);
                 quote! {
                     #[cfg(feature = "shadow_desc")]
-                    let #name = server.resources.remove(&(#name as usize)).unwrap();
+                    let #name = server.resources.remove(&(#name as usize)).unwrap() as #ty;
                 }
             } else {
                 quote! {
                     #[cfg(feature = "shadow_desc")]
-                    let #name = *server.resources.get(&(#name as usize)).unwrap();
+                    let #name = *server.resources.get(&(#name as usize)).unwrap() as #ty;
                 }
             }
         });
 
     // execution statement
     let result_name = &result.name;
-    let exec_statement = {
+    let exec_statement = if !input.injections.server_execution.is_empty() {
+        let mut tokens = proc_macro2::TokenStream::new();
+        tokens.append_all(&input.injections.server_execution);
+        tokens
+    } else {
         let result_ty = &result.ty;
         let params = params.iter().map(|param| {
             let name = &param.name;
-            let arg = match param.mode {
-                ElementMode::Input => match &param.pass_by {
-                    PassBy::InputValue => quote!(#name),
-                    PassBy::SinglePtr => quote_spanned!(name.span()=> &raw const #name),
-                    PassBy::ArrayPtr { .. } => quote_spanned!(name.span()=> #name.as_ptr()),
-                },
-                ElementMode::Output => match &param.pass_by {
-                    PassBy::InputValue => unreachable!(),
-                    PassBy::SinglePtr => quote_spanned!(name.span()=> #name.as_mut_ptr()),
-                    PassBy::ArrayPtr { .. } => quote_spanned! {name.span()=>
-                        std::mem::MaybeUninit::slice_as_mut_ptr(&mut #name)
-                    },
-                },
-            };
-            if is_hacked_type(&param.ty) {
-                quote_spanned!(name.span()=> std::mem::transmute(#arg))
+            let arg = if let PassBy::InputValue = param.pass_by {
+                &name
             } else {
-                arg
+                &param.get_exe_ptr_ident()
+            };
+            if param.is_void_ptr || is_hacked_type(&param.ty) {
+                quote_spanned!(name.span()=> (#arg).cast())
+            } else {
+                quote!(#arg)
             }
         });
         quote! { let #result_name: #result_ty = unsafe { #func(#(#params),*) }; }
@@ -451,13 +472,11 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
         .map(|param| {
             let name = &param.name;
             let send = match &param.pass_by {
-                PassBy::InputValue => unreachable!(),
+                PassBy::InputValue | PassBy::InputCStr => unreachable!(),
                 PassBy::SinglePtr => quote! { #name.send(channel_sender) },
                 PassBy::ArrayPtr { len, .. } => {
                     let len_ident = format_ident!("{}_len", name);
-                    let mut tokens = quote_spanned! {len.span()=>
-                        let #len_ident = usize::try_from((#len).clone()).unwrap();
-                    };
+                    let mut tokens = define_usize_from(&len_ident, len);
                     let span = name.span();
                     quote_each_token_spanned! {tokens span
                         send_slice(&#name[..#len_ident], channel_sender)
@@ -506,14 +525,17 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
         Default::default()
     };
 
+    let server_extra_recv = input.injections.server_extra_recv.iter();
+    let server_after_send = input.injections.server_after_send.iter();
+
     let gen_fn = quote! {
-        #[allow(non_snake_case)]
         pub fn #func_exe<C: CommChannel>(server: &mut ServerWorker<C>) {
             let ServerWorker { channel_sender, channel_receiver, .. } = server;
             log::debug!("[#{}] [{}:{}] {}", server.id, std::file!(), std::line!(), stringify!(#func));
             #( #recv_statements )*
             #( #get_resource_statements )*
             #shadow_desc_recv
+            #( #server_extra_recv )*
             match channel_receiver.recv_ts() {
                 Ok(()) => {}
                 Err(e) => panic!("failed to receive {}: {:?}", "timestamp", e),
@@ -537,6 +559,7 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
                 Ok(()) => {}
                 Err(e) => panic!("failed to flush_out: {}", e),
             }
+            #( #server_after_send )*
         }
     };
 

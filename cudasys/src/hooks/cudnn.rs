@@ -373,5 +373,5 @@ fn cudnnGetConvolutionForwardWorkspaceSize(
     sizeInBytes: *mut usize,
 ) -> cudnnStatus_t;
 
-#[cuda_custom_hook] // proc_id = 1535
+#[cuda_custom_hook(proc_id = 1535)]
 fn cudnnGetErrorString(status: cudnnStatus_t) -> *const c_char;

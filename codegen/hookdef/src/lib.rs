@@ -2,14 +2,14 @@
 //!
 //! This is a separate crate because we can't export normal items in a proc-macro crate.
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt as _};
-use syn::meta::{parser, ParseNestedMeta};
+use syn::meta::{self, ParseNestedMeta};
 use syn::parse::{Parse, ParseStream, Parser};
 use syn::spanned::Spanned;
 use syn::{
-    Attribute, Block, Error, Expr, ExprBlock, FnArg, LitInt, Result, Signature, Stmt, Token, Type,
-    Visibility,
+    Attribute, Block, Error, Expr, ExprBlock, FnArg, LitInt, Meta, Result, Signature, Stmt, Token,
+    Type,
 };
 
 pub struct HookAttrs {
@@ -25,7 +25,7 @@ impl HookAttrs {
     pub fn from_macro(args: TokenStream) -> Result<Self> {
         let span = args.span();
         let mut raw = RawAttrs::default();
-        Parser::parse2(parser(|meta| raw.parse(meta)), args)?;
+        Parser::parse2(meta::parser(|meta| raw.parse(meta)), args)?;
         raw.validate()
             .ok_or_else(|| Error::new(span, Self::ERROR))
     }
@@ -82,6 +82,38 @@ impl RawAttrs {
     }
 }
 
+pub struct CustomHookAttrs {
+    pub proc_id: Option<LitInt>,
+}
+
+impl CustomHookAttrs {
+    pub fn from_macro(args: TokenStream) -> Result<Self> {
+        if args.is_empty() {
+            return Ok(Self { proc_id: None });
+        }
+        let mut result = Self { proc_id: None };
+        Parser::parse2(meta::parser(|meta| result.parse(meta)), args)?;
+        Ok(result)
+    }
+
+    pub fn from_attr(attr: &Attribute) -> Result<Self> {
+        if let Meta::Path(_) = attr.meta {
+            return Ok(Self { proc_id: None });
+        }
+        let mut result = Self { proc_id: None };
+        attr.parse_nested_meta(|meta| result.parse(meta))?;
+        Ok(result)
+    }
+
+    fn parse(&mut self, meta: ParseNestedMeta<'_>) -> Result<()> {
+        match meta.path.require_ident()?.to_string().as_str() {
+            "proc_id" => self.proc_id = Some(meta.value()?.parse()?),
+            _ => return Err(meta.error("unsupported property")),
+        }
+        Ok(())
+    }
+}
+
 pub struct HookFnItem {
     pub sig: Signature,
     pub injections: HookInjections,
@@ -89,8 +121,12 @@ pub struct HookFnItem {
 
 #[derive(Default)]
 pub struct HookInjections {
-    pub client_before_send: Option<Block>,
-    pub client_after_recv: Option<Block>,
+    pub client_before_send: Vec<Stmt>,
+    pub client_extra_send: Vec<Stmt>,
+    pub client_after_recv: Vec<Stmt>,
+    pub server_extra_recv: Vec<Stmt>,
+    pub server_execution: Vec<Stmt>,
+    pub server_after_send: Vec<Stmt>,
 }
 
 impl Parse for HookFnItem {
@@ -116,8 +152,12 @@ impl Parse for HookFnItem {
                 return Err(Error::new_spanned(block, "empty injection block"));
             }
             match label.name.ident.to_string().as_str() {
-                "client_before_send" => injections.client_before_send = Some(block),
-                "client_after_recv" => injections.client_after_recv = Some(block),
+                "client_before_send" => injections.client_before_send = block.stmts,
+                "client_extra_send" => injections.client_extra_send = block.stmts,
+                "client_after_recv" => injections.client_after_recv = block.stmts,
+                "server_extra_recv" => injections.server_extra_recv = block.stmts,
+                "server_execution" => injections.server_execution = block.stmts,
+                "server_after_send" => injections.server_after_send = block.stmts,
                 _ => {
                     return Err(Error::new_spanned(
                         label.name.ident,
@@ -161,12 +201,16 @@ pub fn is_hacked_type(mut ty: &Type) -> bool {
     while let Type::Ptr(ptr) = ty {
         ty = &ptr.elem;
     }
+    last_seg(ty).is_some_and(|seg| seg.to_string().starts_with("Hacked"))
+}
+
+pub fn last_seg(ty: &Type) -> Option<&Ident> {
     if let Type::Path(ty) = ty {
         if let Some(seg) = ty.path.segments.last() {
-            return seg.ident.to_string().starts_with("Hacked");
+            return Some(&seg.ident);
         }
     }
-    false
+    None
 }
 
 pub fn check_max_attributes(attrs: &[Attribute], max: usize) -> Result<()> {
@@ -184,8 +228,8 @@ pub fn check_max_attributes(attrs: &[Attribute], max: usize) -> Result<()> {
 
 fn check_before_signature(input: ParseStream<'_>) -> Result<()> {
     check_max_attributes(&input.call(Attribute::parse_outer)?, 0)?;
-    match input.parse()? {
-        Visibility::Inherited => Ok(()),
-        vis => Err(Error::new_spanned(vis, "no visibility allowed")),
+    match input.peek(Token![fn]) {
+        true => Ok(()),
+        false => Err(input.error("expected `fn` without any modifiers")),
     }
 }

@@ -1,5 +1,7 @@
-use quote::ToTokens;
-use syn::{Expr, Ident, Type};
+use hookdef::last_seg;
+use quote::{format_ident, quote_spanned, ToTokens};
+use syn::spanned::Spanned as _;
+use syn::{Expr, Ident, Type, TypePtr};
 
 /// - "type", - "*mut type"
 /// the former is input to native function,
@@ -8,6 +10,7 @@ use syn::{Expr, Ident, Type};
 pub enum ElementMode {
     Input,
     Output,
+    Skip,
 }
 
 pub struct Element {
@@ -15,12 +18,20 @@ pub struct Element {
     pub ty: Type,
     pub mode: ElementMode,
     pub pass_by: PassBy,
+    pub is_void_ptr: bool,
+}
+
+impl Element {
+    pub fn get_exe_ptr_ident(&self) -> Ident {
+        format_ident!("{}__ptr", self.name)
+    }
 }
 
 pub enum PassBy {
     InputValue,
     SinglePtr,
     ArrayPtr { len: Expr, cap: Option<Expr> },
+    InputCStr,
 }
 
 pub fn is_shadow_desc_type(ty: &Type) -> bool {
@@ -42,11 +53,17 @@ pub fn is_async_return_type(ty: &Type) -> bool {
     ].contains(&ty.to_token_stream().to_string().as_str())
 }
 
-pub fn is_void_ptr(ptr: &syn::TypePtr) -> bool {
-    if let Type::Path(elem) = ptr.elem.as_ref() {
-        if let Some(seg) = elem.path.segments.last() {
-            return seg.ident == "c_void";
-        }
+pub fn is_void_ptr(ptr: &TypePtr) -> bool {
+    last_seg(&ptr.elem).is_some_and(|seg| seg == "c_void")
+}
+
+pub fn is_const_cstr(ptr: &TypePtr) -> bool {
+    ptr.const_token.is_some() && last_seg(&ptr.elem).is_some_and(|seg| seg == "c_char")
+}
+
+pub fn define_usize_from(ident: &Ident, expr: &Expr) -> proc_macro2::TokenStream {
+    quote_spanned! {expr.span()=>
+        #[allow(clippy::useless_conversion)]
+        let #ident = usize::try_from((#expr).to_owned()).unwrap();
     }
-    false
 }

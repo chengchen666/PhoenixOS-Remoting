@@ -4,12 +4,13 @@ use hookdef::{check_max_attributes, HookAttrs, HookFnItem, HookInjections};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 use syn::{
-    Attribute, Error, FnArg, LitInt, Meta, Pat, PatIdent, Result, ReturnType, Signature, Type,
-    TypePtr,
+    parse_quote, Attribute, Error, FnArg, LitInt, Meta, Pat, PatIdent, Result, ReturnType,
+    Signature, Type, TypePtr,
 };
 
 use crate::utils::{
-    is_async_return_type, is_shadow_desc_type, is_void_ptr, Element, ElementMode, PassBy,
+    is_async_return_type, is_const_cstr, is_shadow_desc_type, is_void_ptr, Element, ElementMode,
+    PassBy,
 };
 
 pub struct HookFn {
@@ -32,24 +33,19 @@ impl HookFn {
         HookAttrs { proc_id, is_async_api, .. }: HookAttrs,
         HookFnItem { sig, injections }: HookFnItem,
     ) -> Result<Self> {
-        let mut is_return_type_async_api = true;
+        if is_async_api {
+            check_async_api(&sig.output, &injections)?;
+        }
+
         let result = Element {
             name: format_ident!("result"),
             ty: match &sig.output {
                 ReturnType::Default => syn::parse_quote!(()),
-                ReturnType::Type(_, ty) => {
-                    is_return_type_async_api = is_async_return_type(ty);
-                    if is_async_api && !is_return_type_async_api {
-                        return Err(Error::new_spanned(
-                            &sig.output,
-                            "unsupported `async_api` return type",
-                        ));
-                    }
-                    ty.as_ref().clone()
-                }
+                ReturnType::Type(_, ty) => ty.as_ref().clone(),
             },
             mode: ElementMode::Output,
             pass_by: PassBy::InputValue,
+            is_void_ptr: false,
         };
 
         let params = sig
@@ -57,18 +53,14 @@ impl HookFn {
             .iter()
             .map(|arg| parse_param(arg, is_async_api))
             .collect::<Result<Box<_>>>()?;
-        if !is_async_api
-            && is_return_type_async_api
-            && !params.is_empty()
-            && params
-                .iter()
-                .all(|x| x.mode == ElementMode::Input)
-        {
-            sig.ident
-                .span()
-                .unwrap()
-                .note("this function can be `async_api`")
-                .emit();
+
+        if let Some(param) = params.iter().find(|param| param.mode == ElementMode::Skip) {
+            if injections.server_execution.is_empty() {
+                return Err(Error::new_spanned(
+                    &param.name,
+                    "custom execution required when skipping parameter",
+                ));
+            }
         }
 
         fn is_create_shadow_desc(func: &Ident, params: &[Element]) -> bool {
@@ -76,7 +68,7 @@ impl HookFn {
                 return false;
             }
             let param = &params[0];
-            if param.mode == ElementMode::Input {
+            if param.mode != ElementMode::Output {
                 return false;
             }
             let Type::Ptr(ptr) = &param.ty else { panic!() };
@@ -102,6 +94,14 @@ impl HookFn {
 
     pub fn into_plain_fn(self) -> TokenStream {
         let mut sig = self.sig;
+
+        if !self.is_async_api
+            && check_async_api(&sig.output, &self.injections).is_ok()
+            && self.params.iter().all(|x| x.mode == ElementMode::Input)
+        {
+            sig.ident.span().unwrap().note("this function can be `async_api`").emit();
+        }
+
         for arg in sig.inputs.iter_mut() {
             let FnArg::Typed(arg) = arg else { panic!() };
             arg.attrs.clear();
@@ -111,6 +111,20 @@ impl HookFn {
                 unimplemented!()
             }
         }
+    }
+}
+
+fn check_async_api(output: &ReturnType, injections: &HookInjections) -> Result<()> {
+    if let Some(stmt) =
+        injections.client_after_recv.first().or(injections.server_after_send.first())
+    {
+        return Err(Error::new_spanned(stmt, "`async_api` cannot have `after` injections"));
+    }
+    match output {
+        ReturnType::Type(_, ty) if !is_async_return_type(ty) => {
+            Err(Error::new_spanned(output, "unsupported `async_api` return type"))
+        }
+        _ => Ok(()),
     }
 }
 
@@ -134,6 +148,8 @@ fn parse_param(arg: &FnArg, is_async_api: bool) -> Result<Element> {
         check_max_attributes(&arg.attrs, 1)?;
         if let Some(attr) = arg.attrs.first() {
             parse_param_attr(attr, ptr)?
+        } else if is_const_cstr(ptr) {
+            (ElementMode::Input, PassBy::InputCStr)
         } else if ptr.const_token.is_some() || is_void_ptr(ptr) {
             return Err(Error::new_spanned(
                 arg,
@@ -154,11 +170,22 @@ fn parse_param(arg: &FnArg, is_async_api: bool) -> Result<Element> {
         ));
     }
 
+    let mut ty = ty.clone();
+    let is_void_ptr = match (&pass_by, &mut ty) {
+        (PassBy::InputValue, _) => false,
+        (_, Type::Ptr(ref mut ptr)) if is_void_ptr(ptr) => {
+            ptr.elem = Box::new(parse_quote!(u8));
+            true
+        }
+        _ => false,
+    };
+
     Ok(Element {
         name: ident.clone(),
-        ty: ty.clone(),
+        ty,
         mode,
         pass_by,
+        is_void_ptr,
     })
 }
 
@@ -220,6 +247,8 @@ fn parse_param_attr(attr: &Attribute, ptr: &TypePtr) -> Result<(ElementMode, Pas
         Ok((mode, pass_by))
     } else if location == "device" && matches!(attr.meta, Meta::Path(_)) {
         Ok((ElementMode::Input, PassBy::InputValue))
+    } else if location == "skip" && matches!(attr.meta, Meta::Path(_)) {
+        Ok((ElementMode::Skip, PassBy::InputValue))
     } else {
         Err(Error::new_spanned(
             attr,

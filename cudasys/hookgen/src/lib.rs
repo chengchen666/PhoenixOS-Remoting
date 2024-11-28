@@ -3,72 +3,146 @@ use std::fs;
 use std::io::Write as _;
 use std::path::Path;
 
-use hookdef::{is_hacked_type, HookAttrs};
+use hookdef::{is_hacked_type, CustomHookAttrs, HookAttrs};
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, ToTokens};
 use syn::parse::{Parse, ParseStream};
 use syn::spanned::Spanned as _;
 use syn::{
-    parse_quote, Attribute, FnArg, ForeignItem, Ident, Item, ItemFn, Meta, Signature, Token,
+    parse_quote, Attribute, Block, FnArg, ForeignItem, Ident, Item, ItemFn, Meta, Signature, Token,
     Type, UseTree, Visibility,
 };
+
+struct Hook {
+    proc_id: i32,
+    name: String,
+    is_custom: bool,
+}
 
 pub fn generate_impls(
     hooks_path: &str,
     bindings_dir: &str,
-    output_path: &str,
-    unimplement_path: Option<&str>,
+    output_dir: &str,
+    output_suffix: &str,
+    unimplement_suffix: Option<&str>,
     cuda_version: u8,
 ) {
-    let target_attr = match unimplement_path {
+    let target_attr = match unimplement_suffix {
         Some(_) => "cuda_hook_hijack",
         None => "cuda_hook_exe",
     };
-    let dir = fs::read_dir(bindings_dir).expect("failed to read bindings directory");
-    for entry in dir {
-        let path = entry.unwrap().path();
-        let (module, extension) = path
-            .file_name()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .split_once('.')
-            .unwrap();
-        assert_eq!(extension, "rs");
-        let mut bindings = parse_bindings(&path);
+    let mod_file = fs::read_to_string(Path::new(output_dir).join("mod.rs"))
+        .expect("failed to read `mod.rs` file");
+    let mut all_hooks = Vec::new();
+    for (ref module, mut bindings) in parse_bindings_dir(bindings_dir) {
         let hooks_path = hooks_path.replace("{}", module);
-        let comment = ["// Generated from ", &hooks_path, "\n\n"].concat();
-        let imports = {
-            let module = Ident::new(module, Span::call_site());
-            match unimplement_path {
-                Some(_) => [
-                    Item::Use(parse_quote! { use super::*; }),
-                    Item::Use(parse_quote! { use cudasys::types::#module::*; }),
-                ],
-                None => [
-                    Item::Use(parse_quote! { use super::*; }),
-                    Item::Use(parse_quote! { use cudasys::#module::*; }),
-                ],
-            }
-        };
-        convert_hooks(
+        let comment = format!("// Generated from {hooks_path} under CUDA {cuda_version}\n\n");
+        let imports = get_imports(module, unimplement_suffix.is_some());
+        let output_mod = [module, output_suffix].concat();
+        let hooks = convert_hooks(
             &hooks_path,
-            &output_path.replace("{}", module),
+            &format!("{output_dir}/{output_mod}.rs"),
             &comment,
             &imports,
             &mut bindings,
             target_attr,
             cuda_version,
         );
-        if let Some(unimplement_path) = unimplement_path {
-            gen_unimplement(
-                &unimplement_path.replace("{}", module),
+        if unimplement_suffix.is_some()
+            && !hooks.is_empty()
+            && !mod_file.contains(&format!("mod {output_mod};"))
+        {
+            println!("cargo:warning=`mod {output_mod};` is missing from `mod.rs`");
+        }
+        if unimplement_suffix.is_none() {
+            for Hook { proc_id, name, is_custom } in hooks {
+                if is_custom {
+                    all_hooks.push((proc_id, format!("{output_mod}_custom::{name}Exe")));
+                } else {
+                    all_hooks.push((proc_id, format!("{output_mod}::{name}Exe")));
+                }
+            }
+        }
+        if let Some(unimplement_suffix) = unimplement_suffix {
+            let unimplement_mod = [module, unimplement_suffix].concat();
+            let count = bindings.len();
+            generate_bare_hooks(
+                &format!("{output_dir}/{unimplement_mod}.rs"),
                 &comment,
+                vec![parse_quote! { #![allow(unused_variables)] }],
                 &imports[1..],
                 bindings,
+                |sig| {
+                    let name = sig.ident.to_string();
+                    Some(parse_quote!({ unimplemented!(#name) }))
+                },
             );
+            if count != 0 && !mod_file.contains(&format!("mod {unimplement_mod};")) {
+                println!("cargo:warning=`mod {unimplement_mod};` is missing from `mod.rs`");
+            }
         }
     }
+    if unimplement_suffix.is_none() {
+        all_hooks.sort_by_key(|&(proc_id, _)| proc_id);
+        let mut output_file = fs::File::create(Path::new(output_dir).join("mod_exe.rs")).unwrap();
+        write!(
+            &mut output_file,
+            "// Generated from {} under CUDA {cuda_version}\n\n",
+            hooks_path.replace("{}", "*"),
+        )
+        .unwrap();
+        write!(
+            &mut output_file,
+            "macro_rules! dispatcher_match {{\n($proc_id:ident, $other:ident => $err:tt) => {{\nmatch $proc_id {{\n",
+        )
+        .unwrap();
+        for (proc_id, func) in all_hooks {
+            if proc_id < 0 {
+                writeln!(
+                    &mut output_file,
+                    "{proc_id} => compile_error!(\"{func} has invalid proc_id\"),"
+                )
+                .unwrap();
+            } else {
+                writeln!(&mut output_file, "{proc_id} => {func},").unwrap();
+            }
+        }
+        write!(&mut output_file, "$other => $err\n}}\n}}\n}}\n").unwrap();
+    }
+}
+
+pub fn generate_passthrough(
+    bindings_dir: &str,
+    output_dir: &str,
+    body: fn(&Signature) -> Option<Box<Block>>,
+) {
+    let comment = format!("// Generated from {bindings_dir}\n\n");
+    let mut mod_file = fs::File::create(&format!("{output_dir}/mod_passthrough.rs")).unwrap();
+    mod_file.write_all(comment.as_bytes()).unwrap();
+    for (module, bindings) in parse_bindings_dir(bindings_dir) {
+        writeln!(&mut mod_file, "mod {module}_passthrough;").unwrap();
+        generate_bare_hooks(
+            &format!("{output_dir}/{module}_passthrough.rs"),
+            &comment,
+            Vec::new(),
+            &get_imports(&module, true)[1..],
+            bindings,
+            body,
+        );
+    }
+}
+
+fn parse_bindings_dir(bindings_dir: &str) -> Vec<(String, BTreeMap<String, Signature>)> {
+    fs::read_dir(bindings_dir)
+        .expect("failed to read bindings directory")
+        .map(|entry| {
+            let path = entry.unwrap().path();
+            let (module, extension) =
+                path.file_name().unwrap().to_str().unwrap().split_once('.').unwrap();
+            assert_eq!(extension, "rs");
+            (module.to_string(), parse_bindings(&path))
+        })
+        .collect()
 }
 
 fn parse_bindings(path: &Path) -> BTreeMap<String, Signature> {
@@ -77,18 +151,28 @@ fn parse_bindings(path: &Path) -> BTreeMap<String, Signature> {
     let file = syn::parse_file(&bindings).unwrap();
     let mut result = BTreeMap::new();
     for item in file.items {
-        let Item::ForeignMod(foreign) = item else {
-            panic!()
-        };
+        let Item::ForeignMod(foreign) = item else { panic!() };
         for item in foreign.items {
-            let ForeignItem::Fn(func) = item else {
-                panic!()
-            };
+            let ForeignItem::Fn(func) = item else { panic!() };
             let name = func.sig.ident.to_string();
             result.insert(name, func.sig);
         }
     }
     result
+}
+
+fn get_imports(module: &str, is_client: bool) -> [Item; 2] {
+    let module = Ident::new(module, Span::call_site());
+    match is_client {
+        true => [
+            Item::Use(parse_quote! { use super::*; }),
+            Item::Use(parse_quote! { use cudasys::types::#module::*; }),
+        ],
+        false => [
+            Item::Use(parse_quote! { use super::*; }),
+            Item::Use(parse_quote! { use cudasys::#module::*; }),
+        ],
+    }
 }
 
 fn convert_hooks(
@@ -99,11 +183,12 @@ fn convert_hooks(
     bindings: &mut BTreeMap<String, Signature>,
     target_attr: &str,
     cuda_version: u8,
-) {
+) -> Vec<Hook> {
     eprintln!("parsing {hooks_path:?}");
     let hooks = fs::read_to_string(hooks_path).unwrap();
     let file = syn::parse_file(&hooks).unwrap();
     let mut output = imports.to_vec();
+    let mut hooks = Vec::new();
 
     for item in file.items {
         match item {
@@ -114,7 +199,10 @@ fn convert_hooks(
                     }
                 }
             }
-            Item::Type(_) => output.push(item),
+            Item::Type(mut item) => {
+                item.attrs.clear();
+                output.push(Item::Type(item));
+            }
             Item::Fn(mut func) => {
                 let binding = bindings.remove(&func.sig.ident.to_string());
                 if check_sig_replace_attr(
@@ -124,6 +212,7 @@ fn convert_hooks(
                     target_attr,
                     cuda_version,
                     &mut output,
+                    &mut hooks,
                 ) {
                     output.push(Item::Fn(func));
                 }
@@ -138,6 +227,7 @@ fn convert_hooks(
                     target_attr,
                     cuda_version,
                     &mut output,
+                    &mut hooks,
                 ) {
                     output.push(Item::Verbatim(func.to_token_stream()));
                 }
@@ -153,13 +243,14 @@ fn convert_hooks(
 
     let output = prettyplease::unparse(&syn::File {
         shebang: None,
-        attrs: vec![parse_quote! { #![allow(non_snake_case)] }],
+        attrs: Default::default(),
         items: output,
     });
 
     let mut output_file = fs::File::create(output_path).unwrap();
     output_file.write_all(comment.as_bytes()).unwrap();
     output_file.write_all(output.as_bytes()).unwrap();
+    hooks
 }
 
 /// Returns true if the function should be emitted.
@@ -170,6 +261,7 @@ fn check_sig_replace_attr(
     target_attr: &str,
     cuda_version: u8,
     output: &mut Vec<Item>,
+    hooks: &mut Vec<Hook>,
 ) -> bool {
     let err_item = || {
         Item::Macro(parse_quote! {
@@ -185,6 +277,21 @@ fn check_sig_replace_attr(
     match attr.path().segments.last().unwrap().ident.to_string().as_str() {
         "cuda_hook" => {}
         "cuda_custom_hook" => {
+            match CustomHookAttrs::from_attr(attr) {
+                Ok(attrs) => {
+                    if let Some(proc_id) = attrs.proc_id {
+                        hooks.push(Hook {
+                            proc_id: proc_id.base10_parse().unwrap_or(-1),
+                            name: sig.ident.to_string(),
+                            is_custom: true,
+                        });
+                    }
+                }
+                Err(err) => {
+                    output.push(Item::Macro(syn::parse2(err.to_compile_error()).unwrap()));
+                    return true;
+                }
+            }
             eprintln!("skipped custom hook `{}`", sig.ident);
             return false;
         }
@@ -202,6 +309,11 @@ fn check_sig_replace_attr(
                 );
                 return false;
             }
+            hooks.push(Hook {
+                proc_id: attrs.proc_id.base10_parse().unwrap_or(-1),
+                name: sig.ident.to_string(),
+                is_custom: false,
+            });
         }
         Err(err) => {
             output.push(Item::Macro(syn::parse2(err.to_compile_error()).unwrap()));
@@ -288,28 +400,30 @@ fn is_type_equal_ignore_path(hook: &Type, binding: &Type) -> bool {
     }
 }
 
-fn gen_unimplement(
+fn generate_bare_hooks(
     output_path: &str,
     comment: &str,
+    file_attrs: Vec<Attribute>,
     imports: &[Item],
     bindings: BTreeMap<String, Signature>,
+    body: fn(&Signature) -> Option<Box<Block>>,
 ) {
     let mut items = imports.to_vec();
     let attrs = vec![parse_quote! { #[no_mangle] }];
     let abi = Some(parse_quote!(extern "C"));
     for mut sig in bindings.into_values() {
-        let name = sig.ident.to_string();
+        let Some(block) = body(&sig) else { continue };
         sig.abi = abi.clone();
         items.push(Item::Fn(ItemFn {
             attrs: attrs.clone(),
-            vis: Visibility::Public(Default::default()),
+            vis: Visibility::Inherited,
             sig,
-            block: parse_quote!({ unimplemented!(#name) }),
+            block,
         }));
     }
     let output = prettyplease::unparse(&syn::File {
         shebang: None,
-        attrs: vec![parse_quote! { #![allow(unused_variables)] }],
+        attrs: file_attrs,
         items,
     });
     let mut file = fs::File::create(output_path).unwrap();

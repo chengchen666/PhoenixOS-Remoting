@@ -38,8 +38,9 @@ fn main() {
     hookgen::generate_impls(
         "../cudasys/src/hooks/{}.rs",
         "../cudasys/src/bindings/funcs",
-        "./src/hijack/{}_hijack.rs",
-        Some("./src/hijack/{}_unimplement.rs"),
+        "./src/hijack",
+        "_hijack",
+        Some("_unimplement"),
         (cudasys::cuda::CUDA_VERSION / 1000) as u8,
     );
 
