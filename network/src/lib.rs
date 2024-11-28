@@ -31,12 +31,9 @@ lazy_static! {
         // Use environment variable to set config file's path.
         let path = match std::env::var("NETWORK_CONFIG") {
             Ok(val) => val,
-            Err(_) => {
-                let root = env!("CARGO_MANIFEST_DIR");
-                format!("{}/../config.toml", root)
-            }
+            Err(_) => concat!(env!("CARGO_MANIFEST_DIR"), "/../config.toml").to_owned(),
         };
-        let content = std::fs::read_to_string(path.clone()).expect(format!("Failed to read {}", path).as_str());
+        let content = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("Failed to read {}: {}", path, e));
         toml::from_str(&content).expect("Failed to parse config.toml")
     };
 }

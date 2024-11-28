@@ -20,7 +20,6 @@ pub use rdma::RDMAChannel;
 
 pub mod utils;
 
-mod fakemutex;
 pub mod emulator;
 pub use emulator::EmulatorChannel;
 pub mod types;
@@ -101,7 +100,7 @@ pub trait RingBufferManager: BufferManager {
 
     #[inline]
     fn num_adjacent_bytes_to_read(&self, cur_head: usize) -> usize {
-        let cur_tail = self.read_tail_volatile() as usize;
+        let cur_tail = self.read_tail_volatile();
         if cur_tail >= cur_head {
             cur_tail - cur_head
         } else {
@@ -111,7 +110,7 @@ pub trait RingBufferManager: BufferManager {
 
     #[inline]
     fn num_adjacent_bytes_to_write(&self, cur_tail: usize) -> usize {
-        let mut cur_head = self.read_head_volatile() as usize;
+        let mut cur_head = self.read_head_volatile();
         if cur_head == 0 {
             cur_head = self.capacity();
         }
@@ -147,7 +146,7 @@ impl<T: RingBufferChannel + CommChannelInner> CommChannelInnerIO for T {
 
         while len > 0 {
             // current head and tail
-            let read_tail = self.read_tail_volatile() as usize;
+            let read_tail = self.read_tail_volatile();
             assert!(read_tail < self.capacity(), "read_tail: {}", read_tail);
 
             // buf_head can be modified by the other side at any time
@@ -194,7 +193,7 @@ impl<T: RingBufferChannel + CommChannelInner> CommChannelInnerIO for T {
                 return Ok(offset);
             }
 
-            let read_head = self.read_head_volatile() as usize;
+            let read_head = self.read_head_volatile();
             assert!(read_head < self.capacity(), "read_head: {}", read_head);
             let current = std::cmp::min(self.num_adjacent_bytes_to_read(read_head), len);
 
@@ -220,7 +219,7 @@ impl<T: RingBufferChannel + CommChannelInner> CommChannelInnerIO for T {
 
     fn safe_try_get_bytes(&self, dst: &mut crate::RawMemoryMut) -> Result<usize, CommChannelError> {
         if self.num_bytes_stored() < dst.len {
-            return Ok(0);
+            Ok(0)
         } else {
             self.try_get_bytes(dst)
         }
@@ -247,7 +246,7 @@ impl LocalChannel {
     pub fn new(size: usize) -> LocalChannel {
         let channel = LocalChannel {
             ptr: utils::allocate_cache_line_aligned(size, CACHE_LINE_SZ).as_ptr(),
-            size: size,
+            size,
         };
         channel.write_head_volatile(0);
         channel.write_tail_volatile(0);

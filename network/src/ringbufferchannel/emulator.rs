@@ -45,7 +45,7 @@ impl EmulatorChannel {
         let now_timestamp = NsTimestamp::now();
         let base_timestamp = match now_timestamp > self.get_last_timestamp() {
             true => now_timestamp,
-            false => self.get_last_timestamp().clone(),
+            false => self.get_last_timestamp(),
         };
         let sec = base_timestamp.sec_timestamp
             + (base_timestamp.ns_timestamp as i64 + latency as i64) / 1000000000;

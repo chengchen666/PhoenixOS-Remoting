@@ -26,3 +26,7 @@ rdma = ["dep:KRdmaKit"]
 
 [lints]
 workspace = true
+
+[[test]]
+name = "rdma_comm"
+required-features = ["rdma"]
