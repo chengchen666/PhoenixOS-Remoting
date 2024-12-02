@@ -37,6 +37,16 @@ pub mod cublasLt {
     include!("bindings/funcs/cublasLt.rs");
 }
 
+pub mod nvrtc {
+    pub use crate::types::nvrtc::*;
+    include!("bindings/funcs/nvrtc.rs");
+}
+
+pub mod nccl {
+    pub use crate::types::nccl::*;
+    include!("bindings/funcs/nccl.rs");
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

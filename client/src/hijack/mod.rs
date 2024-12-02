@@ -14,6 +14,10 @@ mod cudnn_unimplement;
 mod cublas_hijack;
 mod cublas_unimplement;
 mod cublasLt_unimplement;
+mod nvrtc_hijack;
+mod nvrtc_unimplement;
+mod nccl_hijack;
+mod nccl_unimplement;
 
 use codegen::{cuda_hook_hijack, use_thread_local};
 use log::error;

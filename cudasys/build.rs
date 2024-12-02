@@ -65,6 +65,8 @@ impl ParseCallbacks for DeriveCallback {
                 | "nvmlReturn_enum"
                 | "cudnnStatus_t"
                 | "cublasStatus_t"
+                | "nvrtcResult"
+                | "ncclResult_t"
         ) {
             vec![
                 "num_derive::FromPrimitive".to_owned(),
@@ -257,5 +259,25 @@ fn main() {
         &["cublasLt.*"],
         &["cublasLt.*"],
         "dylib=cublasLt",
+    );
+
+    bind_gen(
+        &cuda_paths,
+        "nvrtc.h",
+        "nvrtc",
+        &["nvrtc.*"],
+        &["nvrtc.*"],
+        &["nvrtc.*"],
+        "dylib=nvrtc",
+    );
+
+    bind_gen(
+        &cuda_paths,
+        "nccl.h",
+        "nccl",
+        &["nccl.*"],
+        &["nccl.*", "NCCL.*"],
+        &["nccl.*"],
+        "dylib=nccl",
     );
 }

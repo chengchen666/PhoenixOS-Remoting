@@ -68,6 +68,8 @@ fn create_cuda_symlinks() {
         "libcublas.so.12",
         "libcublasLt.so.11",
         "libcublasLt.so.12",
+        "libnvrtc.so.11.2",
+        "libnvrtc.so.11.3",
     ] {
         let _ = std::os::unix::fs::symlink("../libclient.so", symlink_dir.join(lib));
     }

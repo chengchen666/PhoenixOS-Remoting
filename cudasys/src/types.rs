@@ -55,3 +55,17 @@ pub mod cublasLt {
 
     success_return_value!(cublasStatus_t::CUBLAS_STATUS_SUCCESS);
 }
+
+pub mod nvrtc {
+    include!("bindings/types/nvrtc.rs");
+
+    success_return_value!(nvrtcResult::NVRTC_SUCCESS);
+}
+
+pub mod nccl {
+    include!("bindings/types/nccl.rs");
+
+    const _: () = assert!(NCCL_VERSION_CODE >= 21602, "run `apt install libnccl2 libnccl-dev`");
+
+    success_return_value!(ncclResult_t::ncclSuccess);
+}
