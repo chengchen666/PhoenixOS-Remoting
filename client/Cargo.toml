@@ -14,7 +14,7 @@ codegen = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 lazy_static = { workspace = true }
-ctor = "0.2"
+small_ctor = "0.1"
 core_affinity = { workspace = true }
 lz4_flex = { version = "0.11", default-features = false }
 elf = "0.7"

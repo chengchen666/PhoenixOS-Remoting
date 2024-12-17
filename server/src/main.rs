@@ -1,13 +1,7 @@
 use server::*;
-use std::{
-    env,
-};
 
 fn main() {
-    if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "debug");
-    }
-    env_logger::init();
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
     // core_affinity::set_for_current(0);
     let config = &*network::CONFIG;
     match config.comm_type.as_str() {
