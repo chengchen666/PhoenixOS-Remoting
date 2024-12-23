@@ -29,28 +29,19 @@ docker run -dit  --shm-size 8G  --name $container_name  --gpus all  --privileged
 - Note that we need Rust **nightly** toolchain to build the project, which is not installed in the docker image.
 
 ```shell
-curl https://sh.rustup.rs -sSf | sh
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain nightly
 . "$HOME/.cargo/env"
-rustup toolchain install nightly-x86_64-unknown-linux-gnu
-rustup default nightly
+# Optional: install cargo-expand
+# See `codegen/README.md` for usage and alternatives
 cargo +nightly install cargo-expand
 ```
 
 - Version checklist
-  - Rust: `cargo 1.78.0-nightly`
-  - CMake: `3.22.1`
-  - Clang: `6.0.0-1ubuntu2`
+  - Rust: `nightly`
+  - CMake: at least `3.22.1` (required to run some of the tests)
+  - Clang: at least `6.0.0-1ubuntu2`
 
 ## Build
-
-First we should build the ELF parsing static library from source:
-
-```shell
-cd /path/to/xpuremoting/client/src/elf
-make -j
-```
-
-Then we can build the project using cargo:
 
 ```shell
 cd /path/to/xpuremoting && cargo build
@@ -58,19 +49,17 @@ cd /path/to/xpuremoting && cargo build
 
 You should specify `default` feature in both `client/server`'s Cargo.toml to decide which communication methods will be compiled. For example, if you want to use RDMA communication method, you should add `"rdma"` into the `default` feature in `client/Cargo.toml` and `server/Cargo.toml`. 
 
-The default configuration using shared memory communication method and using emulator to simulate network communication. 
-
 ## Config
 
 You can use `config.toml` file to config communication type, buffer size, RDMA server listener socket and so on.
 
-Due to `cargo` will use cwd as running root folder, use absolute path for config file. The default path will be `xpuremoting/config.toml`. If you want a specific path, you can use environment variable `NETWORK_CONFIG` customize it. For example: `NETWORK_CONFG="/path/to/my/config cargo run`.
+Since `cargo` will use cwd as running root folder, you should use absolute path for config file. The default path will be `/workspace/config.toml`. If you want a specific path, you can use the environment variable `NETWORK_CONFIG` to customize it. For example: `NETWORK_CONFIG=/workspace/config.toml cargo run server`.
 
 ### Emulator
 
 The network emulator is a component used to simulate system performance under different network conditions. When enabled, it calculates network latency and make the message receiver busy-wait, thus simulating the network overhead caused by RTT and bandwidth. Real-world tests have shown that the emulator's performance deviates from the actual conditions by no more than 5%. You can configure the `rtt` and `bandwidth` settings in `config.toml`.
 
-By default, the network emulator is enabled, and this feature is only available when using shared memory. To disable the emulator, you can simply remove the `emulator` field from the default features in the `client/Cargo.toml`, `server/Cargo.toml`, and `network/Cargo.toml` files.
+This feature is only available when using shared memory. To enable the emulator, you can simply add `emulator` to the default features in `client/Cargo.toml` and `server/Cargo.toml`.
 
 ## Test
 
@@ -99,7 +88,7 @@ cd tests/cuda_api
 mkdir -p build && cd build
 cmake .. && make
 cd ..
-./startclient.sh ./build/remoting_test
+find -type f -executable -name "test_*" -exec ./startclient_debug.sh {} \;
 ```
 
 P.S. Can use `RUST_LOG` environment to control the log level (default=debug).
