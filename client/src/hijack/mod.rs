@@ -2,6 +2,7 @@
 
 mod cuda_hijack;
 mod cuda_hijack_custom;
+mod cuda_hijack_utils;
 mod cuda_unimplement;
 mod cudart_hijack;
 mod cudart_hijack_custom;
@@ -24,5 +25,5 @@ use log::error;
 use network::type_impl::{recv_slice_to, send_slice, MemPtr};
 use network::{CommChannel, Transportable};
 
-use crate::elf::interfaces::{fat_header, kernel_info_t};
-use crate::{ClientThread, CLIENT_THREAD, ELF_CONTROLLER};
+use crate::elf::{FatBinaryHeader, FatBinaryWrapper};
+use crate::{ClientThread, FatBinaryHandle, HostPtr, CLIENT_THREAD, RUNTIME_CACHE};

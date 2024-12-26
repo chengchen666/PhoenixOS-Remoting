@@ -3,7 +3,7 @@
 mod dispatcher;
 
 use cudasys::{
-    cuda::{CUdeviceptr, CUfunction, CUmodule},
+    cuda::CUmodule,
     cudart::{cudaDeviceSynchronize, cudaError_t, cudaGetDeviceCount, cudaSetDevice},
 };
 use dispatcher::dispatch;
@@ -13,31 +13,26 @@ use network::ringbufferchannel::RDMAChannel;
 
 use network::{
     ringbufferchannel::{EmulatorChannel, SHMChannel},
-    type_impl::MemPtr,
     Channel, CommChannel, CommChannelError, Transportable, NetworkConfig,
 };
 
 use log::{error, info};
 
+#[cfg(feature = "shadow_desc")]
 use std::collections::BTreeMap;
 
 struct ServerWorker<C> {
     pub id: i32,
     pub channel_sender: C,
     pub channel_receiver: C,
-    // client_address -> module
-    pub modules: BTreeMap<MemPtr, CUmodule>,
-    // host_func -> device_func
-    pub functions: BTreeMap<MemPtr, CUfunction>,
-    // host_var -> device_var
-    pub variables: BTreeMap<MemPtr, CUdeviceptr>,
+    pub modules: Vec<CUmodule>,
     #[cfg(feature = "shadow_desc")]
     pub resources: BTreeMap<usize, usize>,
 }
 
 impl<C> Drop for ServerWorker<C> {
     fn drop(&mut self) {
-        for (_, module) in self.modules.iter() {
+        for module in &self.modules {
             unsafe {
                 cudasys::cuda::cuModuleUnload(*module);
             }
@@ -145,8 +140,6 @@ pub fn launch_server(#[expect(non_snake_case)] CONFIG: &NetworkConfig, id: i32, 
         channel_sender,
         channel_receiver,
         modules: Default::default(),
-        functions: Default::default(),
-        variables: Default::default(),
         #[cfg(feature = "shadow_desc")]
         resources: Default::default(),
     };
@@ -172,5 +165,5 @@ pub fn launch_server(#[expect(non_snake_case)] CONFIG: &NetworkConfig, id: i32, 
         }
     }
 
-    info!("[{}:{}] server terminated", std::file!(), std::line!());
+    info!("[{}:{}] server #{} terminated", std::file!(), std::line!(), server.id);
 }

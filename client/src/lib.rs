@@ -1,5 +1,3 @@
-use lazy_static::lazy_static;
-
 #[cfg(feature = "rdma")]
 use network::ringbufferchannel::RDMAChannel;
 
@@ -10,20 +8,29 @@ use network::{
 
 mod hijack;
 
-#[expect(dead_code)]
 mod elf;
-use elf::ElfController;
+use elf::{FatBinaryHeader, KernelParamInfo};
 
 mod dl;
 
+use std::borrow::Cow;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::ffi::c_char;
 use std::io::Read as _;
+
+use cudasys::types::cuda::{CUfunction, CUmodule};
+type FatBinaryHandle = usize;
+type HostPtr = usize;
 
 struct ClientThread {
     id: i32,
     channel_sender: Channel,
     channel_receiver: Channel,
     resource_idx: usize,
+    /// Used in `cuModuleLoadData` to judge if the image is a static fatbin.
+    is_cuda_launch_kernel: bool,
+    driver: DriverCache,
     #[cfg(feature = "local")]
     cuda_device: Option<std::ffi::c_int>,
 }
@@ -87,6 +94,8 @@ impl ClientThread {
             channel_sender,
             channel_receiver,
             resource_idx: 0,
+            is_cuda_launch_kernel: false,
+            driver: Default::default(),
             #[cfg(feature = "local")]
             cuda_device: None,
         }
@@ -102,10 +111,40 @@ impl Drop for ClientThread {
 
 thread_local! {
     static CLIENT_THREAD: RefCell<ClientThread> = RefCell::new(ClientThread::new());
+    static RUNTIME_CACHE: RefCell<RuntimeCache> = const { RefCell::new(RuntimeCache::new()) };
 }
 
-lazy_static! {
-    static ref ELF_CONTROLLER: ElfController = ElfController::new();
+#[derive(Default)]
+struct DriverCache {
+    /// Used in `cuModuleGetFunction`, populated by `cuModuleLoadData`.
+    images: BTreeMap<CUmodule, Cow<'static, [u8]>>,
+    /// Used in `cuLaunchKernel`, populated by `cuModuleGetFunction`.
+    function_params: BTreeMap<CUfunction, Box<[KernelParamInfo]>>,
+}
+
+struct RuntimeCache {
+    /// Populated by `__cudaRegisterFatBinary`.
+    lazy_fatbins: Vec<*const FatBinaryHeader>,
+    /// Populated by `__cudaRegisterFunction`.
+    lazy_functions: BTreeMap<HostPtr, (FatBinaryHandle, *const c_char)>,
+    /// Populated by `__cudaRegisterVar`.
+    lazy_variables: BTreeMap<HostPtr, (FatBinaryHandle, *const c_char)>,
+    /// Result of `cuModuleLoadData` calls.
+    loaded_modules: BTreeMap<FatBinaryHandle, CUmodule>,
+    /// Used in `cudaLaunchKernel`. Cache of `cuModuleGetFunction` calls.
+    loaded_functions: BTreeMap<HostPtr, CUfunction>,
+}
+
+impl RuntimeCache {
+    const fn new() -> Self {
+        Self {
+            lazy_fatbins: Vec::new(),
+            lazy_functions: BTreeMap::new(),
+            lazy_variables: BTreeMap::new(),
+            loaded_modules: BTreeMap::new(),
+            loaded_functions: BTreeMap::new(),
+        }
+    }
 }
 
 #[ctor::ctor]

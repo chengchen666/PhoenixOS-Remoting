@@ -66,61 +66,6 @@ pub fn cudaMemcpyExe<C: CommChannel>(server: &mut ServerWorker<C>) {
     }
 }
 
-pub fn cudaLaunchKernelExe<C: CommChannel>(server: &mut ServerWorker<C>) {
-    let ServerWorker { channel_sender, channel_receiver, .. } = server;
-    log::debug!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
-
-    let mut func: MemPtr = Default::default();
-    func.recv(channel_receiver).unwrap();
-    let mut gridDim: dim3 = dim3 { x: 0, y: 0, z: 0 };
-    gridDim.recv(channel_receiver).unwrap();
-    let mut blockDim: dim3 = dim3 { x: 0, y: 0, z: 0 };
-    blockDim.recv(channel_receiver).unwrap();
-    let mut argc: usize = Default::default();
-    argc.recv(channel_receiver).unwrap();
-    let mut arg_vec: Vec<Vec<u8>> = Vec::new();
-    for _ in 0..argc {
-        let mut arg: Vec<u8> = Default::default();
-        arg.recv(channel_receiver).unwrap();
-        arg_vec.push(arg);
-    }
-    let mut args: Vec<*mut std::os::raw::c_void> = Vec::new();
-    for i in 0..argc {
-        args.push(arg_vec[i].as_ptr() as *mut std::os::raw::c_void);
-    }
-    let mut sharedMem: usize = Default::default();
-    sharedMem.recv(channel_receiver).unwrap();
-    let mut stream: cudaStream_t = Default::default();
-    stream.recv(channel_receiver).unwrap();
-    match channel_receiver.recv_ts() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to receive timestamp: {:?}", e),
-    }
-
-    let device_func = *server.functions.get(&func).unwrap();
-
-    let result = unsafe {
-        cudasys::cuda::cuLaunchKernel(
-            device_func,
-            gridDim.x,
-            gridDim.y,
-            gridDim.z,
-            blockDim.x,
-            blockDim.y,
-            blockDim.z,
-            sharedMem as std::os::raw::c_uint,
-            stream as cudasys::cuda::CUstream,
-            args.as_mut_ptr() as *mut *mut std::os::raw::c_void,
-            std::ptr::null_mut(),
-        )
-    };
-
-    if cfg!(not(feature = "async_api")) {
-        result.send(channel_sender).unwrap();
-        channel_sender.flush_out().unwrap();
-    }
-}
-
 pub fn cudaGetErrorStringExe<C: CommChannel>(server: &mut ServerWorker<C>) {
     let ServerWorker { channel_sender, channel_receiver, .. } = server;
     log::debug!("[{}:{}] cudaGetErrorString", std::file!(), std::line!());

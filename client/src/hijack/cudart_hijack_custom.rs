@@ -1,9 +1,8 @@
 #![expect(non_snake_case)]
 use super::*;
 use cudasys::types::cudart::*;
-use ::std::os::raw::*;
 use std::cell::RefCell;
-use std::ffi::CString;
+use std::ffi::*;
 use std::alloc::{alloc, Layout};
 
 #[no_mangle]
@@ -107,7 +106,6 @@ pub extern "C" fn cudaMemcpyAsync(
 }
 
 #[no_mangle]
-#[use_thread_local(client = CLIENT_THREAD.with_borrow_mut)]
 pub extern "C" fn cudaLaunchKernel(
     func: MemPtr,
     gridDim: dim3,
@@ -118,81 +116,56 @@ pub extern "C" fn cudaLaunchKernel(
 ) -> cudaError_t {
     log::debug!("[{}:{}] cudaLaunchKernel", std::file!(), std::line!());
 
-    let ClientThread { channel_sender, channel_receiver, .. } = client;
+    use super::cuda_hijack::{cuLaunchKernel, cuModuleGetFunction, cuModuleLoadData};
 
-    let proc_id = 200;
-    let mut result: cudaError_t = Default::default();
-    let info: *mut kernel_info_t =
-        ELF_CONTROLLER.find_kernel_host_func(func as *mut ::std::os::raw::c_void);
-    if info.is_null() {
-        panic!("request to call unknown kernel.");
-    }
-    let info = unsafe { &mut *info };
-
-    let argc = info.param_num;
-    let mut arg_vec: Vec<Vec<u8>> = Vec::new();
-    for i in 0..argc {
-        let size = unsafe { *info.param_sizes.wrapping_add(i) as usize };
-        let arg: Vec<u8> =
-            unsafe { std::slice::from_raw_parts((*args.add(i)) as *const u8, size).to_vec() };
-        arg_vec.push(arg);
-    }
-
-    match proc_id.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send proc_id: {:?}", e),
-    }
-    match func.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send func: {:?}", e),
-    }
-    match gridDim.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send gridDim: {:?}", e),
-    }
-    match blockDim.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send blockDim: {:?}", e),
-    }
-    match argc.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send argc: {:?}", e),
-    }
-    for arg in arg_vec.iter() {
-        match arg.send(channel_sender) {
-            Ok(()) => {}
-            Err(e) => panic!("failed to send arg: {:?}", e),
+    let cufunc = RUNTIME_CACHE.with_borrow_mut(|runtime| {
+        if runtime.loaded_modules.is_empty() {
+            log::info!(
+                "#fatbins = {}, #functions = {}",
+                runtime.lazy_fatbins.len(),
+                runtime.lazy_functions.len(),
+            );
         }
-    }
-    match sharedMem.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send sharedMem: {:?}", e),
-    }
-    match stream.send(channel_sender) {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send stream: {:?}", e),
-    }
+        let load_module = |fatCubinHandle: &FatBinaryHandle| {
+            // See our implementation of `__cudaRegisterFatBinary`
+            let index = (*fatCubinHandle >> 4) - 1;
+            log::info!("registering fatbin #{index}");
+            let image = runtime.lazy_fatbins[index];
+            CLIENT_THREAD.with_borrow_mut(|client| client.is_cuda_launch_kernel = true);
+            let mut module = std::ptr::null_mut();
+            assert_eq!(cuModuleLoadData(&raw mut module, image.cast()), Default::default());
+            CLIENT_THREAD.with_borrow_mut(|client| client.is_cuda_launch_kernel = false);
+            module
+        };
+        let load_function = |func: &HostPtr| {
+            let (fatCubinHandle, deviceName) = *runtime.lazy_functions.get(func).unwrap();
+            log::info!("registering function {:?}", unsafe { CStr::from_ptr(deviceName) });
+            let module =
+                *runtime.loaded_modules.entry(fatCubinHandle).or_insert_with_key(load_module);
+            let mut cufunc = std::ptr::null_mut();
+            assert_eq!(
+                cuModuleGetFunction(&raw mut cufunc, module, deviceName),
+                Default::default()
+            );
+            cufunc
+        };
+        *runtime.loaded_functions.entry(func).or_insert_with_key(load_function)
+    });
 
-    match channel_sender.flush_out() {
-        Ok(()) => {}
-        Err(e) => panic!("failed to send: {:?}", e),
-    }
-
-    if cfg!(feature = "async_api") {
-        return cudaError_t::cudaSuccess;
-    } else {
-        match result.recv(channel_receiver) {
-            Ok(()) => {}
-            Err(e) => panic!("failed to receive result: {:?}", e),
-        }
-        match channel_receiver.recv_ts() {
-            Ok(()) => {}
-            Err(e) => panic!("failed to receive timestamp: {:?}", e),
-        }
-        if result != Default::default() {
-            log::error!("{} returned error: {:?}", "cudaLaunchKernel", result);
-        }
-        return result;
+    unsafe {
+        std::mem::transmute(cuLaunchKernel(
+            cufunc,
+            gridDim.x,
+            gridDim.y,
+            gridDim.z,
+            blockDim.x,
+            blockDim.y,
+            blockDim.z,
+            sharedMem.try_into().unwrap(),
+            stream.cast(),
+            args,
+            std::ptr::null_mut(),
+        ))
     }
 }
 

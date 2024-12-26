@@ -95,7 +95,7 @@ fn cudaFuncGetAttributes(
     #[device] func: *const c_void,
 ) -> cudaError_t;
 
-#[cuda_custom_hook(proc_id = 100)]
+#[cuda_custom_hook] // local, proc_id was 100
 fn __cudaRegisterFatBinary(fatCubin: *mut c_void) -> *mut *mut c_void;
 
 #[cuda_custom_hook] // local
@@ -104,7 +104,7 @@ fn __cudaRegisterFatBinaryEnd(fatCubinHandle: *mut *mut c_void);
 #[cuda_custom_hook] // local, proc_id was 101
 fn __cudaUnregisterFatBinary(fatCubinHandle: *mut *mut c_void);
 
-#[cuda_custom_hook(proc_id = 102)]
+#[cuda_custom_hook] // local, proc_id was 102
 fn __cudaRegisterFunction(
     fatCubinHandle: *mut *mut c_void,
     hostFun: *const c_char,
@@ -118,7 +118,7 @@ fn __cudaRegisterFunction(
     wSize: *mut c_int,
 );
 
-#[cuda_custom_hook(proc_id = 103)]
+#[cuda_custom_hook] // local, proc_id was 103
 fn __cudaRegisterVar(
     fatCubinHandle: *mut *mut c_void,
     hostVar: *mut c_char,
@@ -130,7 +130,7 @@ fn __cudaRegisterVar(
     global: c_int,
 );
 
-#[cuda_custom_hook(proc_id = 200)]
+#[cuda_custom_hook] // local, proc_id was 200
 fn cudaLaunchKernel(
     func: *const c_void,
     gridDim: dim3,

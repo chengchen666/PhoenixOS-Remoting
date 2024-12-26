@@ -8,7 +8,7 @@ use network::{CommChannel, Transportable};
 use crate::ServerWorker;
 
 mod cuda_exe;
-mod cuda_exe_custom;
+mod cuda_exe_utils;
 mod cudart_exe;
 mod cudart_exe_custom;
 mod nvml_exe;
