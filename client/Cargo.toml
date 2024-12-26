@@ -13,7 +13,6 @@ network = { workspace = true }
 codegen = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
-lazy_static = { workspace = true }
 small_ctor = "0.1"
 core_affinity = { workspace = true }
 lz4_flex = { version = "0.11", default-features = false }
@@ -22,6 +21,7 @@ elf = "0.7"
 [build-dependencies]
 cudasys = { workspace = true }
 hookgen = { workspace = true }
+syn = { workspace = true, optional = true }
 
 [lib]
 crate-type = ["cdylib"]
@@ -34,6 +34,7 @@ emulator = []
 async_api = []
 shadow_desc = []
 local = []
+passthrough = ["dep:syn"]
 
 [lints]
 workspace = true

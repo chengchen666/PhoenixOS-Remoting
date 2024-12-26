@@ -1,64 +1,60 @@
 #![expect(non_snake_case)]
-use super::*;
+
+use std::cell::OnceCell;
+use std::ffi::*;
+use std::sync::OnceLock;
+use std::{env, mem};
+
+use log::info;
 
 // original dlsym
 extern "C" {
-    pub fn dlsym(handle: *mut std::ffi::c_void, symbol: *const std::os::raw::c_char) -> *mut std::ffi::c_void;
+    fn dlsym(handle: *mut c_void, symbol: *const c_char) -> *mut c_void;
 }
 
-// dlopen_orig and dlclose_orig are used to load the original dlopen and dlsym functions from the libdl
-lazy_static! {
-    // # define RTLD_NEXT        ((void *) -1l)
-    static ref DLOPEN_ORIG: extern "C" fn(*const std::os::raw::c_char, std::os::raw::c_int) -> *mut std::ffi::c_void = {
-        let RTLD_NEXT = usize::MAX as *mut std::ffi::c_void;
-        let symbol = b"dlopen\0".as_ptr() as *const std::os::raw::c_char;
-        let orig = unsafe { dlsym(RTLD_NEXT, symbol) };
-        if orig.is_null() {
-            panic!("Failed to load original dlopen");
-        }
-        unsafe { std::mem::transmute(orig) }
-    };
-    static ref DLCLOSE_ORIG: extern "C" fn(*mut std::ffi::c_void) -> std::os::raw::c_int = {
-        let RTLD_NEXT = usize::MAX as *mut std::ffi::c_void;
-        let symbol = b"dlclose\0".as_ptr() as *const std::os::raw::c_char;
-        let orig = unsafe { dlsym(RTLD_NEXT, symbol) };
-        if orig.is_null() {
-            panic!("Failed to load original dlclose");
-        }
-        unsafe { std::mem::transmute(orig) }
-    };
-    static ref SELF_HANDLES: Mutex<Vec<usize>> = Mutex::new(Vec::new());
+pub fn dlsym_next(symbol: &CStr) -> *mut c_void {
+    const RTLD_NEXT: *mut c_void = usize::MAX as _;
+    let result = unsafe { dlsym(RTLD_NEXT, symbol.as_ptr()) };
+    if result.is_null() {
+        panic!("failed to find symbol {symbol:?}");
+    }
+    result
 }
 
 #[no_mangle]
-pub extern "C" fn dlopen(filename: *const std::os::raw::c_char, flags: std::os::raw::c_int) -> *mut std::ffi::c_void {
+extern "C" fn dlopen(filename: *const c_char, flags: c_int) -> *mut c_void {
+    #[thread_local]
+    static DLOPEN: OnceCell<extern "C" fn(*const c_char, c_int) -> *mut c_void> = OnceCell::new();
+    let DLOPEN_ORIG = DLOPEN.get_or_init(|| unsafe { mem::transmute(dlsym_next(c"dlopen")) });
     // use the original dlopen to load the library
     if filename.is_null() {
         return DLOPEN_ORIG(filename, flags);
     }
-    let filename = unsafe { std::ffi::CStr::from_ptr(filename) };
-    let filename = filename.to_str().unwrap();
-    if filename.contains("libcuda") || filename.contains("libnvrtc") || filename.contains("libnvidia-ml") {
+    let name = unsafe { CStr::from_ptr(filename) }.to_str().unwrap();
+    if name.contains("cpython") {
+        return DLOPEN_ORIG(filename, flags);
+    }
+    info!("[dlopen] {name} (flags: {flags:#x})");
+    if name.contains("libcuda") || name.contains("libnvrtc.so") || name.contains("libnvidia-ml") {
+        if cfg!(feature = "passthrough") {
+            assert!(!DLOPEN_ORIG(filename, 0x101).is_null());
+        }
         // if the library is libcuda, libnvrtc or libnvidia-ml, return a handle to the client
-        info!("[dlopen] replacing dlopen call to {} library with a handle to the client", filename);
-        let self_handle = DLOPEN_ORIG("libclient.so\0".as_ptr() as *const std::os::raw::c_char, flags);
+        info!("[dlopen] replacing dlopen call to {} library with a handle to the client", name);
+        static SELF_PATH: OnceLock<CString> = OnceLock::new();
+        let self_path = SELF_PATH.get_or_init(|| {
+            let mut result = env::var("LD_PRELOAD").unwrap().into_bytes();
+            if result.last() == Some(&b':') {
+                result.pop();
+            }
+            assert!(!result.contains(&b':'));
+            CString::new(result).unwrap()
+        });
+        let self_handle = DLOPEN_ORIG(self_path.as_ptr(), flags);
         if self_handle.is_null() {
             panic!("Failed to load the client handle");
         }
-        let mut self_handles = SELF_HANDLES.lock().unwrap();
-        self_handles.push(self_handle as usize);
         return self_handle;
     }
-    return DLOPEN_ORIG(filename.as_ptr() as *const std::os::raw::c_char, flags);
-}
-
-#[no_mangle]
-pub extern "C" fn dlclose(handle: *mut std::ffi::c_void) -> std::os::raw::c_int {
-    let self_handles = SELF_HANDLES.lock().unwrap();
-    if self_handles.contains(&(handle as usize)) {
-        // if the handle is the client handle, return 0
-        info!("[dlclose] ignoring dlclose call to the client handle");
-        return 0;
-    }
-    return DLCLOSE_ORIG(handle);
+    DLOPEN_ORIG(filename, flags)
 }

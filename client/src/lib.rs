@@ -1,3 +1,6 @@
+#![cfg_attr(feature = "passthrough", expect(dead_code))]
+#![feature(thread_local)]
+
 #[cfg(feature = "rdma")]
 use network::ringbufferchannel::RDMAChannel;
 
@@ -6,7 +9,10 @@ use network::{
     Channel, Transportable,
 };
 
+#[cfg(not(feature = "passthrough"))]
 mod hijack;
+#[cfg(feature = "passthrough")]
+mod passthrough;
 
 mod elf;
 use elf::{FatBinaryHeader, KernelParamInfo};
