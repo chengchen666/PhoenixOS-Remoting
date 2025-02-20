@@ -1,10 +1,8 @@
-#![cfg_attr(not(feature = "phos"), expect(unused_variables))]
-
 use super::*;
 use cudasys::cudnn::*;
 
 pub fn cudnnGetErrorStringExe<C: CommChannel>(
-    proc_id: i32,
+    #[cfg(feature = "phos")] proc_id: i32,
     server: &mut ServerWorker<C>,
 ) {
     let ServerWorker { channel_sender, channel_receiver, .. } = server;
@@ -20,15 +18,13 @@ pub fn cudnnGetErrorStringExe<C: CommChannel>(
     #[cfg(not(feature = "phos"))]
     let result = unsafe { cudnnGetErrorString(status) };
     #[cfg(feature = "phos")]
-    let result = pos_process(
-        POS_CUDA_WS.lock().unwrap().get_ptr(),
+    let result = call_pos_process(
+        server.pos_cuda_ws,
         proc_id,
         0u64,
         &[
-            addr_of(&status), size_of_val(&status),
+            &raw const status as usize, size_of_val(&status),
         ],
-        0u64,
-        0u64,
     ) as *const i8;
     // transfer to Vec<u8>
     let result = unsafe { std::ffi::CStr::from_ptr(result).to_bytes().to_vec() };

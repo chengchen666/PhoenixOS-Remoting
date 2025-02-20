@@ -2,6 +2,9 @@
 
 mod dispatcher;
 
+#[cfg(feature = "phos")]
+mod phos;
+
 use cudasys::{
     cuda::CUmodule,
     cudart::{cudaDeviceSynchronize, cudaError_t, cudaGetDeviceCount, cudaSetDevice},
@@ -28,31 +31,21 @@ struct ServerWorker<C> {
     pub modules: Vec<CUmodule>,
     #[cfg(feature = "shadow_desc")]
     pub resources: BTreeMap<usize, usize>,
-}
-
-#[cfg(feature = "phos")]
-mod phos;
-#[cfg(feature = "phos")]
-use phos::*;
-
-pub fn addr_of<T>(var: &T) -> usize {
-    var as *const T as usize
-}
-
-#[cfg(feature = "phos")]
-lazy_static!{
-    pub static ref POS_CUDA_WS: Mutex<POSWorkspace> = {
-        let pos = unsafe { pos_create_workspace_cuda() };
-        Mutex::new(POSWorkspace(pos))
-    };
+    #[cfg(feature = "phos")]
+    pub pos_cuda_ws: *mut std::ffi::c_void,
 }
 
 impl<C> Drop for ServerWorker<C> {
     fn drop(&mut self) {
+        #[cfg(not(feature = "phos"))]
         for module in &self.modules {
             unsafe {
                 cudasys::cuda::cuModuleUnload(*module);
             }
+        }
+        #[cfg(feature = "phos")]
+        unsafe {
+            phos::pos_destory_workspace_cuda(self.pos_cuda_ws);
         }
     }
 }
@@ -159,18 +152,18 @@ pub fn launch_server(#[expect(non_snake_case)] CONFIG: &NetworkConfig, id: i32, 
         modules: Default::default(),
         #[cfg(feature = "shadow_desc")]
         resources: Default::default(),
+        #[cfg(feature = "phos")]
+        pos_cuda_ws: {
+            info!("Starting PhOS server ...");
+            let pos_cuda_ws = unsafe { phos::pos_create_workspace_cuda() };
+            info!("PhOS daemon is running. You can run a program like \"env $phos python3 train.py \" now");
+            pos_cuda_ws
+        },
     };
 
     if let Some(mut stream) = tcp {
         use std::io::Write as _;
         stream.write_all(&id.to_be_bytes()).unwrap();
-    }
-
-    #[cfg(feature = "phos")]
-    {
-        info!("Starting PhOS server ...");
-        let pos_cuda_ws: u64 = POS_CUDA_WS.lock().unwrap().get_ptr() as u64;
-        info!("PhOS daemon is running. You can run a program like \"env $phos python3 train.py \" now");
     }
 
     loop {

@@ -10,6 +10,9 @@ use cudasys::FromPrimitive as _;
 
 use crate::ServerWorker;
 
+#[cfg(feature = "phos")]
+use crate::phos::call_pos_process;
+
 mod cuda_exe;
 mod cuda_exe_utils;
 mod cudart_exe;
@@ -37,7 +40,7 @@ pub fn dispatch<C: CommChannel>(proc_id: i32, server: &mut ServerWorker<C>) {
             panic!();
         }
     };
-    func(proc_id, server);
+    func(#[cfg(feature = "phos")] proc_id, server);
     // let end = network::NsTimestamp::now();
     // let elapsed = (end.sec_timestamp - start.sec_timestamp) as f64 * 1000000000.0
     //             + (end.ns_timestamp as i32 - start.ns_timestamp as i32) as f64;

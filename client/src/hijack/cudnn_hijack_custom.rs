@@ -13,7 +13,7 @@ pub extern "C" fn cudnnGetErrorString(
         std::line!()
     );
     let ClientThread { channel_sender, channel_receiver, .. } = client;
-    let proc_id = 1535;
+    let proc_id = 1834;
     let mut result: Vec<u8> = Default::default();
     if let Err(e) = proc_id.send(channel_sender) {
         error!("Error sending proc_id: {:?}", e);
