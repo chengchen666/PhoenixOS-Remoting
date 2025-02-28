@@ -5,13 +5,13 @@ use std::os::raw::*;
 /// FIXME: void pointer hacking
 type HackedAssumeDouble = f64;
 
-#[cuda_hook(proc_id = 1500)]
+#[cuda_hook(proc_id = 1804)]
 fn cudnnCreate(handle: *mut cudnnHandle_t) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1501)]
+#[cuda_hook(proc_id = 1814)]
 fn cudnnCreateTensorDescriptor(tensorDesc: *mut cudnnTensorDescriptor_t) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1502)]
+#[cuda_hook(proc_id = 1873)]
 fn cudnnSetTensor4dDescriptor(
     tensorDesc: cudnnTensorDescriptor_t,
     format: cudnnTensorFormat_t,
@@ -22,12 +22,12 @@ fn cudnnSetTensor4dDescriptor(
     w: c_int,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1503)]
+#[cuda_hook(proc_id = 1805)]
 fn cudnnCreateActivationDescriptor(
     activationDesc: *mut cudnnActivationDescriptor_t,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1504)]
+#[cuda_hook(proc_id = 1861)]
 fn cudnnSetActivationDescriptor(
     activationDesc: cudnnActivationDescriptor_t,
     mode: cudnnActivationMode_t,
@@ -35,27 +35,10 @@ fn cudnnSetActivationDescriptor(
     coef: f64,
 ) -> cudnnStatus_t;
 
-// FIXME: this function used to send `alpha` and `beta` as `MemPtr`s but they are actually host
-// pointers that need to be dereferenced. `handle` was also mistakenly typed `cudnnStatus_t`.
-// Also, this function should be `async_api`.
-/*
-#[cuda_hook(proc_id = 1505)]
-fn cudnnActivationForward(
-    handle: cudnnHandle_t,
-    activationDesc: cudnnActivationDescriptor_t,
-    alpha: *const c_void,
-    xDesc: cudnnTensorDescriptor_t,
-    x: *const c_void,
-    beta: *const c_void,
-    yDesc: cudnnTensorDescriptor_t,
-    y: *mut c_void,
-) -> cudnnStatus_t;
-*/
-
-#[cuda_hook(proc_id = 1506)]
+#[cuda_hook(proc_id = 1816)]
 fn cudnnDestroy(handle: cudnnHandle_t) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1507)]
+#[cuda_hook(proc_id = 2126)]
 fn cudnnSetConvolution2dDescriptor(
     convDesc: cudnnConvolutionDescriptor_t,
     pad_h: c_int,
@@ -68,10 +51,10 @@ fn cudnnSetConvolution2dDescriptor(
     computeType: cudnnDataType_t,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1508, async_api)]
+#[cuda_hook(proc_id = 1871, async_api)]
 fn cudnnSetStream(handle: cudnnHandle_t, streamId: cudaStream_t) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1509, async_api)]
+#[cuda_hook(proc_id = 1875, async_api)]
 fn cudnnSetTensorNdDescriptor(
     tensorDesc: cudnnTensorDescriptor_t,
     dataType: cudnnDataType_t,
@@ -80,16 +63,16 @@ fn cudnnSetTensorNdDescriptor(
     #[host(len = nbDims)] strideA: *const c_int,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1510, async_api)]
+#[cuda_hook(proc_id = 1826, async_api)]
 fn cudnnDestroyTensorDescriptor(tensorDesc: cudnnTensorDescriptor_t) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1511)]
+#[cuda_hook(proc_id = 1808)]
 fn cudnnCreateFilterDescriptor(filterDesc: *mut cudnnFilterDescriptor_t) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1512, async_api)]
+#[cuda_hook(proc_id = 1820, async_api)]
 fn cudnnDestroyFilterDescriptor(filterDesc: cudnnFilterDescriptor_t) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1513, async_api)]
+#[cuda_hook(proc_id = 1865, async_api)]
 fn cudnnSetFilterNdDescriptor(
     filterDesc: cudnnFilterDescriptor_t,
     dataType: cudnnDataType_t,
@@ -98,13 +81,13 @@ fn cudnnSetFilterNdDescriptor(
     #[host(len = nbDims)] filterDimA: *const c_int,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1514)]
+#[cuda_hook(proc_id = 2104)]
 fn cudnnCreateConvolutionDescriptor(convDesc: *mut cudnnConvolutionDescriptor_t) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1515, async_api)]
+#[cuda_hook(proc_id = 2105, async_api)]
 fn cudnnDestroyConvolutionDescriptor(convDesc: cudnnConvolutionDescriptor_t) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1516, async_api)]
+#[cuda_hook(proc_id = 2129, async_api)]
 fn cudnnSetConvolutionNdDescriptor(
     convDesc: cudnnConvolutionDescriptor_t,
     arrayLength: c_int,
@@ -115,25 +98,25 @@ fn cudnnSetConvolutionNdDescriptor(
     computeType: cudnnDataType_t,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1517, async_api)]
+#[cuda_hook(proc_id = 2127, async_api)]
 fn cudnnSetConvolutionGroupCount(
     convDesc: cudnnConvolutionDescriptor_t,
     groupCount: c_int,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1518, async_api)]
+#[cuda_hook(proc_id = 2128, async_api)]
 fn cudnnSetConvolutionMathType(
     convDesc: cudnnConvolutionDescriptor_t,
     mathType: cudnnMathType_t,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1519)]
+#[cuda_hook(proc_id = 2130)]
 fn cudnnSetConvolutionReorderType(
     convDesc: cudnnConvolutionDescriptor_t,
     reorderType: cudnnReorderType_t,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1520)]
+#[cuda_hook(proc_id = 2116)]
 fn cudnnGetConvolutionForwardAlgorithm_v7(
     handle: cudnnHandle_t,
     srcDesc: cudnnTensorDescriptor_t,
@@ -146,7 +129,7 @@ fn cudnnGetConvolutionForwardAlgorithm_v7(
     perfResults: *mut cudnnConvolutionFwdAlgoPerf_t,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1521, async_api)]
+#[cuda_hook(proc_id = 2103, async_api)]
 fn cudnnConvolutionForward(
     handle: cudnnHandle_t,
     #[host] alpha: *const HackedAssumeDouble,
@@ -163,7 +146,7 @@ fn cudnnConvolutionForward(
     #[device] y: *mut c_void,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1522)]
+#[cuda_hook(proc_id = 2008)]
 fn cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
     handle: cudnnHandle_t,
     mode: cudnnBatchNormMode_t,
@@ -176,7 +159,7 @@ fn cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
     sizeInBytes: *mut usize,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1523)]
+#[cuda_hook(proc_id = 2009)]
 fn cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
     handle: cudnnHandle_t,
     mode: cudnnBatchNormMode_t,
@@ -186,7 +169,7 @@ fn cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
     sizeInBytes: *mut usize,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1524, async_api)]
+#[cuda_hook(proc_id = 2004, async_api)]
 fn cudnnBatchNormalizationForwardTrainingEx(
     handle: cudnnHandle_t,
     mode: cudnnBatchNormMode_t,
@@ -215,7 +198,7 @@ fn cudnnBatchNormalizationForwardTrainingEx(
     reserveSpaceSizeInBytes: usize,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1525)]
+#[cuda_hook(proc_id = 2007)]
 fn cudnnGetBatchNormalizationBackwardExWorkspaceSize(
     handle: cudnnHandle_t,
     mode: cudnnBatchNormMode_t,
@@ -230,7 +213,7 @@ fn cudnnGetBatchNormalizationBackwardExWorkspaceSize(
     sizeInBytes: *mut usize,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1526, async_api)]
+#[cuda_hook(proc_id = 2002, async_api)]
 fn cudnnBatchNormalizationBackwardEx(
     handle: cudnnHandle_t,
     mode: cudnnBatchNormMode_t,
@@ -264,7 +247,7 @@ fn cudnnBatchNormalizationBackwardEx(
     reserveSpaceSizeInBytes: usize,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1527)]
+#[cuda_hook(proc_id = 2113)]
 fn cudnnGetConvolutionBackwardDataAlgorithm_v7(
     handle: cudnnHandle_t,
     filterDesc: cudnnFilterDescriptor_t,
@@ -277,7 +260,7 @@ fn cudnnGetConvolutionBackwardDataAlgorithm_v7(
     perfResults: *mut cudnnConvolutionBwdDataAlgoPerf_t,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1528, async_api)]
+#[cuda_hook(proc_id = 2101, async_api)]
 fn cudnnConvolutionBackwardData(
     handle: cudnnHandle_t,
     #[host] alpha: *const HackedAssumeDouble,
@@ -294,7 +277,7 @@ fn cudnnConvolutionBackwardData(
     #[device] dx: *mut c_void,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1529)]
+#[cuda_hook(proc_id = 2213)]
 fn cudnnGetConvolutionBackwardFilterAlgorithm_v7(
     handle: cudnnHandle_t,
     srcDesc: cudnnTensorDescriptor_t,
@@ -307,7 +290,7 @@ fn cudnnGetConvolutionBackwardFilterAlgorithm_v7(
     perfResults: *mut cudnnConvolutionBwdFilterAlgoPerf_t,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1530, async_api)]
+#[cuda_hook(proc_id = 2202, async_api)]
 fn cudnnConvolutionBackwardFilter(
     handle: cudnnHandle_t,
     #[host] alpha: *const HackedAssumeDouble,
@@ -324,7 +307,7 @@ fn cudnnConvolutionBackwardFilter(
     #[device] dw: *mut c_void,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1531, async_api)]
+#[cuda_hook(proc_id = 1802, async_api)]
 fn cudnnBatchNormalizationForwardInference(
     handle: cudnnHandle_t,
     mode: cudnnBatchNormMode_t,
@@ -342,7 +325,7 @@ fn cudnnBatchNormalizationForwardInference(
     epsilon: f64,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1532)]
+#[cuda_hook(proc_id = 1864)]
 fn cudnnSetFilter4dDescriptor(
     filterDesc: cudnnFilterDescriptor_t,
     dataType: cudnnDataType_t,
@@ -353,7 +336,7 @@ fn cudnnSetFilter4dDescriptor(
     w: c_int,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1533)]
+#[cuda_hook(proc_id = 2121)]
 fn cudnnGetConvolutionNdForwardOutputDim(
     convDesc: cudnnConvolutionDescriptor_t,
     inputTensorDesc: cudnnTensorDescriptor_t,
@@ -362,7 +345,7 @@ fn cudnnGetConvolutionNdForwardOutputDim(
     #[host(output, len = nbDims)] tensorOuputDimA: *mut c_int,
 ) -> cudnnStatus_t;
 
-#[cuda_hook(proc_id = 1534)]
+#[cuda_hook(proc_id = 2117)]
 fn cudnnGetConvolutionForwardWorkspaceSize(
     handle: cudnnHandle_t,
     xDesc: cudnnTensorDescriptor_t,
@@ -373,5 +356,5 @@ fn cudnnGetConvolutionForwardWorkspaceSize(
     sizeInBytes: *mut usize,
 ) -> cudnnStatus_t;
 
-#[cuda_custom_hook(proc_id = 1535)]
+#[cuda_custom_hook(proc_id = 1834)]
 fn cudnnGetErrorString(status: cudnnStatus_t) -> *const c_char;

@@ -2,10 +2,10 @@ use crate::types::cuda::*;
 use codegen::cuda_hook;
 use std::os::raw::*;
 
-#[cuda_hook(proc_id = 300)]
+#[cuda_hook(proc_id = 670)]
 fn cuDevicePrimaryCtxGetState(dev: CUdevice, flags: *mut c_uint, active: *mut c_int) -> CUresult;
 
-#[cuda_hook(proc_id = 400, async_api)]
+#[cuda_hook(proc_id = 918, async_api)]
 fn cuLaunchKernel(
     f: CUfunction,
     gridDimX: c_uint,
@@ -34,6 +34,8 @@ fn cuLaunchKernel(
     }
     'server_execution: {
         let result = super::cuda_exe_utils::cu_launch_kernel(
+            #[cfg(feature = "phos")]
+            server.pos_cuda_ws,
             f,
             gridDimX,
             gridDimY,
@@ -48,7 +50,7 @@ fn cuLaunchKernel(
     }
 }
 
-#[cuda_hook(proc_id = 401)]
+#[cuda_hook(proc_id = 701)]
 fn cuModuleLoadData(module: *mut CUmodule, #[host(len = len)] image: *const c_void) -> CUresult {
     'client_before_send: {
         let len = if client.is_cuda_launch_kernel {
@@ -71,7 +73,7 @@ fn cuModuleLoadData(module: *mut CUmodule, #[host(len = len)] image: *const c_vo
     }
 }
 
-#[cuda_hook(proc_id = 402)]
+#[cuda_hook(proc_id = 705)]
 fn cuModuleGetFunction(hfunc: *mut CUfunction, hmod: CUmodule, name: *const c_char) -> CUresult {
     'client_after_recv: {
         let image = client.driver.images.get(&hmod).unwrap();
@@ -85,15 +87,11 @@ fn cuModuleGetFunction(hfunc: *mut CUfunction, hmod: CUmodule, name: *const c_ch
     }
 }
 
-// 500 => unimplemented!("cuGetProcAddress")
-
-#[cuda_hook(proc_id = 501)]
+#[cuda_hook(proc_id = 640)]
 fn cuDriverGetVersion(driverVersion: *mut c_int) -> CUresult;
 
-#[cuda_hook(proc_id = 502)]
+#[cuda_hook(proc_id = 630)]
 fn cuInit(Flags: c_uint) -> CUresult;
 
-// 503 => unimplemented!("cuGetExportTable")
-
-#[cuda_hook(proc_id = 504)]
+#[cuda_hook(proc_id = 684)]
 fn cuCtxGetCurrent(pctx: *mut CUcontext) -> CUresult;

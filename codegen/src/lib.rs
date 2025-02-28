@@ -449,7 +449,7 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
         tokens
     } else {
         let result_ty = &result.ty;
-        let params = params.iter().map(|param| {
+        let exec_args = params.iter().map(|param| {
             let name = &param.name;
             let arg = if let PassBy::InputValue = param.pass_by {
                 &name
@@ -462,7 +462,39 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
                 quote!(#arg)
             }
         });
-        quote! { let #result_name: #result_ty = unsafe { #func(#(#params),*) }; }
+        let pos_args = params.iter().map(|param| {
+            let name = &param.name;
+            let ptr_ident = param.get_exe_ptr_ident();
+            match param.pass_by {
+                PassBy::InputValue => quote_spanned![name.span()=>
+                    &raw const #name as usize,
+                    size_of_val(&#name),
+                ],
+                PassBy::SinglePtr => quote_spanned![name.span()=>
+                    #ptr_ident as usize,
+                    size_of_val(&#name),
+                ],
+                PassBy::ArrayPtr { .. } => quote_spanned![name.span()=>
+                    #ptr_ident as usize,
+                    size_of_val(#name.as_ref()),
+                ],
+                PassBy::InputCStr => quote_spanned![name.span()=>
+                    #ptr_ident as usize,
+                    #name.as_bytes_with_nul().len(),
+                ],
+            }
+        });
+        quote! {
+            #[cfg(not(feature = "phos"))]
+            let #result_name: #result_ty = unsafe { #func(#(#exec_args),*) };
+            #[cfg(feature = "phos")]
+            let #result_name = #result_ty::from_i32(call_pos_process(
+                server.pos_cuda_ws,
+                proc_id,
+                0u64,
+                &[#(#pos_args)*],
+            )).expect("Illegal result ID");
+        }
     };
 
     // send result
@@ -529,7 +561,7 @@ pub fn cuda_hook_exe(args: TokenStream, input: TokenStream) -> TokenStream {
     let server_after_send = input.injections.server_after_send.iter();
 
     let gen_fn = quote! {
-        pub fn #func_exe<C: CommChannel>(server: &mut ServerWorker<C>) {
+        pub fn #func_exe<C: CommChannel>(#[cfg(feature = "phos")] proc_id: i32, server: &mut ServerWorker<C>) {
             let ServerWorker { channel_sender, channel_receiver, .. } = server;
             log::debug!("[#{}] [{}:{}] {}", server.id, std::file!(), std::line!(), stringify!(#func));
             #( #recv_statements )*

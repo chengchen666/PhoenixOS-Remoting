@@ -2,7 +2,7 @@ use super::*;
 use cudasys::cudart::*;
 use std::alloc::{alloc, dealloc, Layout};
 
-pub fn cudaMemcpyExe<C: CommChannel>(server: &mut ServerWorker<C>) {
+pub fn cudaMemcpyExe<C: CommChannel>(#[cfg(feature = "phos")] _proc_id: i32, server: &mut ServerWorker<C>) {
     let ServerWorker { channel_sender, channel_receiver, .. } = server;
     log::debug!("[{}:{}] cudaMemcpy", std::file!(), std::line!());
 
@@ -37,6 +37,7 @@ pub fn cudaMemcpyExe<C: CommChannel>(server: &mut ServerWorker<C>) {
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
 
+    #[cfg(not(feature = "phos"))]
     let result = unsafe {
         cudaMemcpy(
             dst as *mut std::os::raw::c_void,
@@ -45,6 +46,40 @@ pub fn cudaMemcpyExe<C: CommChannel>(server: &mut ServerWorker<C>) {
             kind,
         )
     };
+    #[cfg(feature = "phos")]
+    let result = cudaError_t::from_i32(
+        match kind {
+            cudaMemcpyKind::cudaMemcpyHostToDevice => call_pos_process(
+                server.pos_cuda_ws,
+                320, // cudaMemcpyHtod
+                0u64,
+                &[
+                    &raw const dst as usize, size_of_val(&dst),
+                    src as usize, count as usize,
+                ],
+            ),
+            cudaMemcpyKind::cudaMemcpyDeviceToHost => call_pos_process(
+                server.pos_cuda_ws,
+                321, // cudaMemcpyDtoh
+                0u64,
+                &[
+                    &raw const src as usize, size_of_val(&src),
+                    &raw const count as usize, size_of_val(&count),
+                ],
+            ),
+            cudaMemcpyKind::cudaMemcpyDeviceToDevice => call_pos_process(
+                server.pos_cuda_ws,
+                322, // cudaMemcpyDtod
+                0u64,
+                &[
+                    &raw const dst as usize, size_of_val(&dst),
+                    &raw const src as usize, size_of_val(&src),
+                    &raw const count as usize, size_of_val(&count),
+                ],
+            ),
+            _ => panic!("Illegal cudaMemcpy kind"),
+        }
+    ).expect("Illegal result ID");
 
 
     if cudaMemcpyKind::cudaMemcpyHostToDevice == kind {
@@ -66,7 +101,7 @@ pub fn cudaMemcpyExe<C: CommChannel>(server: &mut ServerWorker<C>) {
     }
 }
 
-pub fn cudaGetErrorStringExe<C: CommChannel>(server: &mut ServerWorker<C>) {
+pub fn cudaGetErrorStringExe<C: CommChannel>(#[cfg(feature = "phos")] proc_id: i32, server: &mut ServerWorker<C>) {
     let ServerWorker { channel_sender, channel_receiver, .. } = server;
     log::debug!("[{}:{}] cudaGetErrorString", std::file!(), std::line!());
     let mut error: cudaError_t = Default::default();
@@ -75,7 +110,17 @@ pub fn cudaGetErrorStringExe<C: CommChannel>(server: &mut ServerWorker<C>) {
         Ok(()) => {}
         Err(e) => panic!("failed to receive timestamp: {:?}", e),
     }
+    #[cfg(not(feature = "phos"))]
     let result = unsafe { cudaGetErrorString(error) };
+    #[cfg(feature = "phos")]
+    let result = call_pos_process(
+        server.pos_cuda_ws,
+        proc_id,
+        0u64,
+        &[
+            &raw const error as usize, size_of_val(&error),
+        ],
+    ) as *const i8;
     let result = unsafe { std::ffi::CStr::from_ptr(result).to_bytes().to_vec() };
     if let Err(e) = result.send(channel_sender) {
         error!("Error sending result: {:?}", e);

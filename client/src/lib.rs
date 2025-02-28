@@ -19,6 +19,9 @@ use elf::{FatBinaryHeader, KernelParamInfo};
 
 mod dl;
 
+#[cfg(feature = "phos")]
+mod phos;
+
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -39,6 +42,8 @@ struct ClientThread {
     driver: DriverCache,
     #[cfg(feature = "local")]
     cuda_device: Option<std::ffi::c_int>,
+    #[cfg(feature = "phos")]
+    phos_agent: *mut std::ffi::c_void,
 }
 
 impl ClientThread {
@@ -104,12 +109,19 @@ impl ClientThread {
             driver: Default::default(),
             #[cfg(feature = "local")]
             cuda_device: None,
+            #[cfg(feature = "phos")]
+            phos_agent: unsafe { phos::pos_create_agent() },
         }
     }
 }
 
 impl Drop for ClientThread {
     fn drop(&mut self) {
+        #[cfg(feature = "phos")]
+        unsafe {
+            phos::pos_destory_agent(self.phos_agent);
+        }
+
         let proc_id = -1;
         proc_id.send(&self.channel_sender).unwrap();
     }

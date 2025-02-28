@@ -26,7 +26,7 @@ pub extern "C" fn cudaMemcpy(
         return cudaError_t::cudaSuccess;
     }
 
-    let proc_id = 7;
+    let proc_id = 278;
     let mut result: cudaError_t = Default::default();
     match proc_id.send(channel_sender) {
         Ok(()) => {}
@@ -206,7 +206,7 @@ pub extern "C" fn cudaGetErrorString(
         std::line!()
     );
     let ClientThread { channel_sender, channel_receiver, .. } = client;
-    let proc_id = 17;
+    let proc_id = 151;
     let mut result:Vec<u8>  = Default::default();
     match proc_id.send(channel_sender) {
         Ok(()) => {}
