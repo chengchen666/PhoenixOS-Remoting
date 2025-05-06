@@ -10,8 +10,10 @@ pub mod test;
 // Only implemented in Linux now
 #[cfg(target_os = "linux")]
 pub mod shm;
+pub mod tcp;
 #[cfg(target_os = "linux")]
 pub use shm::SHMChannel;
+pub use tcp::TcpChannel;
 
 #[cfg(feature = "rdma")]
 pub mod rdma;

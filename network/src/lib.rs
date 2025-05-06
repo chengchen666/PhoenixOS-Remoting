@@ -1,5 +1,4 @@
 #![expect(incomplete_features)]
-#![feature(generic_const_exprs)]
 use serde::Deserialize;
 use std::error::Error;
 use std::boxed::Box;
@@ -64,6 +63,16 @@ impl RawMemory {
             len: self.len - offset,
         }
     }
+
+    pub fn as_slice(&self) -> Option<&[u8]> {
+        unsafe {
+            if self.ptr.is_null() || self.len == 0 {
+                None
+            } else {
+                Some(std::slice::from_raw_parts(self.ptr, self.len))
+            }
+        }
+    }
 }
 
 /// A *mutable* raw memory struct
@@ -90,6 +99,16 @@ impl RawMemoryMut {
         RawMemoryMut {
             ptr: unsafe { self.ptr.add(offset) },
             len: self.len - offset,
+        }
+    }
+
+    pub fn as_mut_slice(&mut self) -> Option<&mut [u8]> {
+        unsafe {
+            if self.ptr.is_null() || self.len == 0 {
+                None
+            } else {
+                Some(std::slice::from_raw_parts_mut(self.ptr as *mut u8, self.len))
+            }
         }
     }
 }
